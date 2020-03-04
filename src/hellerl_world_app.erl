@@ -5,7 +5,7 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-	hellerl_world_sup:start_link().
+    hellerl_world_sup:start_link().
 
 stop(_State) ->
-	ok.
+  ok.
