@@ -1,0 +1,25 @@
+name: Build and plan
+
+on: [pull_request]
+
+jobs:
+
+  build_docker:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - uses: azure/docker-login@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Build the Docker image
+      run: |
+        TAG=philipcristiano/hellerl_world:$(date +%s)
+        docker build . --file Dockerfile --tag $TAG
+        docker push $TAG
+        printf "docker_image = \"%s\"\n\n" $TAG > docker_image.tfvars
+      env:
+        ORG: philipcristiano
+        GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
