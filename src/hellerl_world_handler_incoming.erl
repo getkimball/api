@@ -11,4 +11,11 @@ init(Req0 = #{method := <<"POST">>,
         <<"content-type">> => <<"text/plain">>
     }, <<"POST">> , Req1),
 
+    {ok, Rep, Opts};
+init(Req0, Opts) ->
+    Msg = <<"Requests should be posted with content-type: application/json">>,
+    Rep = cowboy_req:reply(400, #{
+        <<"content-type">> => <<"text/plain">>
+    }, Msg, Req0),
+
     {ok, Rep, Opts}.
