@@ -10,8 +10,8 @@ start(_Type, _Args) ->
     App = hellerl_world,
     Dispatch = cowboy_router:compile([
       {'_', [
-        {"/ready", hellerl_world_handler_ready, []},
-        {"/alive", hellerl_world_handler_alive, []},
+        {"/ready", hellerl_world_handler_ok, []},
+        {"/alive", hellerl_world_handler_ok, []},
         {"/[...]", cowboy_static, {priv_dir, App, "public"}}
       ]}
     ]),

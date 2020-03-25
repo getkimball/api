@@ -5,6 +5,16 @@
 erl_crash.dump
 .concrete/DEV_MODE
 
+# Project
+hellerl_world.d
+
+# Erlang
+/ebin
+/elvis
+
+# Erlang.mk
+/.erlang.mk
+
 # rebar 2.x
 .rebar
 rel/example_project
