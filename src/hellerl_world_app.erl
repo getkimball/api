@@ -12,6 +12,7 @@ start(_Type, _Args) ->
       {'_', [
         {"/ready", hellerl_world_handler_ok, []},
         {"/alive", hellerl_world_handler_ok, []},
+        {"/incoming", hellerl_world_handler_incoming, []},
         {"/[...]", cowboy_static, {priv_dir, App, "public"}}
       ]}
     ]),

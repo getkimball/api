@@ -13,5 +13,6 @@ in stdenv.mkDerivation {
   name = "env";
   buildInputs = [ pkgs.gnumake
                   pkgs.erlang
+                  pkgs.fluent-bit
                 ];
 }
