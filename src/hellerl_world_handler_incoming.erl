@@ -1,6 +1,16 @@
 -module(hellerl_world_handler_incoming).
+-behaviour(cowboy_route_setup).
 
--export([init/2]).
+-export([init/2,
+         setup/0]).
+
+-define(M_INCOMING_LOGS_HANDLED, incoming_logs_handled).
+
+setup() ->
+    prometheus_counter:new([{name, ?M_INCOMING_LOGS_HANDLED},
+                            {help, "Number of log messages"}]),
+    #{routes => [{"/incoming", ?MODULE, []}]}.
+
 
 init(Req0 = #{method := <<"POST">>,
               headers := #{<<"content-type">> := <<"application/json">>}},
@@ -10,7 +20,7 @@ init(Req0 = #{method := <<"POST">>,
     Rep = cowboy_req:reply(200, #{
         <<"content-type">> => <<"text/plain">>
     }, <<"POST">> , Req1),
-
+    prometheus_counter:inc(?M_INCOMING_LOGS_HANDLED),
     {ok, Rep, Opts};
 init(Req0, Opts) ->
     Msg = <<"Requests should be posted with content-type: application/json">>,
