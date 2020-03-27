@@ -1,6 +1,6 @@
 name: Build and plan
 
-on: [pull_request]
+on: [push]
 
 jobs:
 
@@ -15,7 +15,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     - name: Build the Docker image
       run: |
-        TAG=getkimball/pod:$(date +%s)
+        TAG=getkimball/poc:$(date +%s)
         docker build . --file Dockerfile --tag $TAG
         docker push $TAG
       env:
