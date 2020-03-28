@@ -20,7 +20,7 @@ init(Req0 = #{method := <<"POST">>,
     {ok, DataBin, Req1} = cowboy_req:read_body(Req0),
     Data = jsx:decode(DataBin, [return_maps]),
     Len = length(Data),
-    ?LOG_INFO(#{what => "Incoming log message received",
+    ?LOG_DEBUG(#{what => "Incoming log message received",
             data => Data,
             length => Len}),
     Rep = cowboy_req:reply(200, #{
