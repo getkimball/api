@@ -11,5 +11,5 @@ make deps app shell
 ## Running fluent-bit dummy
 
 ```
-fluent-bit -i dummy -t dummy -o http://localhost:8080/incoming -m '*' -p format=json
+docker run --net=host -v$(pwd):/fluent-bit/etc -it fluent/fluent-bit:1.4.1
 ```
