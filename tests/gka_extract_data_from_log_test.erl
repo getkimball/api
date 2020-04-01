@@ -3,13 +3,27 @@
 
 -define(MUT, gka_extract_data_from_log).
 
+
+specific_labels_test() ->
+    Log = log(),
+
+    LabelValues0 = ?MUT:label_values([<<"namespace">>], Log),
+    ?assertEqual([<<"getkimball">>], LabelValues0),
+
+    LabelValues1 = ?MUT:label_values([<<"container_name">>], Log),
+    ?assertEqual([<<"app">>], LabelValues1),
+
+    LabelValues2 = ?MUT:label_values([<<"user_action">>], Log),
+    ?assertEqual([<<"example action">>], LabelValues2),
+
+    ok.
+
 unique_app_log_test() ->
     Log = log(),
 
     App = ?MUT:app(Log),
     Expected = {[<<"namespace">>, <<"container">>, <<"user_action">>],
                 [<<"getkimball">>, <<"app">>, <<"example action">>]},
-
 
     ?assertEqual(Expected, App),
 

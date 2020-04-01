@@ -9,10 +9,23 @@
 -define(M_INCOMING_LOGS_HANDLED, incoming_logs_handled).
 -define(M_LOGS_PER_APP, incoming_logs_handled_for_app).
 -define(M_LOGS_WITHOUT_KUBE_APP, incoming_logs_non_kubernetes).
+-define(TRACKED_LABELS,
+        [<<"namespace">>, <<"container_name">>, <<"user_action">>]).
 
 setup() ->
-    prometheus_counter:new([{name, ?M_INCOMING_LOGS_HANDLED},
-                            {help, "Number of log messages"}]),
+    ok = prometheus_counter:new([{name, ?M_INCOMING_LOGS_HANDLED},
+                                 {help, "Number of log messages"}]),
+
+
+    MetricSpec0 = [{name, ?M_LOGS_PER_APP},
+                   {help, "Number of user actions for an app"},
+                   {labels, ?TRACKED_LABELS}],
+    ok = prometheus_counter:new(MetricSpec0),
+
+    MetricSpec1 = [{name, ?M_LOGS_WITHOUT_KUBE_APP},
+                   {help, "Number of log messages not from Kube"}],
+    ok = prometheus_counter:new(MetricSpec1),
+
     #{routes => [{"/incoming", ?MODULE, []}]}.
 
 
@@ -42,19 +55,10 @@ init(Req0, Opts) ->
 process_logs([]) ->
     ok;
 process_logs([H = #{<<"kubernetes">> := _Any}|T]) ->
-    {Labels, Values} = gka_extract_data_from_log:app(H),
-
-    MetricSpec = [{name, ?M_LOGS_PER_APP},
-                  {help, "Number of log messages for an app"},
-                  {labels, Labels}],
-
-    prometheus_counter:declare(MetricSpec),
+    Values = gka_extract_data_from_log:label_values(?TRACKED_LABELS, H),
     prometheus_counter:inc(?M_LOGS_PER_APP, Values),
 
     process_logs(T);
 process_logs([_H|T]) ->
-    MetricSpec = [{name, ?M_LOGS_WITHOUT_KUBE_APP},
-                  {help, "Number of log messages not from Kube"}],
-    prometheus_counter:declare(MetricSpec),
     prometheus_counter:inc(?M_LOGS_WITHOUT_KUBE_APP),
     process_logs(T).
