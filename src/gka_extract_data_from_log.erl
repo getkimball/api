@@ -6,7 +6,9 @@
 
 app(_Log = #{<<"kubernetes">> :=
               #{<<"namespace_name">> := NamespaceName,
-                <<"container_name">> := ContainerName}}) ->
+                <<"container_name">> := ContainerName},
+             <<"log_processed">> :=
+              #{<<"user_action">> := UserAction}}) ->
 
-    {[<<"namespace">>, <<"container">>],
-     [NamespaceName, ContainerName]}.
+    {[<<"namespace">>, <<"container">>, <<"user_action">>],
+     [NamespaceName, ContainerName, UserAction]}.

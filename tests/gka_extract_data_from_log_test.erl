@@ -7,8 +7,8 @@ unique_app_log_test() ->
     Log = log(),
 
     App = ?MUT:app(Log),
-    Expected = {[<<"namespace">>, <<"container">>],
-                [<<"getkimball">>, <<"app">>]},
+    Expected = {[<<"namespace">>, <<"container">>, <<"user_action">>],
+                [<<"getkimball">>, <<"app">>, <<"example action">>]},
 
 
     ?assertEqual(Expected, App),
@@ -28,8 +28,11 @@ log() ->
                    <<"namespace_name">> => <<"getkimball">>,
                    <<"pod_id">> => <<"21a2b857-ce70-41e4-8316-662164bae15d">>,
                    <<"pod_name">> => <<"getkimball-poc-68689bd9b5-wl6hh">>},
-             <<"log">> =>
-                 <<"                   <<\"namespace_name\">> => <<\"getkimball\">>,\n">>,
-             <<"stream">> => <<"stdout">>,
-             <<"time">> => <<"2020-03-28T14:36:49.416188617Z">>},
+            <<"log">> =>
+                <<"{\"user_action\": \"example action\", \"count\": 57996, \"event\": \"hi\"}\n">>,
+            <<"log_processed">> =>
+                #{<<"count">> => 57996,<<"event">> => <<"hi">>,
+                  <<"user_action">> => <<"example action">>},
+            <<"stream">> => <<"stdout">>,
+            <<"time">> => <<"2020-03-28T14:36:49.416188617Z">>},
     Msg.
