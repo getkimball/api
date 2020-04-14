@@ -1,4 +1,4 @@
--module(hellerl_world_sup).
+-module(service_controller_sup).
 -behaviour(supervisor).
 -include_lib("kernel/include/logger.hrl").
 
