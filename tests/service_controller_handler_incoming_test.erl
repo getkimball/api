@@ -1,7 +1,7 @@
--module(hellerl_world_handler_incoming_test).
+-module(service_controller_handler_incoming_test).
 -include_lib("eunit/include/eunit.hrl").
 
--define(MUT, hellerl_world_handler_incoming).
+-define(MUT, service_controller_handler_incoming).
 
 setup_test() ->
     {ok, _} = application:ensure_all_started(prometheus),

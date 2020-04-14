@@ -13,10 +13,10 @@ FROM debian:buster
 
 RUN apt-get update && apt-get install -y openssl && apt-get clean
 
-COPY --from=builder /app/src/_rel/hellerl_world_release/hellerl_world_release-1.tar.gz /app.tar
+COPY --from=builder /app/src/_rel/service_controller_release/service_controller_release-1.tar.gz /app.tar
 
 WORKDIR /app
 
 RUN tar -xzf /app.tar
 
-CMD ["/app/bin/hellerl_world_release", "foreground"]
+CMD ["/app/bin/service_controller_release", "foreground"]

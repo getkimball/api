@@ -1,4 +1,4 @@
-PROJECT = hellerl_world
+PROJECT = service_controller
 PROJECT_DESCRIPTION = New project
 PROJECT_VERSION = 0.1.0
 
@@ -15,6 +15,6 @@ dep_prometheus_cowboy = hex 0.1.8
 
 DEP_PLUGINS = elvis_mk
 
-SHELL_OPTS = -eval 'application:ensure_all_started(hellerl_world).' -config sys
+SHELL_OPTS = -eval 'application:ensure_all_started(service_controller).' -config sys
 
 include erlang.mk

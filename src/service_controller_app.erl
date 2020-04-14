@@ -1,4 +1,4 @@
--module(hellerl_world_app).
+-module(service_controller_app).
 -behaviour(application).
 -include_lib("kernel/include/logger.hrl").
 
@@ -6,15 +6,15 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-    ?LOG_INFO(#{what=><<"Starting Hellerl World">>}),
-    App = hellerl_world,
+    ?LOG_INFO(#{what=><<"Starting">>}),
+    App = service_controller,
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
     ],
 
     ModRoutes = cowboy_route_setup:get_routes_from_modules([
-        hellerl_world_handler_ok,
-        hellerl_world_handler_incoming
+        service_controller_handler_ok,
+        service_controller_handler_incoming
     ]),
 
     StaticRoute = [
@@ -29,7 +29,7 @@ start(_Type, _Args) ->
       metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
       stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
     }),
-    hellerl_world_sup:start_link().
+    service_controller_sup:start_link().
 
 stop(_State) ->
   ok.

@@ -1,4 +1,4 @@
--module(hellerl_world_handler_ok).
+-module(service_controller_handler_ok).
 -behaviour(cowboy_route_setup).
 
 -export([init/2,
