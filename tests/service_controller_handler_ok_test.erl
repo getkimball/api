@@ -13,6 +13,9 @@ setup_test() ->
     ok.
 
 ok_test() ->
+    meck:new(haproxy),
+    meck:expect(haproxy, frontends, fun () -> [] end),
+
     Req = cowboy_test_helpers:req(),
     Opts = [],
 
@@ -21,4 +24,7 @@ ok_test() ->
 
     ?assertEqual(200, Code),
     ?assertEqual(<<"ok!">>, Body),
+
+    meck:validate(haproxy),
+    meck:unload(haproxy),
     ok.

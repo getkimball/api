@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-controller
+  namespace: getkimball
+  labels:
+    app: service-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-controller
+  template:
+    metadata:
+      namespace: getkimball
+      labels:
+        app: service-controller
+    spec:
+      containers:
+
+      - name: service-controller
+        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/kubernetes-service-controller:master-2e54aa93098c31f63a6aa49cadd3bdf38e828fc3
+        ports:
+        - name: api
+          containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /alive
+            port: api
+
+      - name: haproxy
+        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/haproxy-api:master-d6765feb59d1eadad6382d6b107dfcee14fc5cfd
+        ports:
+        - name: http
+          containerPort: 80
