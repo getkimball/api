@@ -4,4 +4,4 @@ metadata:
   name: service-controller
   namespace: getkimball
 spec:
-  replicas: 10
+  replicas: 1
