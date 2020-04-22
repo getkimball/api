@@ -59,6 +59,7 @@ jobs:
         DOCKER_TAG: ${{ steps.set_docker_tag.outputs.docker_tag }}
         DEPLOY_CONFIG_PATH: ${{ steps.set_docker_tag.outputs.deploy_config_path }}
         KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        NAMESPACE: getkimball
       with:
         command: |
           pushd $DEPLOY_CONFIG_PATH
@@ -68,7 +69,9 @@ jobs:
           kustomize build $DEPLOY_CONFIG_PATH > .action-deploy.yaml
           cat .action-deploy.yaml
 
-          deploys=$(yq -j . .action-deploy.yaml | jq 'if .kind == "Deployment" then .metadata.name  else null end | select( . == null |not)')
-          echo $deploys
-
           kubectl apply -f .action-deploy.yaml
+
+          for DEPLOYMENT in $(yq -j . .action-deploy.yaml | jq -r 'if .kind == "Deployment" then .metadata.name  else null end | select( . == null |not)')
+          do
+            kubectl -n ${NAMESPACE} rollout status deployment ${DEPLOYMENT} --timeout=5m
+          done
