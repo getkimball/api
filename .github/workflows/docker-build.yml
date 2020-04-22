@@ -1,4 +1,4 @@
-name: Docker Build and Upload
+name: Docker Build Upload Deploy
 
 on:
   push:
@@ -59,4 +59,8 @@ jobs:
           kustomize edit set image ${ECR_REPOSITORY}=${DOCKER_TAG}
           popd
 
-          kustomize build kubernetes/overlays/production
+          kustomize build kubernetes/overlays/production > .action-deploy.yaml
+          cat .action-deploy.yaml
+
+          kubectl -n getkimball get all
+          kubectl apply -f .action-deploy.yaml
