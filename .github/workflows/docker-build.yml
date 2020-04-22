@@ -68,5 +68,7 @@ jobs:
           kustomize build $DEPLOY_CONFIG_PATH > .action-deploy.yaml
           cat .action-deploy.yaml
 
-          kubectl -n getkimball get all
+          deploys=$(yq -j . .action-deploy.yaml | jq 'if .kind == "Deployment" then .metadata.name  else null end | select( . == null |not)')
+          echo $deploys
+
           kubectl apply -f .action-deploy.yaml
