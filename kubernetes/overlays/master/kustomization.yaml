@@ -1,6 +1,7 @@
+namePrefix: master-
 commonLabels:
   org: getkimball
-  variant: production
+  branch: master
 commonAnnotations:
   note: Deployed via Github Actions
 patchesStrategicMerge:
