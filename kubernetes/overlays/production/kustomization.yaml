@@ -1,0 +1,16 @@
+namePrefix: production-
+commonLabels:
+  org: getkimball
+  variant: production
+commonAnnotations:
+  note: Hello, I am production!
+patchesStrategicMerge:
+- deployment.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+images:
+- name: 422221479733.dkr.ecr.us-east-1.amazonaws.com/kubernetes-service-controller
+  newName: foo
+  newTag: bar

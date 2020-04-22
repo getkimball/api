@@ -36,8 +36,10 @@ jobs:
       run: |
         if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
           echo "##[set-output name=docker_tag;]$(echo ${ECR_REPOSITORY}:pr-${GITHUB_SHA})"
+          echo "##[set-output name=docker_image_tag;]$(echo pr-${GITHUB_SHA})"
         else
           echo "##[set-output name=docker_tag;]$(echo ${ECR_REPOSITORY}:${GITHUB_REF##*/}-${GITHUB_SHA})"
+          echo "##[set-output name=docker_image_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA}))"
         fi
 
     - name: Build, tag, and push pull_request image to Amazon ECR
@@ -46,3 +48,14 @@ jobs:
       run: |
         docker build -t $DOCKER_TAG .
         docker push $DOCKER_TAG
+
+    - name: Kustomize and Deployment
+      uses: getkimball/deploy-action@master
+      env:
+        ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
+        DOCKER_IMAGE_TAG: ${{ steps.set_docker_tag.outputs.docker_image_tag }}
+        KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
+      with:
+        command: |
+          echo hello world
+          kustomize build kubernetes/overlays/production
