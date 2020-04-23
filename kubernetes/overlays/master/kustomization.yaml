@@ -1,0 +1,12 @@
+namePrefix: master-
+commonLabels:
+  org: getkimball
+  branch: master
+commonAnnotations:
+  note: Deployed via Github Actions
+patchesStrategicMerge:
+- deployment.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base

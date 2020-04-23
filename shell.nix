@@ -21,11 +21,12 @@ in stdenv.mkDerivation {
   name = "env";
   buildInputs = [ released_pkgs.gnumake
                   released_pkgs.erlang
-                  pinned_pkgs.kubernetes-helm
-                  pinned_pkgs.fluent-bit
                   pinned_pkgs.aws-iam-authenticator
                   pinned_pkgs.awscli
+                  pinned_pkgs.fluent-bit
                   pinned_pkgs.kubectl
                   pinned_pkgs.kubectx
+                  pinned_pkgs.kubernetes-helm
+                  pinned_pkgs.kustomize
                 ];
 }
