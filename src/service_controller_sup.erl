@@ -20,5 +20,9 @@ init([]) ->
     Ops = swaggerl:operations(API),
     ?LOG_INFO(#{what=>"Kubernetes Operations",
                 ops=>Ops}),
-    Procs = [],
+    Procs = [
+        #{id    => service_controller_service_watcher,
+          start => {service_controller_service_watcher, start_link, [API]}
+        }
+    ],
     {ok, {{one_for_one, 1, 5}, Procs}}.
