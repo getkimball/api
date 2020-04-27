@@ -93,10 +93,36 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({kubewatch, Type, Object}, State) ->
+handle_info({kubewatch, Type, Object =
+                  #{<<"metadata">> :=
+                    #{<<"namespace">> := Namespace,
+                      <<"name">> := Name ,
+                      <<"annotations">> :=
+                      #{<<"getkimball.com/name">> := GKName,
+                        <<"getkimball.com/enabled">> := <<"true">>}}}},
+            State) ->
     ?LOG_INFO(#{what=><<"Watched object">>,
                 type=>Type,
+                namespace=>Namespace,
+                name=>Name}),
+    ?LOG_DEBUG(#{what=><<"Watched object">>,
+                type=>Type,
                 object=>Object}),
+    ok = haproxy:ensure_frontend(GKName, #{}),
+
+    {noreply, State};
+handle_info({kubewatch, Type, Object = #{<<"metadata">> :=
+                                          #{<<"namespace">> := Namespace,
+                                            <<"name">> := Name }}}, State) ->
+    ?LOG_INFO(#{what=><<"Unwatched object">>,
+                type=>Type,
+                namespace=>Namespace,
+                name=>Name}),
+    ?LOG_DEBUG(#{what=><<"Unwatched object">>,
+                type=>Type,
+                namespace=>Namespace,
+                object=>Object,
+                name=>Name}),
     {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
