@@ -12,7 +12,7 @@ setup() ->
 
 init(Req0, Opts) ->
     HAPFrontends = haproxy:frontends(),
-    ?LOG_INFO(#{what=><<"frontends">>,
+    ?LOG_DEBUG(#{what=><<"frontends">>,
                 frontends=>HAPFrontends}),
 
     Req = cowboy_req:reply(200, #{

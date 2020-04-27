@@ -76,7 +76,7 @@ jobs:
           do
             IFS=","
             read -r NAMESPACE NAME <<< $NAMESPACE_AND_NAME
-            echo kubectl -n ${NAMESPACE} rollout status deployment ${NAME} --timeout=5m
-            kubectl -n ${NAMESPACE} rollout status deployment ${NAME} --timeout=5m
+            echo kubectl -n ${NAMESPACE} rollout status deployment ${NAME} --timeout=2m
+            kubectl -n ${NAMESPACE} rollout status deployment ${NAME} --timeout=2m
           done
           IFS=$OLDIFS
