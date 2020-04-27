@@ -8,6 +8,7 @@ metadata:
 spec:
   replicas: 1
   minReadySeconds: 30
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: service-controller
