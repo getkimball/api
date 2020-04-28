@@ -7,6 +7,7 @@
 
 start(_Type, _Args) ->
     ?LOG_INFO(#{what=><<"Starting">>}),
+    setup_sentry(),
     App = service_controller,
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
@@ -33,3 +34,20 @@ start(_Type, _Args) ->
 
 stop(_State) ->
   ok.
+
+setup_sentry() ->
+    DSN = os:getenv("SENTRY_DSN"),
+    case DSN of
+        false ->
+            ?LOG_INFO(#{what=>"Sentry not setup. Set 'SENTRY_DSN'"});
+        ActualDSN ->
+            logger:add_handler(
+                eraven,
+                er_logger_handler,
+                #{level => warning,
+                  config => #{
+
+                    dsn => ActualDSN
+        }})
+    end,
+    ok.
