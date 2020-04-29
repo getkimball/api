@@ -1,4 +1,5 @@
 namePrefix: master-
+namespace: getkimball
 commonLabels:
   org: getkimball
   branch: master
