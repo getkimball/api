@@ -30,6 +30,12 @@ spec:
           httpGet:
             path: /alive
             port: api
+        env:
+        - name: "SENTRY_DSN"
+          valueFrom:
+            secretKeyRef:
+              name: service-controller
+              key: sentry_dsn
 
       - name: haproxy
         image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/haproxy-api:2020-04-27-2-58d5b4afc8b421fe3f1278b8aec87b33977197b7

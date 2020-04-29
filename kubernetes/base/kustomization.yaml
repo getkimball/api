@@ -2,6 +2,7 @@
 # at https://github.com/monopole/hello
 commonLabels:
   app: service-controller
+namespace: getkimball
 
 resources:
 - cluster-role-binding.yaml

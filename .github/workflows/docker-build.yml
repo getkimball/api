@@ -59,10 +59,12 @@ jobs:
         DOCKER_TAG: ${{ steps.set_docker_tag.outputs.docker_tag }}
         DEPLOY_CONFIG_PATH: ${{ steps.set_docker_tag.outputs.deploy_config_path }}
         KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       with:
         command: |
           pushd $DEPLOY_CONFIG_PATH
           kustomize edit set image ${ECR_REPOSITORY}=${DOCKER_TAG}
+          kustomize edit add secret service-controller --from-literal=sentry_dsn=${SENTRY_DSN}
           popd
 
           kustomize build $DEPLOY_CONFIG_PATH > .action-deploy.yaml
