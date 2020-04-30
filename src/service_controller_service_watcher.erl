@@ -32,7 +32,6 @@ start_link(Args) ->
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
-
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
@@ -99,15 +98,29 @@ handle_info({kubewatch, Type, Object =
                       <<"name">> := Name ,
                       <<"annotations">> :=
                       #{<<"getkimball.com/name">> := GKName,
-                        <<"getkimball.com/enabled">> := <<"true">>}}}},
+                        <<"getkimball.com/enabled">> := <<"true">>}},
+                    <<"spec">> := #{
+                      <<"clusterIP">> := ClusterIP,
+                      <<"ports">> := ServicePorts
+                  }}},
             State) ->
     ?LOG_INFO(#{what=><<"Watched object">>,
                 type=>Type,
                 namespace=>Namespace,
+                cluster_ip=>ClusterIP,
+                ports=>ServicePorts,
+                gkname=>GKName,
                 name=>Name}),
     ?LOG_DEBUG(#{what=><<"Watched object">>,
                 type=>Type,
+                gkname=>GKName,
                 object=>Object}),
+    %% TODO: Get port number by name from above
+    BackendName = << Namespace/binary, <<"_">>/binary, Name/binary >>,
+    ok = haproxy:ensure_backend(BackendName,
+                                #{cluster_ip=>ClusterIP,
+                                  port=>80,
+                                  name=>BackendName}),
     ok = haproxy:ensure_frontend(GKName, #{}),
 
     {noreply, State};
@@ -120,8 +133,8 @@ handle_info({kubewatch, Type, Object = #{<<"metadata">> :=
                 name=>Name}),
     ?LOG_DEBUG(#{what=><<"Unwatched object">>,
                 type=>Type,
-                namespace=>Namespace,
                 object=>Object,
+                namespace=>Namespace,
                 name=>Name}),
     {noreply, State};
 handle_info(_Info, State) ->
