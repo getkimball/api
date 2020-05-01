@@ -82,20 +82,13 @@ put_frontend(Name, Version, Options) ->
     Path = "services/haproxy/configuration/frontends/" ++ LName,
     {ok, Code, Body} = hap_payload_request(put, Path, Version, Options),
 
-    case Code of
-        404 -> {error, not_found};
-        200 -> ok;
-        Else -> {error, {Else, Body}}
-    end.
+    http_code_transform(put, Code, Body).
 
 post_frontend(_Name, Version, Options) ->
     Path = "services/haproxy/configuration/frontends",
 
     {ok, Code, Body} = hap_payload_request(post, Path, Version, Options),
-    case Code of
-        202 -> ok;
-        Else -> {error, {Else, Body}}
-    end.
+    http_code_transform(post, Code, Body).
 
 frontend_options(Name) ->
     #{<<"name">> => Name,
@@ -124,12 +117,7 @@ put_backend(Name, Version, Options) ->
     ROptions = maps:merge(#{<<"name">> => Name}, Options),
 
     {ok, Code, Body} = hap_payload_request(put, Path, Version, ROptions),
-    case Code of
-        404 -> {error, not_found};
-        200 -> ok;
-        202 -> ok;
-        Else -> {error, {Else, Body}}
-    end.
+    http_code_transform(put, Code, Body).
 
 post_backend(Name, Version, Options) ->
     Path = "services/haproxy/configuration/backends/",
@@ -137,11 +125,7 @@ post_backend(Name, Version, Options) ->
     ROptions = maps:merge(#{<<"name">> => Name}, Options),
 
     {ok, Code, Body} = hap_payload_request(post, Path, Version, ROptions),
-    case Code of
-        404 -> {error, not_found};
-        202 -> ok;
-        Else -> {error, {Else, Body}}
-    end.
+    http_code_transform(post, Code, Body).
 
 binds(FEName) ->
     Path = "/services/haproxy/configuration/binds",
@@ -173,13 +157,9 @@ put_bind(Name, Version, Options) ->
     ROptions = maps:merge(#{<<"name">> => Name}, Options),
     QueryArgs = [{<<"frontend">>, Name}],
 
-    {ok, Code, Body} = hap_payload_request(put, Path, Version, ROptions, QueryArgs),
-    case Code of
-        404 -> {error, not_found};
-        200 -> ok;
-        202 -> ok;
-        Else -> {error, {Else, Body}}
-    end.
+    {ok, Code, Body} = hap_payload_request(
+          put, Path, Version, ROptions, QueryArgs),
+    http_code_transform(put, Code, Body).
 
 post_bind(Name, Version, Options) ->
     Path = "/services/haproxy/configuration/binds",
@@ -187,12 +167,9 @@ post_bind(Name, Version, Options) ->
     ROptions = maps:merge(#{<<"name">> => Name}, Options),
     QueryArgs = [{<<"frontend">>, Name}],
 
-    {ok, Code, Body} = hap_payload_request(post, Path, Version, ROptions, QueryArgs),
-    case Code of
-        404 -> {error, not_found};
-        202 -> ok;
-        Else -> {error, {Else, Body}}
-    end.
+    {ok, Code, Body} = hap_payload_request(
+        post, Path, Version, ROptions, QueryArgs),
+    http_code_transform(post, Code, Body).
 
 json_request(Method, URL, ReqHeaders, Payload, Options) ->
     JSONPayload = jsx:encode(Payload),
@@ -217,4 +194,18 @@ request_with_retry(Method, URL, H, P, Opts, Retries) ->
                        retries_left=>Retries - 1}),
           request_with_retry(Method, URL, H, P, Opts, Retries -1);
       Else -> Else
+    end.
+
+
+http_code_transform(put, Code, Body) ->
+    case Code of
+        404 -> {error, not_found};
+        200 -> ok;
+        202 -> ok;
+        Else -> {error, {Else, Body}}
+    end;
+http_code_transform(post, Code, Body) ->
+    case Code of
+        202 -> ok;
+        Else -> {error, {Else, Body}}
     end.
