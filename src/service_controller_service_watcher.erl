@@ -117,10 +117,10 @@ handle_info({kubewatch, Type, Object =
                 object=>Object}),
     %% TODO: Get port number by name from above
     BackendName = << Namespace/binary, <<"_">>/binary, Name/binary >>,
-    ok = haproxy:ensure_backend(BackendName,
-                                #{cluster_ip=>ClusterIP,
-                                  port=>80,
-                                  name=>BackendName}),
+    ok = haproxy:ensure_backend(BackendName, #{name=>BackendName}),
+    ok = haproxy:ensure_server(BackendName, #{backend_name=>BackendName,
+                                              cluster_ip=>ClusterIP,
+                                              port=>80}),
     ok = haproxy:ensure_frontend(GKName, #{}),
     ok = haproxy:ensure_bind(GKName, #{port=>80}),
 
