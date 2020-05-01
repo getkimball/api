@@ -122,6 +122,7 @@ handle_info({kubewatch, Type, Object =
                                   port=>80,
                                   name=>BackendName}),
     ok = haproxy:ensure_frontend(GKName, #{}),
+    ok = haproxy:ensure_bind(GKName, #{port=>80}),
 
     {noreply, State};
 handle_info({kubewatch, Type, Object = #{<<"metadata">> :=
