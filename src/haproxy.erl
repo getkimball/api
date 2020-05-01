@@ -3,10 +3,12 @@
 
 -export([frontends/0,
          backends/0,
+         servers/1,
          binds/1,
          ensure_frontend/2,
          ensure_backend/2,
          ensure_bind/2,
+         ensure_server/2,
          request/2]).
 
 -define(JSON_HEADER, {<<"content-type">>, <<"application/json">>}).
@@ -63,10 +65,10 @@ hap_payload_request(Method, Path, Version, Opts, QueryArgs) ->
 frontends() ->
     retried_get("services/haproxy/configuration/frontends").
 
-ensure_frontend(Name, _Options) when is_binary(Name) ->
+ensure_frontend(Name, #{default_backend:=BackendName}) when is_binary(Name) ->
     % LName = binary:bin_to_list(Name),
     #{<<"_version">> := PutVersion} = haproxy:frontends(),
-    FEOptions = frontend_options(Name),
+    FEOptions = frontend_options(Name, BackendName),
     Resp = put_frontend(Name, PutVersion, FEOptions),
     case Resp of
       ok -> ok;
@@ -90,9 +92,10 @@ post_frontend(_Name, Version, Options) ->
     {ok, Code, Body} = hap_payload_request(post, Path, Version, Options),
     http_code_transform(post, Code, Body).
 
-frontend_options(Name) ->
+frontend_options(Name, BackendName) ->
     #{<<"name">> => Name,
      <<"mode">> => <<"http">>,
+     <<"default_backend">> => BackendName,
      <<"maxconn">> => 2000}.
 
 backends() ->
@@ -170,6 +173,53 @@ post_bind(Name, Version, Options) ->
     {ok, Code, Body} = hap_payload_request(
         post, Path, Version, ROptions, QueryArgs),
     http_code_transform(post, Code, Body).
+
+servers(BEName) ->
+    Path = "/services/haproxy/configuration/servers",
+    QueryArgs = [{<<"backend">>, BEName}],
+
+    retried_get(Path, QueryArgs).
+
+ensure_server(Name, #{backend_name:=BEName,
+                      cluster_ip:=ClusterIP,
+                      port:=Port}) when is_binary(Name) ->
+    #{<<"_version">> := PutVersion} = haproxy:servers(BEName),
+    Options = #{
+        name => BEName,
+        address => ClusterIP,
+        port => Port
+    },
+
+    Resp = put_server(Name, PutVersion, Options),
+    case Resp of
+      ok -> ok;
+      {error, not_found} ->
+          #{<<"_version">> := PostVersion} = haproxy:servers(Name),
+          post_server(Name, PostVersion, Options);
+      Else -> Else
+    end.
+
+put_server(Name, Version, Options) ->
+    LName = binary:bin_to_list(Name),
+    Path = "services/haproxy/configuration/servers/" ++ LName,
+
+    ROptions = maps:merge(#{<<"name">> => Name}, Options),
+    QueryArgs = [{<<"backend">>, Name}],
+
+    {ok, Code, Body} = hap_payload_request(
+          put, Path, Version, ROptions, QueryArgs),
+    http_code_transform(put, Code, Body).
+
+post_server(Name, Version, Options) ->
+    Path = "/services/haproxy/configuration/servers",
+
+    ROptions = maps:merge(#{<<"name">> => Name}, Options),
+    QueryArgs = [{<<"backend">>, Name}],
+
+    {ok, Code, Body} = hap_payload_request(
+        post, Path, Version, ROptions, QueryArgs),
+    http_code_transform(post, Code, Body).
+
 
 json_request(Method, URL, ReqHeaders, Payload, Options) ->
     JSONPayload = jsx:encode(Payload),

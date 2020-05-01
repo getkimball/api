@@ -38,7 +38,7 @@ spec:
               key: sentry_dsn
 
       - name: haproxy
-        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/haproxy-api:2020-04-30-0-dd1570e6ce06b6120615e04c57e8c7da9ae84e12
+        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/haproxy-api:2020-05-01-6e29324077d2e100ba992156efb3f4b95eb231da
         ports:
         - name: http
           containerPort: 80
