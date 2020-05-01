@@ -65,10 +65,10 @@ hap_payload_request(Method, Path, Version, Opts, QueryArgs) ->
 frontends() ->
     retried_get("services/haproxy/configuration/frontends").
 
-ensure_frontend(Name, _Options) when is_binary(Name) ->
+ensure_frontend(Name, #{default_backend:=BackendName}) when is_binary(Name) ->
     % LName = binary:bin_to_list(Name),
     #{<<"_version">> := PutVersion} = haproxy:frontends(),
-    FEOptions = frontend_options(Name),
+    FEOptions = frontend_options(Name, BackendName),
     Resp = put_frontend(Name, PutVersion, FEOptions),
     case Resp of
       ok -> ok;
@@ -92,9 +92,10 @@ post_frontend(_Name, Version, Options) ->
     {ok, Code, Body} = hap_payload_request(post, Path, Version, Options),
     http_code_transform(post, Code, Body).
 
-frontend_options(Name) ->
+frontend_options(Name, BackendName) ->
     #{<<"name">> => Name,
      <<"mode">> => <<"http">>,
+     <<"default_backend">> => BackendName,
      <<"maxconn">> => 2000}.
 
 backends() ->
