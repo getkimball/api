@@ -11,13 +11,20 @@
          handle_cast/2,
          handle_info/2,
          terminate/2,
+         backends/1,
          code_change/3]).
 
 -record(state, {api, pid}).
 
+-define(SERVICE_REGISTRY, service_registry_table).
+
 %%%===================================================================
 %%% API functions
 %%%===================================================================
+backends(Frontend) ->
+    Registrations = ets:lookup(?SERVICE_REGISTRY, Frontend),
+    [BE || {_FE, BE} <- Registrations].
+
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -46,6 +53,8 @@ start_link(Args) ->
 init(API) ->
     ?LOG_INFO(#{msg => "Service watcher starting"}),
     Self = self(),
+    ?SERVICE_REGISTRY = ets:new(?SERVICE_REGISTRY,
+                                [bag, named_table, {read_concurrency, true}]),
     Callback = fun({Type, Obj}) -> Self ! {kubewatch, Type, Obj} end,
     Pid = kuberlnetes:spawn_watch(
         Callback, API, "listCoreV1ServiceForAllNamespaces", []),
@@ -116,14 +125,17 @@ handle_info({kubewatch, Type, Object =
                 gkname=>GKName,
                 object=>Object}),
     %% TODO: Get port number by name from above
+    FrontendName = GKName,
     BackendName = << Namespace/binary, <<"_">>/binary, Name/binary >>,
     ok = haproxy:ensure_backend(BackendName, #{name=>BackendName,
                                                mode=><<"http">>}),
     ok = haproxy:ensure_server(BackendName, #{backend_name=>BackendName,
                                               cluster_ip=>ClusterIP,
                                               port=>80}),
-    ok = haproxy:ensure_frontend(GKName, #{default_backend=>BackendName}),
-    ok = haproxy:ensure_bind(GKName, #{port=>80}),
+    ok = haproxy:ensure_frontend(FrontendName, #{default_backend=>BackendName}),
+    ok = haproxy:ensure_bind(FrontendName, #{port=>80}),
+    % ok = haproxy:ensure_gk_lua(GKName),
+    ok = ensure_service_registered(FrontendName, BackendName),
 
     {noreply, State};
 handle_info({kubewatch, Type, Object = #{<<"metadata">> :=
@@ -170,3 +182,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+ensure_service_registered(Frontend, Backend) ->
+    true = ets:insert(?SERVICE_REGISTRY, {Frontend, Backend}),
+    ok.

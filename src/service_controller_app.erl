@@ -8,6 +8,7 @@
 start(_Type, _Args) ->
     ?LOG_INFO(#{what=><<"Starting">>}),
     setup_sentry(),
+    {ok, _} = setup_ranch(),
     App = service_controller,
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
@@ -51,3 +52,10 @@ setup_sentry() ->
         }})
     end,
     ok.
+
+setup_ranch() ->
+  {ok, _} = ranch:start_listener(tcp_echo,
+                ranch_tcp, [{port, 5556}],
+                service_controller_hap_backend_decider, []
+  ).
+

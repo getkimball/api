@@ -5,10 +5,12 @@
          backends/0,
          servers/1,
          binds/1,
+         http_request_rules/2,
          ensure_frontend/2,
          ensure_backend/2,
          ensure_bind/2,
          ensure_server/2,
+         ensure_gk_lua/1,
          request/2]).
 
 -define(JSON_HEADER, {<<"content-type">>, <<"application/json">>}).
@@ -220,6 +222,49 @@ post_server(Name, Version, Options) ->
         post, Path, Version, ROptions, QueryArgs),
     http_code_transform(post, Code, Body).
 
+frontend_request_rules_query(Name) ->
+    [{<<"parent_name">>, Name},
+     {<<"parent_type">>, <<"frontend">>}].
+
+http_request_rules(frontend, Name) ->
+    Path = "/services/haproxy/configuration/http_request_rules",
+    QueryArgs = frontend_request_rules_query(Name),
+
+    retried_get(Path, QueryArgs).
+ensure_gk_lua(Name) when is_binary(Name) ->
+    #{<<"_version">> := PutVersion} = haproxy:http_request_rules(
+                                              frontend, Name),
+    Options = #{
+        id => 0,
+        type => <<"lua.gkcookie">>
+    },
+    QueryArgs = frontend_request_rules_query(Name),
+
+    Resp = put_http_request_rule(PutVersion, QueryArgs, Options),
+    case Resp of
+      ok -> ok;
+      {error, not_found} ->
+          #{<<"_version">> := PostVersion} = haproxy:http_request_rules(
+                                                frontend, Name),
+          post_http_request_rule(PostVersion, QueryArgs, Options);
+      Else -> Else
+    end.
+
+put_http_request_rule(Version, QueryArgs, Options=#{id:=Id}) ->
+    LID = integer_to_list(Id),
+    Path = "services/haproxy/configuration/http_request_rules/" ++ LID,
+
+
+    {ok, Code, Body} = hap_payload_request(
+          put, Path, Version, Options, QueryArgs),
+    http_code_transform(put, Code, Body).
+
+post_http_request_rule(Version, QueryArgs, Options) ->
+    Path = "/services/haproxy/configuration/http_request_rules",
+
+    {ok, Code, Body} = hap_payload_request(
+        post, Path, Version, Options, QueryArgs),
+    http_code_transform(post, Code, Body).
 
 json_request(Method, URL, ReqHeaders, Payload, Options) ->
     JSONPayload = jsx:encode(Payload),
