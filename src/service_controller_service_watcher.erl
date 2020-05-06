@@ -101,6 +101,36 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info({kubewatch, Type= <<"DELETED">>, Object =
+                  #{<<"metadata">> :=
+                    #{<<"namespace">> := Namespace,
+                      <<"name">> := Name ,
+                      <<"annotations">> :=
+                      #{<<"getkimball.com/name">> := GKName,
+                        <<"getkimball.com/enabled">> := <<"true">>}},
+                    <<"spec">> := #{
+                      <<"clusterIP">> := ClusterIP,
+                      <<"ports">> := ServicePorts
+                  }}},
+            State) ->
+    ?LOG_INFO(#{what=><<"Watched object">>,
+                type=>Type,
+                namespace=>Namespace,
+                cluster_ip=>ClusterIP,
+                ports=>ServicePorts,
+                gkname=>GKName,
+                name=>Name}),
+    ?LOG_DEBUG(#{what=><<"Watched object">>,
+                type=>Type,
+                gkname=>GKName,
+                object=>Object}),
+    %% TODO: Get port number by name from above
+    FrontendName = GKName,
+    BackendName = << Namespace/binary, <<"_">>/binary, Name/binary >>,
+    ok = ensure_service_unregistered(FrontendName, BackendName),
+    ok = haproxy:ensure_no_backend(BackendName),
+    {noreply, State};
+
 handle_info({kubewatch, Type, Object =
                   #{<<"metadata">> :=
                     #{<<"namespace">> := Namespace,
@@ -185,4 +215,8 @@ code_change(_OldVsn, State, _Extra) ->
 
 ensure_service_registered(Frontend, Backend) ->
     true = ets:insert(?SERVICE_REGISTRY, {Frontend, Backend}),
+    ok.
+
+ensure_service_unregistered(Frontend, Backend) ->
+    true = ets:delete_object(?SERVICE_REGISTRY, {Frontend, Backend}),
     ok.

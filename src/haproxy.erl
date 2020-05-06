@@ -8,6 +8,7 @@
          http_request_rules/2,
          ensure_frontend/2,
          ensure_backend/2,
+         ensure_no_backend/1,
          ensure_bind/2,
          ensure_server/2,
          ensure_gk_lua/1,
@@ -40,6 +41,29 @@ retried_get(Path, QueryArgs) ->
     {ok, Body} = hackney:body(Ref),
     Data = jsx:decode(Body, [return_maps]),
     Data.
+
+delete(Path, Version) ->
+    URL = base_url() ++ Path,
+    Params = [{"version", list_to_binary(integer_to_list(Version))}],
+    URLParams = uri_string:compose_query(Params),
+    URLWithParams = URL ++ "?" ++ URLParams,
+
+    ?LOG_DEBUG(#{what=>"haproxy http request",
+                 request_method=>delete,
+                 request_path=>URLWithParams}),
+    {ok, Code, _Headers, Ref} = request_with_retry(delete,
+                                                   URLWithParams,
+                                                   [],
+                                                   [],
+                                                   [auth_option()],
+                                                   1),
+    {ok, Body} = hackney:body(Ref),
+    ?LOG_DEBUG(#{what=>"haproxy http response",
+                 code=>Code,
+                 request_method=>delete,
+                 request_path=>URLWithParams,
+                 response=>Body}),
+    {ok, Code, Body}.
 
 hap_payload_request(Method, Path, Version, Opts) ->
     hap_payload_request(Method, Path, Version, Opts, []).
@@ -94,17 +118,16 @@ post_frontend(_Name, Version, Options) ->
     {ok, Code, Body} = hap_payload_request(post, Path, Version, Options),
     http_code_transform(post, Code, Body).
 
-frontend_options(Name, BackendName) ->
+frontend_options(Name, _BackendName) ->
     #{<<"name">> => Name,
      <<"mode">> => <<"http">>,
-     <<"default_backend">> => BackendName,
+     % <<"default_backend">> => BackendName,
      <<"maxconn">> => 2000}.
 
 backends() ->
     retried_get("services/haproxy/configuration/backends").
 
 ensure_backend(Name, Options) when is_binary(Name) ->
-    % LName = binary:bin_to_list(Name),
     #{<<"_version">> := PutVersion} = haproxy:backends(),
     Resp = put_backend(Name, PutVersion, Options),
     case Resp of
@@ -114,6 +137,21 @@ ensure_backend(Name, Options) when is_binary(Name) ->
           post_backend(Name, PostVersion, Options);
       Else -> Else
     end.
+
+ensure_no_backend(Name) when is_binary(Name) ->
+    #{<<"_version">> := DelVersion} = haproxy:backends(),
+    Resp = delete_backend(Name, DelVersion),
+    case Resp of
+      ok -> ok;
+      {error, not_found} -> ok;
+      Else -> Else
+    end.
+
+delete_backend(Name, Version) ->
+    LName = binary:bin_to_list(Name),
+    Path = "services/haproxy/configuration/backends/" ++ LName,
+    {ok, Code, Body} = delete(Path, Version),
+    http_code_transform(delete, Code, Body).
 
 put_backend(Name, Version, Options) ->
     LName = binary:bin_to_list(Name),
@@ -297,6 +335,12 @@ http_code_transform(put, Code, Body) ->
         404 -> {error, not_found};
         200 -> ok;
         202 -> ok;
+        Else -> {error, {Else, Body}}
+    end;
+http_code_transform(delete, Code, Body) ->
+    case Code of
+        202 -> ok;
+        204 -> ok;
         Else -> {error, {Else, Body}}
     end;
 http_code_transform(post, Code, Body) ->
