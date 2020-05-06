@@ -22,9 +22,6 @@ auth_option() ->
     Pass = <<"insecure-password">>,
     {basic_auth, {User, Pass}}.
 
-hap_request(Method, Path, Version, QueryArgs, Body) ->
-    hap_request(Method, Path, Version, QueryArgs, Body, 1).
-
 hap_request(Method, Path, Version, QueryArgs, Body, Attempts) ->
     URL = base_url() ++ Path,
 
@@ -97,6 +94,18 @@ request_with_retry(Method, URL, H, P, Retries) ->
       Else -> Else
     end.
 
+ensure(PutPath, PostPath, VersionFunc, QueryArgs, Options) ->
+    #{<<"_version">> := PutVersion} = VersionFunc(),
+    Resp = hap_request(put, PutPath, PutVersion, QueryArgs, Options, 1),
+    case Resp of
+      ok -> ok;
+      {error, not_found} ->
+          #{<<"_version">> := PostVersion} = VersionFunc(),
+          hap_request(post, PostPath, PostVersion, QueryArgs, Options, 1);
+      Else -> Else
+    end.
+
+
 frontends() ->
     {ok, Body} = hap_request(
         get, "services/haproxy/configuration/frontends", [], [], [], 3),
@@ -108,16 +117,7 @@ ensure_frontend(Name, #{}) when is_binary(Name) ->
     PostPath = "services/haproxy/configuration/frontends",
     FEOptions = frontend_options(Name, <<"">>),
 
-    #{<<"_version">> := PutVersion} = haproxy:frontends(),
-
-    Resp = hap_request(put, PutPath, PutVersion, [], FEOptions, 1),
-    case Resp of
-      ok -> ok;
-      {error, not_found} ->
-          #{<<"_version">> := PostVersion} = haproxy:frontends(),
-          hap_request(post, PostPath, PostVersion, [], FEOptions, 1);
-      Else -> Else
-    end.
+    ensure(PutPath, PostPath, fun frontends/0, [], FEOptions).
 
 frontend_options(Name, _BackendName) ->
     #{<<"name">> => Name,
@@ -137,15 +137,7 @@ ensure_backend(Name, Options) when is_binary(Name) ->
     PostPath = "services/haproxy/configuration/backends",
     BEOptions = Options,
 
-    #{<<"_version">> := PutVersion} = haproxy:backends(),
-    Resp = hap_request(put, PutPath, PutVersion, [], Options),
-    case Resp of
-      ok -> ok;
-      {error, not_found} ->
-          #{<<"_version">> := PostVersion} = haproxy:backends(),
-          hap_request(post, PostPath, PostVersion, [], BEOptions);
-      Else -> Else
-    end.
+    ensure(PutPath, PostPath, fun backends/0, [], BEOptions).
 
 ensure_no_backend(Name) when is_binary(Name) ->
     LName = binary:bin_to_list(Name),
@@ -164,7 +156,6 @@ ensure_bind(Name, Opts) when is_binary(Name) ->
     LName = binary:bin_to_list(Name),
     PutPath = "services/haproxy/configuration/binds/" ++ LName,
     PostPath = "services/haproxy/configuration/binds",
-    #{<<"_version">> := PutVersion} = haproxy:binds(Name),
     Options = #{
         name => Name,
         address => <<"0.0.0.0">>,
@@ -172,14 +163,7 @@ ensure_bind(Name, Opts) when is_binary(Name) ->
     },
     QueryArgs = [{<<"frontend">>, Name}],
 
-    Resp = hap_request(put, PutPath, PutVersion, QueryArgs, Options),
-    case Resp of
-      ok -> ok;
-      {error, not_found} ->
-          #{<<"_version">> := PostVersion} = haproxy:binds(Name),
-          hap_request(post, PostPath, PostVersion, QueryArgs, Options);
-      Else -> Else
-    end.
+    ensure(PutPath, PostPath, fun() -> binds(Name) end, QueryArgs, Options).
 
 servers(BEName) ->
     Path = "/services/haproxy/configuration/servers",
@@ -194,7 +178,6 @@ ensure_server(Name, #{backend_name:=BEName,
     PutPath = "services/haproxy/configuration/servers/" ++ LName,
     PostPath = "services/haproxy/configuration/servers",
 
-    #{<<"_version">> := PutVersion} = haproxy:servers(BEName),
     Options = #{
         name => BEName,
         address => ClusterIP,
@@ -202,14 +185,7 @@ ensure_server(Name, #{backend_name:=BEName,
     },
     QueryArgs = [{<<"backend">>, BEName}],
 
-    Resp = hap_request(put, PutPath, PutVersion, QueryArgs, Options),
-    case Resp of
-      ok -> ok;
-      {error, not_found} ->
-          #{<<"_version">> := PostVersion} = haproxy:servers(Name),
-          hap_request(post, PostPath, PostVersion, QueryArgs, Options);
-      Else -> Else
-    end.
+    ensure(PutPath, PostPath, fun() -> servers(BEName) end, QueryArgs, Options).
 
 frontend_request_rules_query(Name) ->
     [{<<"parent_name">>, Name},
