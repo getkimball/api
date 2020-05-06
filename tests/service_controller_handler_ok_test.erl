@@ -25,6 +25,6 @@ ok_test() ->
     ?assertEqual(200, Code),
     ?assertEqual(<<"ok!">>, Body),
 
-    meck:validate(haproxy),
+    true = meck:validate(haproxy),
     meck:unload(haproxy),
     ok.
