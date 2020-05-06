@@ -162,7 +162,7 @@ handle_info({kubewatch, Type, Object =
     ok = haproxy:ensure_server(BackendName, #{backend_name=>BackendName,
                                               cluster_ip=>ClusterIP,
                                               port=>80}),
-    ok = haproxy:ensure_frontend(FrontendName, #{default_backend=>BackendName}),
+    ok = haproxy:ensure_frontend(FrontendName, #{}),
     ok = haproxy:ensure_bind(FrontendName, #{port=>80}),
     % ok = haproxy:ensure_gk_lua(GKName),
     ok = ensure_service_registered(FrontendName, BackendName),

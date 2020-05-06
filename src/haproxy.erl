@@ -10,15 +10,9 @@
          ensure_backend/2,
          ensure_no_backend/1,
          ensure_bind/2,
-         ensure_server/2,
-         ensure_gk_lua/1,
-         request/2]).
+         ensure_server/2]).
 
 -define(JSON_HEADER, {<<"content-type">>, <<"application/json">>}).
-
--spec request(map(), binary()) -> any().
-request(_Connection, _Request) ->
-    ok.
 
 base_url() ->
     "http://localhost:5555/v1/".
@@ -28,95 +22,102 @@ auth_option() ->
     Pass = <<"insecure-password">>,
     {basic_auth, {User, Pass}}.
 
-retried_get(Path) ->
-    retried_get(Path, []).
+hap_request(Method, Path, Version, QueryArgs, Body) ->
+    hap_request(Method, Path, Version, QueryArgs, Body, 1).
 
-retried_get(Path, QueryArgs) ->
+hap_request(Method, Path, Version, QueryArgs, Body, Attempts) ->
     URL = base_url() ++ Path,
-    URLParams = uri_string:compose_query(QueryArgs),
-    URLWithParams = URL ++ "?" ++ URLParams,
-    {ok, _Code, _Headers, Ref} = request_with_retry(get, URLWithParams, [], [],
-                                                 [auth_option()],
-                                                 3),
-    {ok, Body} = hackney:body(Ref),
-    Data = jsx:decode(Body, [return_maps]),
-    Data.
 
-delete(Path, Version) ->
-    URL = base_url() ++ Path,
-    Params = [{"version", list_to_binary(integer_to_list(Version))}],
-    URLParams = uri_string:compose_query(Params),
-    URLWithParams = URL ++ "?" ++ URLParams,
+    QueryArgsWithVersion = case Version of
+        [] -> QueryArgs;
+        Else -> VersionArg = [
+                  {"version", list_to_binary(integer_to_list(Else))}
+                ],
+                QueryArgs ++ VersionArg
+    end,
 
-    ?LOG_DEBUG(#{what=>"haproxy http request",
-                 request_method=>delete,
-                 request_path=>URLWithParams}),
-    {ok, Code, _Headers, Ref} = request_with_retry(delete,
-                                                   URLWithParams,
-                                                   [],
-                                                   [],
-                                                   [auth_option()],
-                                                   1),
-    {ok, Body} = hackney:body(Ref),
-    ?LOG_DEBUG(#{what=>"haproxy http response",
-                 code=>Code,
-                 request_method=>delete,
-                 request_path=>URLWithParams,
-                 response=>Body}),
-    {ok, Code, Body}.
+    URLWithParams = case QueryArgsWithVersion of
+        [] -> URL;
+        ElseParams -> URL ++ "?" ++ uri_string:compose_query(ElseParams)
+    end,
 
-hap_payload_request(Method, Path, Version, Opts) ->
-    hap_payload_request(Method, Path, Version, Opts, []).
+    Payload = case Body of
+        [] -> [];
+        ElseBody -> jsx:encode(ElseBody)
+    end,
 
-hap_payload_request(Method, Path, Version, Opts, QueryArgs) ->
-    URL = base_url() ++ Path,
-    Params = [{"version", list_to_binary(integer_to_list(Version))}| QueryArgs],
-    URLParams = uri_string:compose_query(Params),
-    URLWithParams = URL ++ "?" ++ URLParams,
     Headers = [?JSON_HEADER],
+
+    request(Method, URLWithParams, Headers, Payload, Attempts).
+
+
+request(Method, URL, Headers, Payload, Attempts) ->
     ?LOG_DEBUG(#{what=>"haproxy http request",
-                 request_payload=>Opts,
+                 request_payload=>Payload,
                  request_method=>Method,
-                 request_path=>URLWithParams}),
-    {ok, Code, _Headers, Body} = json_request(Method, URLWithParams,
-                                        Headers, Opts, [auth_option()]),
+                 request_path=>URL}),
+
+    {ok, Code, _Headers, Ref} = request_with_retry(
+          Method, URL, Headers, Payload, Attempts),
+    {ok, Body} = hackney:body(Ref),
+
     ?LOG_DEBUG(#{what=>"haproxy http response",
                  code=>Code,
                  request_method=>Method,
-                 request_payload=>Opts,
-                 request_path=>URLWithParams,
+                 request_payload=>Payload,
+                 request_path=>URL,
                  response=>Body}),
-    {ok, Code, Body}.
+    Data = case Body of
+        <<>> -> #{};
+        Else -> jsx:decode(Else, [return_maps])
+    end,
+
+    ?LOG_DEBUG(#{what=>"haproxy http response",
+                 code=>Code,
+                 request_method=>Method,
+                 request_payload=>Payload,
+                 request_data=>Data,
+                 request_path=>URL,
+                 response=>Body}),
+
+    http_code_transform(Method, Code, Data).
+
+request_with_retry(_Method, _URL, _H, _P, 0) ->
+    {error, no_more_retries};
+request_with_retry(Method, URL, H, P, Retries) ->
+    Opts = [auth_option()],
+    case hackney:request(Method, URL, H, P, Opts) of
+      {error, Reason} ->
+          ?LOG_INFO(#{what=>"Request Error",
+                       url=>URL,
+                       payload=>P,
+                       reason=>Reason,
+                       retries_left=>Retries - 1}),
+          request_with_retry(Method, URL, H, P, Retries -1);
+      Else -> Else
+    end.
 
 frontends() ->
-    retried_get("services/haproxy/configuration/frontends").
+    {ok, Body} = hap_request(
+        get, "services/haproxy/configuration/frontends", [], [], [], 3),
+    Body.
 
-ensure_frontend(Name, #{default_backend:=BackendName}) when is_binary(Name) ->
-    % LName = binary:bin_to_list(Name),
+ensure_frontend(Name, #{}) when is_binary(Name) ->
+    LName = binary:bin_to_list(Name),
+    PutPath = "services/haproxy/configuration/frontends/" ++ LName,
+    PostPath = "services/haproxy/configuration/frontends",
+    FEOptions = frontend_options(Name, <<"">>),
+
     #{<<"_version">> := PutVersion} = haproxy:frontends(),
-    FEOptions = frontend_options(Name, BackendName),
-    Resp = put_frontend(Name, PutVersion, FEOptions),
+
+    Resp = hap_request(put, PutPath, PutVersion, [], FEOptions, 1),
     case Resp of
       ok -> ok;
       {error, not_found} ->
           #{<<"_version">> := PostVersion} = haproxy:frontends(),
-          post_frontend(Name, PostVersion, FEOptions);
+          hap_request(post, PostPath, PostVersion, [], FEOptions, 1);
       Else -> Else
     end.
-
-
-put_frontend(Name, Version, Options) ->
-    LName = binary:bin_to_list(Name),
-    Path = "services/haproxy/configuration/frontends/" ++ LName,
-    {ok, Code, Body} = hap_payload_request(put, Path, Version, Options),
-
-    http_code_transform(put, Code, Body).
-
-post_frontend(_Name, Version, Options) ->
-    Path = "services/haproxy/configuration/frontends",
-
-    {ok, Code, Body} = hap_payload_request(post, Path, Version, Options),
-    http_code_transform(post, Code, Body).
 
 frontend_options(Name, _BackendName) ->
     #{<<"name">> => Name,
@@ -125,140 +126,90 @@ frontend_options(Name, _BackendName) ->
      <<"maxconn">> => 2000}.
 
 backends() ->
-    retried_get("services/haproxy/configuration/backends").
+    {ok, Body} = hap_request(
+        get, "services/haproxy/configuration/backends", [], [], [], 3),
+    ?LOG_INFO(#{what=><<"backends">>, body=>Body}),
+    Body.
 
 ensure_backend(Name, Options) when is_binary(Name) ->
+    LName = binary:bin_to_list(Name),
+    PutPath = "services/haproxy/configuration/backends/" ++ LName,
+    PostPath = "services/haproxy/configuration/backends",
+    BEOptions = Options,
+
     #{<<"_version">> := PutVersion} = haproxy:backends(),
-    Resp = put_backend(Name, PutVersion, Options),
+    Resp = hap_request(put, PutPath, PutVersion, [], Options),
     case Resp of
       ok -> ok;
       {error, not_found} ->
           #{<<"_version">> := PostVersion} = haproxy:backends(),
-          post_backend(Name, PostVersion, Options);
+          hap_request(post, PostPath, PostVersion, [], BEOptions);
       Else -> Else
     end.
 
 ensure_no_backend(Name) when is_binary(Name) ->
-    #{<<"_version">> := DelVersion} = haproxy:backends(),
-    Resp = delete_backend(Name, DelVersion),
-    case Resp of
-      ok -> ok;
-      {error, not_found} -> ok;
-      Else -> Else
-    end.
-
-delete_backend(Name, Version) ->
     LName = binary:bin_to_list(Name),
     Path = "services/haproxy/configuration/backends/" ++ LName,
-    {ok, Code, Body} = delete(Path, Version),
-    http_code_transform(delete, Code, Body).
+    #{<<"_version">> := Version} = haproxy:backends(),
+    hap_request(delete, Path, Version, [], [], 1).
 
-put_backend(Name, Version, Options) ->
-    LName = binary:bin_to_list(Name),
-    Path = "services/haproxy/configuration/backends/" ++ LName,
-
-    ROptions = maps:merge(#{<<"name">> => Name}, Options),
-
-    {ok, Code, Body} = hap_payload_request(put, Path, Version, ROptions),
-    http_code_transform(put, Code, Body).
-
-post_backend(Name, Version, Options) ->
-    Path = "services/haproxy/configuration/backends/",
-
-    ROptions = maps:merge(#{<<"name">> => Name}, Options),
-
-    {ok, Code, Body} = hap_payload_request(post, Path, Version, ROptions),
-    http_code_transform(post, Code, Body).
 
 binds(FEName) ->
     Path = "/services/haproxy/configuration/binds",
     QueryArgs = [{<<"frontend">>, FEName}],
-
-    retried_get(Path, QueryArgs).
+    {ok, Body} = hap_request(get, Path, [], QueryArgs, [], 3),
+    Body.
 
 ensure_bind(Name, Opts) when is_binary(Name) ->
-    #{<<"_version">> := PutVersion} = haproxy:backends(),
+    LName = binary:bin_to_list(Name),
+    PutPath = "services/haproxy/configuration/binds/" ++ LName,
+    PostPath = "services/haproxy/configuration/binds",
+    #{<<"_version">> := PutVersion} = haproxy:binds(Name),
     Options = #{
         name => Name,
         address => <<"0.0.0.0">>,
         port => maps:get(port, Opts)
     },
+    QueryArgs = [{<<"frontend">>, Name}],
 
-    Resp = put_bind(Name, PutVersion, Options),
+    Resp = hap_request(put, PutPath, PutVersion, QueryArgs, Options),
     case Resp of
       ok -> ok;
       {error, not_found} ->
           #{<<"_version">> := PostVersion} = haproxy:binds(Name),
-          post_bind(Name, PostVersion, Options);
+          hap_request(post, PostPath, PostVersion, QueryArgs, Options);
       Else -> Else
     end.
-
-put_bind(Name, Version, Options) ->
-    LName = binary:bin_to_list(Name),
-    Path = "services/haproxy/configuration/binds/" ++ LName,
-
-    ROptions = maps:merge(#{<<"name">> => Name}, Options),
-    QueryArgs = [{<<"frontend">>, Name}],
-
-    {ok, Code, Body} = hap_payload_request(
-          put, Path, Version, ROptions, QueryArgs),
-    http_code_transform(put, Code, Body).
-
-post_bind(Name, Version, Options) ->
-    Path = "/services/haproxy/configuration/binds",
-
-    ROptions = maps:merge(#{<<"name">> => Name}, Options),
-    QueryArgs = [{<<"frontend">>, Name}],
-
-    {ok, Code, Body} = hap_payload_request(
-        post, Path, Version, ROptions, QueryArgs),
-    http_code_transform(post, Code, Body).
 
 servers(BEName) ->
     Path = "/services/haproxy/configuration/servers",
     QueryArgs = [{<<"backend">>, BEName}],
-
-    retried_get(Path, QueryArgs).
+    {ok, Body} = hap_request(get, Path, [], QueryArgs, [], 3),
+    Body.
 
 ensure_server(Name, #{backend_name:=BEName,
                       cluster_ip:=ClusterIP,
                       port:=Port}) when is_binary(Name) ->
+    LName = binary:bin_to_list(Name),
+    PutPath = "services/haproxy/configuration/servers/" ++ LName,
+    PostPath = "services/haproxy/configuration/servers",
+
     #{<<"_version">> := PutVersion} = haproxy:servers(BEName),
     Options = #{
         name => BEName,
         address => ClusterIP,
         port => Port
     },
+    QueryArgs = [{<<"backend">>, BEName}],
 
-    Resp = put_server(Name, PutVersion, Options),
+    Resp = hap_request(put, PutPath, PutVersion, QueryArgs, Options),
     case Resp of
       ok -> ok;
       {error, not_found} ->
           #{<<"_version">> := PostVersion} = haproxy:servers(Name),
-          post_server(Name, PostVersion, Options);
+          hap_request(post, PostPath, PostVersion, QueryArgs, Options);
       Else -> Else
     end.
-
-put_server(Name, Version, Options) ->
-    LName = binary:bin_to_list(Name),
-    Path = "services/haproxy/configuration/servers/" ++ LName,
-
-    ROptions = maps:merge(#{<<"name">> => Name}, Options),
-    QueryArgs = [{<<"backend">>, Name}],
-
-    {ok, Code, Body} = hap_payload_request(
-          put, Path, Version, ROptions, QueryArgs),
-    http_code_transform(put, Code, Body).
-
-post_server(Name, Version, Options) ->
-    Path = "/services/haproxy/configuration/servers",
-
-    ROptions = maps:merge(#{<<"name">> => Name}, Options),
-    QueryArgs = [{<<"backend">>, Name}],
-
-    {ok, Code, Body} = hap_payload_request(
-        post, Path, Version, ROptions, QueryArgs),
-    http_code_transform(post, Code, Body).
 
 frontend_request_rules_query(Name) ->
     [{<<"parent_name">>, Name},
@@ -267,69 +218,15 @@ frontend_request_rules_query(Name) ->
 http_request_rules(frontend, Name) ->
     Path = "/services/haproxy/configuration/http_request_rules",
     QueryArgs = frontend_request_rules_query(Name),
+    hap_request(get, Path, [], QueryArgs, [], 3).
 
-    retried_get(Path, QueryArgs).
-ensure_gk_lua(Name) when is_binary(Name) ->
-    #{<<"_version">> := PutVersion} = haproxy:http_request_rules(
-                                              frontend, Name),
-    Options = #{
-        id => 0,
-        type => <<"lua.gkcookie">>
-    },
-    QueryArgs = frontend_request_rules_query(Name),
-
-    Resp = put_http_request_rule(PutVersion, QueryArgs, Options),
-    case Resp of
-      ok -> ok;
-      {error, not_found} ->
-          #{<<"_version">> := PostVersion} = haproxy:http_request_rules(
-                                                frontend, Name),
-          post_http_request_rule(PostVersion, QueryArgs, Options);
-      Else -> Else
-    end.
-
-put_http_request_rule(Version, QueryArgs, Options=#{id:=Id}) ->
-    LID = integer_to_list(Id),
-    Path = "services/haproxy/configuration/http_request_rules/" ++ LID,
-
-
-    {ok, Code, Body} = hap_payload_request(
-          put, Path, Version, Options, QueryArgs),
-    http_code_transform(put, Code, Body).
-
-post_http_request_rule(Version, QueryArgs, Options) ->
-    Path = "/services/haproxy/configuration/http_request_rules",
-
-    {ok, Code, Body} = hap_payload_request(
-        post, Path, Version, Options, QueryArgs),
-    http_code_transform(post, Code, Body).
-
-json_request(Method, URL, ReqHeaders, Payload, Options) ->
-    JSONPayload = jsx:encode(Payload),
-    {ok, Code, RespHeaders, Ref} = hackney:request(Method,
-                                               URL,
-                                               ReqHeaders,
-                                               JSONPayload,
-                                               Options),
-    {ok, Body} = hackney:body(Ref),
-    {ok, Code, RespHeaders, Body}.
-
-request_with_retry(_Method, _URL, _H, _P, _Opts, 0) ->
-    {error, no_more_retries};
-request_with_retry(Method, URL, H, P, Opts, Retries) ->
-    case hackney:request(Method, URL, H, P, Opts) of
-      {error, Reason} ->
-          ?LOG_INFO(#{what=>"Request Error",
-                       url=>URL,
-                       headers=>H,
-                       payload=>P,
-                       reason=>Reason,
-                       retries_left=>Retries - 1}),
-          request_with_retry(Method, URL, H, P, Opts, Retries -1);
-      Else -> Else
-    end.
-
-
+http_code_transform(get, Code, Body) ->
+    case Code of
+        404 -> {error, not_found};
+        200 -> {ok, Body};
+        202 -> {ok, Body};
+        Else -> {error, {Else, Body}}
+    end;
 http_code_transform(put, Code, Body) ->
     case Code of
         404 -> {error, not_found};
