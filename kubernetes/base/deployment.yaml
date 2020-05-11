@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: service-controller
+  name: features
   namespace: getkimball
   labels:
-    app: service-controller
+    app: features
 spec:
   replicas: 1
   minReadySeconds: 30
   revisionHistoryLimit: 3
   selector:
     matchLabels:
-      app: service-controller
+      app: features
   template:
     metadata:
       namespace: getkimball
       labels:
-        app: service-controller
+        app: features
     spec:
       serviceAccountName: getkimball
       containers:
 
-      - name: service-controller
-        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/kubernetes-service-controller:master-2e54aa93098c31f63a6aa49cadd3bdf38e828fc3
+      - name: features
+        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/features:master-2e54aa93098c31f63a6aa49cadd3bdf38e828fc3
         ports:
         - name: api
           containerPort: 8080
@@ -34,11 +34,5 @@ spec:
         - name: "SENTRY_DSN"
           valueFrom:
             secretKeyRef:
-              name: service-controller
+              name: features
               key: sentry_dsn
-
-      - name: haproxy
-        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/haproxy-api:2020-05-05-4233c9bd96d03dedebfbf016ff419db2fabf724c
-        ports:
-        - name: http
-          containerPort: 80

@@ -1,8 +1,8 @@
-PROJECT = service_controller
+PROJECT = features
 PROJECT_DESCRIPTION = New project
 PROJECT_VERSION = 0.1.0
 
-DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney swaggerl kuberlnetes jiffy
+DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney swaggerl kuberlnetes
 BUILD_DEPS = elvis_mk eraven
 LOCAL_DEPS = sasl
 TEST_DEPS = meck
@@ -21,6 +21,6 @@ dep_swaggerl = git https://github.com/philipcristiano/swaggerl.git v0.0.6
 
 DEP_PLUGINS = elvis_mk
 
-SHELL_OPTS = -eval 'application:ensure_all_started(service_controller).' -config sys
+SHELL_OPTS = -eval 'application:ensure_all_started(features).' -config sys
 
 include erlang.mk

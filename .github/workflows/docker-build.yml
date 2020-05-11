@@ -64,7 +64,7 @@ jobs:
         command: |
           pushd $DEPLOY_CONFIG_PATH
           kustomize edit set image ${ECR_REPOSITORY}=${DOCKER_TAG}
-          kustomize edit add secret service-controller --from-literal=sentry_dsn=${SENTRY_DSN}
+          kustomize edit add secret features --from-literal=sentry_dsn=${SENTRY_DSN}
           popd
 
           kustomize build $DEPLOY_CONFIG_PATH > .action-deploy.yaml
