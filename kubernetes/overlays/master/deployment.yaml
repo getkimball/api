@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: service-controller
+  name: features
   namespace: getkimball
 spec:
   replicas: 1
