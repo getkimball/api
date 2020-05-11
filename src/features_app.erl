@@ -10,6 +10,14 @@ start(_Type, _Args) ->
     setup_sentry(),
     App = features,
 
+    ok = application:set_env(trails, api_root, "/"),
+    ok = application:set_env(cowboy_swagger, global_spec,
+        #{swagger => "2.0",
+          info => #{
+            title => <<"Kimball Features API">>,
+            version => <<"0.0.0">>
+    }}),
+
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
     ],
@@ -19,12 +27,14 @@ start(_Type, _Args) ->
 
     Handlers = [
         features_handler_ok,
-        features_handler_v0_features
+        features_handler_v0_features,
+        cowboy_swagger_handler
     ],
     Trails = trails:trails(Handlers),
 
     AllRoutes = Routes ++ Trails ++  StaticRoute,
 
+    trails:store(Trails),
     Dispatch = trails:single_host_compile(AllRoutes),
 
     {ok, _} = cowboy:start_clear(http, [{port, 8080}], #{

@@ -11,5 +11,9 @@ start_link() ->
 init([]) ->
     ?LOG_INFO(#{what=><<"Supervisor starting">>}),
 
-    Procs = [],
+    Procs = [
+        #{id    => features_store,
+          start => {features_store, start_link, []}
+        }
+    ],
     {ok, {{one_for_one, 1, 5}, Procs}}.
