@@ -18,7 +18,8 @@ start(_Type, _Args) ->
     ],
 
     Handlers = [
-        features_handler_ok
+        features_handler_ok,
+        features_handler_v0_features
     ],
     Trails = trails:trails(Handlers),
 
