@@ -2,8 +2,10 @@
 # at https://github.com/monopole/hello
 commonLabels:
   app: features
+  build: pr
 namespace: getkimball
 
 resources:
 - deployment.yaml
 - namespace.yaml
+- service.yaml
