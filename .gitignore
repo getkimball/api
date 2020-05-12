@@ -12,6 +12,7 @@ hellerl_world.d
 /ebin
 /elvis
 /_rel
+/logs
 
 # Erlang.mk
 /.erlang.mk

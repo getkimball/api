@@ -2,7 +2,7 @@ namePrefix: master-
 namespace: getkimball
 commonLabels:
   org: getkimball
-  branch: master
+  build: master
 commonAnnotations:
   note: Deployed via Github Actions
 patchesStrategicMerge:
