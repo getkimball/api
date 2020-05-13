@@ -13,7 +13,7 @@ init([]) ->
 
     Procs = [
         #{id    => features_store,
-          start => {features_store, start_link, []}
+          start => {features_store, start_link, [features_store_lib_configmap]}
         }
     ],
     {ok, {{one_for_one, 1, 5}, Procs}}.
