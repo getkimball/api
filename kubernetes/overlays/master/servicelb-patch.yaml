@@ -5,5 +5,4 @@ metadata:
   name: features
   namespace: getkimball
 spec:
-  ports:
-    type: LoadBalancer
+  type: LoadBalancer
