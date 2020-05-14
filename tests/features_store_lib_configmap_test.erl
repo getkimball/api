@@ -10,21 +10,11 @@ init_test() ->
 
     API = make_ref(),
 
-    Operations = [
-        <<"createCoreV1NamespacedConfigMap">>,
-        <<"readCoreV1NamespacedConfigMap">>,
-        <<"replaceCoreV1NamespacedConfigMap">>
-    ],
-
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
 
     _State = ?MUT:init(),
-
-    Expected = [{operations, Operations}],
-    ?assertEqual(Expected, meck:capture(first, kuberlnetes, load, '_', 1)),
-
-
+    ok = assert_kubernerlnetes_loaded(),
 
     true = meck:validate(kuberlnetes),
     true = meck:validate(swaggerl),
@@ -38,23 +28,17 @@ write_read_test() ->
 
     API = make_ref(),
 
-    Operations = [
-        <<"createCoreV1NamespacedConfigMap">>,
-        <<"readCoreV1NamespacedConfigMap">>,
-        <<"replaceCoreV1NamespacedConfigMap">>
-    ],
-
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
     ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
 
     State = ?MUT:init(),
-
-    Expected = [{operations, Operations}],
-    ?assertEqual(Expected, meck:capture(first, kuberlnetes, load, '_', 1)),
+    ok = assert_kubernerlnetes_loaded(),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    io:format("here!~n"),
     State = ?MUT:store(Data, State),
+    io:format("here!~n"),
 
     StoreOps = meck:capture(first, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
     ConfigMapDoc = proplists:get_value(<<"body">>, StoreOps),
@@ -70,4 +54,15 @@ write_read_test() ->
     true = meck:validate(swaggerl),
     ok = meck:unload(kuberlnetes),
     ok = meck:unload(swaggerl),
+    ok.
+
+assert_kubernerlnetes_loaded() ->
+    Operations = [
+        <<"createCoreV1NamespacedConfigMap">>,
+        <<"readCoreV1NamespacedConfigMap">>,
+        <<"replaceCoreV1NamespacedConfigMap">>
+    ],
+
+    Expected = [{operations, Operations}],
+    ?assertEqual(Expected, meck:capture(first, kuberlnetes, load, '_', 1)),
     ok.
