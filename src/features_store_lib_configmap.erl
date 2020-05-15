@@ -78,7 +78,7 @@ data_from_configmap_doc(#{<<"data">> := #{<<"data">> := Data}}) ->
     jsx:decode(Data, [return_maps]).
 
 create_configmap(#state{api=API}, NS, Name, Doc) ->
-    Fields = configmap_request_fields(NS, Doc),
+    Fields = configmap_request_fields(NS, Name, Doc),
     Resp = swaggerl:op(API, "createCoreV1NamespacedConfigMap", Fields),
     ?LOG_INFO(#{what=><<"Create Configmap">>,
                  response=>Resp,
@@ -89,7 +89,7 @@ create_configmap(#state{api=API}, NS, Name, Doc) ->
     Code.
 
 replace_configmap(#state{api=API}, NS, Name, Doc) ->
-    Fields = configmap_request_fields(NS, Doc),
+    Fields = configmap_request_fields(NS, Name, Doc),
     Resp = swaggerl:op(API, "replaceCoreV1NamespacedConfigMap", Fields),
     ?LOG_DEBUG(#{what=><<"Replace Configmap">>,
                  response=>Resp,
@@ -127,8 +127,9 @@ configmap(Name, Data) ->
       }
     }.
 
-configmap_request_fields(NS, Doc) ->
+configmap_request_fields(NS, Name, Doc) ->
     [
         {<<"namespace">>, NS},
+        {<<"name">>, Name},
         {<<"body">>, Doc}
     ].

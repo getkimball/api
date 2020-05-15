@@ -70,9 +70,11 @@ first_write_test() ->
 
     ReplaceOps = meck:capture(first, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
     CreateOps = meck:capture(first, swaggerl, op, [API, "createCoreV1NamespacedConfigMap", '_'], 3),
+    ReplaceName = proplists:get_value(<<"name">>, ReplaceOps),
     ReplaceConfigMapDoc = proplists:get_value(<<"body">>, ReplaceOps),
     CreateConfigMapDoc = proplists:get_value(<<"body">>, CreateOps),
 
+    ?assertEqual(<<"features-state-store">>, ReplaceName),
     ?assertEqual(ReplaceConfigMapDoc, CreateConfigMapDoc),
 
     unload(),
@@ -97,8 +99,10 @@ push_to_namespaces_test() ->
 
     StoreOps = meck:capture(last, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
     ConfigMapNamespace = proplists:get_value(<<"namespace">>, StoreOps),
+    ConfigMapName = proplists:get_value(<<"name">>, StoreOps),
 
     ?assertEqual(Namespace, ConfigMapNamespace),
+    ?assertEqual(<<"getkimball-features">>, ConfigMapName),
 
     unload(),
     ok.
