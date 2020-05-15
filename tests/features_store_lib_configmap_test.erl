@@ -89,6 +89,40 @@ first_write_test() ->
     ok = meck:unload(swaggerl),
     ok.
 
+push_to_namespaces_test() ->
+    ok = meck:new(application, [unstick]),
+    ok = meck:new(kuberlnetes),
+    ok = meck:new(swaggerl),
+
+    API = make_ref(),
+    Namespace = <<"test_namespace">>,
+
+    ok = meck:expect(application, get_env, [features, namespaces, '_'], [Namespace]),
+    ok = meck:expect(kuberlnetes, load, ['_'], API),
+    ok = meck:expect(swaggerl, operations, ['_'], []),
+    ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
+
+    State = ?MUT:init(),
+
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    State = ?MUT:store(Data, State),
+
+    StoreOps = meck:capture(last, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
+    ConfigMapNamespace = proplists:get_value(<<"namespace">>, StoreOps),
+
+    ?assertEqual(Namespace, ConfigMapNamespace),
+
+
+    true = meck:validate(kuberlnetes),
+    true = meck:validate(swaggerl),
+    true = meck:validate(application),
+    ok = meck:unload(kuberlnetes),
+    ok = meck:unload(swaggerl),
+    ok = meck:unload(application),
+    ok.
+
+
 assert_kubernerlnetes_loaded() ->
     Operations = [
         <<"createCoreV1NamespacedConfigMap">>,

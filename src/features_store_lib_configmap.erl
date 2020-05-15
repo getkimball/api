@@ -6,7 +6,8 @@
          store/2]).
 
 -record(state, {api=defined,
-                configmap_ref=undefined}).
+                configmap_ref=undefined,
+                additional_namespaces=undefined}).
 
 %%%%
 %   features_store api
@@ -22,9 +23,14 @@ init() ->
     ],
     API = kuberlnetes:load([{operations, Operations}]),
     Ops = swaggerl:operations(API),
+    Namespaces = application:get_env(features, namespaces, []),
+    AdditionalNamespaces = [{NS, <<"getkimball-features">>} ||
+                                 NS <- Namespaces],
     ?LOG_DEBUG(#{what=><<"Kubernetes operations">>,
                  ops=>Ops}),
-    #state{api=API, configmap_ref=ConfigmapRef}.
+    #state{api=API,
+           configmap_ref=ConfigmapRef,
+           additional_namespaces=AdditionalNamespaces}.
 
 get_all(State=#state{configmap_ref=#{namespace:=NS, name:=Name}}) ->
     {Code, ConfigMapResp} = get_configmap(State, NS, Name),
@@ -37,9 +43,17 @@ get_all(State=#state{configmap_ref=#{namespace:=NS, name:=Name}}) ->
 
     {Data, State}.
 
-store(Data, State=#state{configmap_ref=#{namespace:=NS, name:=Name}}) ->
-    ok = write_configmap(State, NS, Name, Data),
+store(Data, State=#state{configmap_ref=#{namespace:=NS, name:=Name},
+                         additional_namespaces=ANS}) ->
+    ToWrite = [{NS, Name} | ANS],
+    ok = write_configmap_to_namespaces(State, ToWrite, Data),
     State.
+
+write_configmap_to_namespaces(_State, [], _Data) ->
+    ok;
+write_configmap_to_namespaces(State, [{NS, Name}|T], Data) ->
+    ok = write_configmap(State, NS, Name, Data),
+    write_configmap_to_namespaces(State, T, Data).
 
 %%%%
 %   Internal
@@ -73,7 +87,6 @@ create_configmap(#state{api=API}, NS, Name, Doc) ->
                  name=>Name}),
     Code = maps:get(<<"code">>, Resp, 200),
     Code.
-
 
 replace_configmap(#state{api=API}, NS, Name, Doc) ->
     Fields = configmap_request_fields(NS, Doc),

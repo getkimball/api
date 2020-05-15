@@ -21,3 +21,10 @@ PR branch: http://features.getkimball.svc/api-docs/swagger.json
 ```
 make deps app shell
 ```
+
+
+## Configuration
+
+### Environment variables
+
+* `ADDITIONAL_NAMESPACES` - A comma separated list of namespaces to sync feature config to. This should include any namespaces where you intend to run sidecars
