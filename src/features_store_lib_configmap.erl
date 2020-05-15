@@ -29,7 +29,8 @@ init() ->
 get_all(State=#state{configmap_ref=#{namespace:=NS, name:=Name}}) ->
     {Code, ConfigMapResp} = get_configmap(State, NS, Name),
     Data = case Code of
-      404 -> create_configmap(State, NS, Name, []),
+      404 -> ConfigMap = configmap(Name, []),
+             create_configmap(State, NS, Name, ConfigMap),
              [];
       200 -> data_from_configmap_doc(ConfigMapResp)
     end,
@@ -62,28 +63,23 @@ get_configmap(#state{api=API}, NS, Name) ->
 data_from_configmap_doc(#{<<"data">> := #{<<"data">> := Data}}) ->
     jsx:decode(Data, [return_maps]).
 
-create_configmap(#state{api=API}, NS, Name, Data) ->
-    ConfigMap = configmap(Name, Data),
-    Fields = [
-        {<<"namespace">>, NS},
-        {<<"body">>, ConfigMap}
-    ],
-    Resp = swaggerl:op(API, "createCoreV1NamespacedConfigMap", Fields),
+create_configmap(#state{api=API}, NS, Name, Doc) ->
+    Resp = swaggerl:op(API, "createCoreV1NamespacedConfigMap", [
+                              {<<"namespace">>, NS},
+                              {<<"body">>, Doc}]),
     ?LOG_DEBUG(#{what=><<"Create Configmap">>,
                  response=>Resp,
                  namespace=>NS,
-                 configmap=>ConfigMap,
+                 configmap=>Doc,
                  name=>Name}),
     Code = maps:get(<<"code">>, Resp, 200),
     Code.
 
 
 replace_configmap(#state{api=API}, NS, Name, Doc) ->
-    Fields = [
-        {<<"namespace">>, NS},
-        {<<"body">>, Doc}
-    ],
-    Resp = swaggerl:op(API, "replaceCoreV1NamespacedConfigMap", Fields),
+    Resp = swaggerl:op(API, "replaceCoreV1NamespacedConfigMap", [
+                              {<<"namespace">>, NS},
+                              {<<"body">>, Doc}]),
     ?LOG_DEBUG(#{what=><<"Replace Configmap">>,
                  response=>Resp,
                  namespace=>NS,
@@ -101,7 +97,6 @@ write_configmap(State=#state{}, NS, Name, Data) ->
                  configmap=>ConfigMapDoc,
                  name=>Name}),
     Code = replace_configmap(State, NS, Name, ConfigMapDoc),
-
     200 = case Code of
       200 -> 200;
       404 -> create_configmap(State, NS, Name, ConfigMapDoc)

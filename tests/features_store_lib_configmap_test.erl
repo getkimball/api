@@ -56,6 +56,39 @@ write_read_test() ->
     ok = meck:unload(swaggerl),
     ok.
 
+first_write_test() ->
+    ok = meck:new(kuberlnetes),
+    ok = meck:new(swaggerl),
+
+    API = make_ref(),
+
+    ok = meck:expect(kuberlnetes, load, ['_'], API),
+    ok = meck:expect(swaggerl, operations, ['_'], []),
+    ok = meck:expect(swaggerl, op, [{[API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>404}},
+                                    {[API, "createCoreV1NamespacedConfigMap",  '_'], #{<<"code">>=>200}}
+                                    ]),
+
+    State = ?MUT:init(),
+    ok = assert_kubernerlnetes_loaded(),
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    io:format("here!~n"),
+    State = ?MUT:store(Data, State),
+    io:format("here!~n"),
+
+    ReplaceOps = meck:capture(first, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
+    CreateOps = meck:capture(first, swaggerl, op, [API, "createCoreV1NamespacedConfigMap", '_'], 3),
+    ReplaceConfigMapDoc = proplists:get_value(<<"body">>, ReplaceOps),
+    CreateConfigMapDoc = proplists:get_value(<<"body">>, CreateOps),
+
+    ?assertEqual(ReplaceConfigMapDoc, CreateConfigMapDoc),
+
+    true = meck:validate(kuberlnetes),
+    true = meck:validate(swaggerl),
+    ok = meck:unload(kuberlnetes),
+    ok = meck:unload(swaggerl),
+    ok.
+
 assert_kubernerlnetes_loaded() ->
     Operations = [
         <<"createCoreV1NamespacedConfigMap">>,
