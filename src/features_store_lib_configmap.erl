@@ -23,7 +23,7 @@ init() ->
     ],
     API = kuberlnetes:load([{operations, Operations}]),
     Ops = swaggerl:operations(API),
-    Namespaces = application:get_env(features, namespaces, []),
+    {ok, Namespaces} = application:get_env(features, namespaces),
     AdditionalNamespaces = [{NS, <<"getkimball-features">>} ||
                                  NS <- Namespaces],
     ?LOG_DEBUG(#{what=><<"Kubernetes operations">>,
