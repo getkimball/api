@@ -80,7 +80,7 @@ data_from_configmap_doc(#{<<"data">> := #{<<"data">> := Data}}) ->
 create_configmap(#state{api=API}, NS, Name, Doc) ->
     Fields = configmap_request_fields(NS, Doc),
     Resp = swaggerl:op(API, "createCoreV1NamespacedConfigMap", Fields),
-    ?LOG_DEBUG(#{what=><<"Create Configmap">>,
+    ?LOG_INFO(#{what=><<"Create Configmap">>,
                  response=>Resp,
                  namespace=>NS,
                  configmap=>Doc,
