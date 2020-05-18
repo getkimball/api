@@ -7,16 +7,9 @@
 
 start(_Type, _Args) ->
     ?LOG_INFO(#{what=><<"Starting">>}),
-    setup_sentry(),
     App = features,
 
-    ok = application:set_env(trails, api_root, "/"),
-    ok = application:set_env(cowboy_swagger, global_spec,
-        #{swagger => "2.0",
-          info => #{
-            title => <<"Kimball Features API">>,
-            version => <<"0.0.0">>
-    }}),
+    ok = set_config(),
 
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
@@ -46,6 +39,28 @@ start(_Type, _Args) ->
 
 stop(_State) ->
   ok.
+
+set_config() ->
+    setup_sentry(),
+    setup_additional_namespace_config(),
+    ok = application:set_env(trails, api_root, "/"),
+    ok = application:set_env(cowboy_swagger, global_spec,
+        #{swagger => "2.0",
+          info => #{
+            title => <<"Kimball Features API">>,
+            version => <<"0.0.0">>
+    }}),
+    ok.
+
+setup_additional_namespace_config() ->
+    NamespacesString = os:getenv("ADDITIONAL_NAMESPACES", ""),
+    NamespacesBin = binary:list_to_bin(NamespacesString),
+    Namespaces = binary:split(NamespacesBin, <<",">>),
+    application:set_env(features, namespaces, Namespaces),
+
+    ?LOG_INFO(#{what=>"Sync to additional namespaces",
+                namespaces=>Namespaces}),
+    ok.
 
 setup_sentry() ->
     DSN = os:getenv("SENTRY_DSN"),
