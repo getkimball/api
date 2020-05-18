@@ -7,6 +7,7 @@
 trails() ->
     Metadata =    #{
         get => #{
+            operationId => getFeatures,
             tags => ["Features"],
             description => "Gets features and their status",
             produces => ["application/json"],
@@ -19,6 +20,7 @@ trails() ->
             }
         },
         post => #{
+            operationId => setFeature,
             tags => ["Features"],
             description => "Sets a feature status",
             produces => ["application/json"],
