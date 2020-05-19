@@ -34,6 +34,23 @@ read_test() ->
     unload(),
     ok.
 
+store_test() ->
+    load(),
+    ok = meck:expect(application, get_env, [features, file_store_path], {ok, []}),
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    DataBin = jsx:encode(Data),
+    ok = meck:expect(file, read_file, ['_'], {ok, DataBin}),
+
+    % API = make_ref(),
+    State = ?MUT:init(),
+
+    Resp = ?MUT:store(Data, State),
+
+    ?assertEqual({not_suported, State}, Resp),
+
+    unload(),
+    ok.
 
 load() ->
     ok = meck:new(file, [unstick]),

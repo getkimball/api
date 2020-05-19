@@ -9,7 +9,9 @@
 
 -callback init() -> callback_state().
 -callback get_all(callback_state()) -> {lib_data(), callback_state()}.
--callback store(lib_data(), callback_state()) -> callback_state().
+-callback store(lib_data(), callback_state()) ->
+            {ok, callback_state()} |
+            {not_suported, callback_state()}.
 
 %%
 
@@ -105,8 +107,8 @@ init_store_lib(StoreLib) ->
 %%--------------------------------------------------------------------
 handle_call({set_binary_feature, Name, Status}, _From, State) ->
     ok = store_features([#{name=>Name, status=>Status}]),
-    NewState = store_in_storelib(State),
-    {reply, ok, NewState};
+    {Resp, NewState} = store_in_storelib(State),
+    {reply, Resp, NewState};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -201,13 +203,13 @@ store_features([#{name := Name, status := Status} | T]) ->
     store_features(T).
 
 store_in_storelib(State=#state{store_lib=undefined}) ->
-    State;
+    {ok, State};
 store_in_storelib(State=#state{store_lib=StoreLib,
                                store_lib_state=StoreLibState}) ->
     AllFeatures = get_binary_features_pl(),
     FeatureMaps = features_pl_to_maps(AllFeatures),
-    NewStoreLibState = StoreLib:store(FeatureMaps, StoreLibState),
-    State#state{store_lib_state=NewStoreLibState}.
+    {Resp, NewStoreLibState} = StoreLib:store(FeatureMaps, StoreLibState),
+    {Resp, State#state{store_lib_state=NewStoreLibState}}.
 
 get_binary_features_pl() ->
     Objs = ets:match_object(?FEATURE_REGISTRY, {'$0', '$1'}),

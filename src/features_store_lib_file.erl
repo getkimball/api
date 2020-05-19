@@ -23,7 +23,7 @@ get_all(State=#state{path=Path}) ->
     {Data, State}.
 
 store(_Data, State=#state{}) ->
-    State.
+    {not_suported, State}.
 
 %%%%
 %   Internal

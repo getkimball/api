@@ -47,7 +47,7 @@ store(Data, State=#state{configmap_ref=#{namespace:=NS, name:=Name},
                          additional_namespaces=ANS}) ->
     ToWrite = [{NS, Name} | ANS],
     ok = write_configmap_to_namespaces(State, ToWrite, Data),
-    State.
+    {ok, State}.
 
 write_configmap_to_namespaces(_State, [], _Data) ->
     ok;
