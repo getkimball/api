@@ -8,7 +8,9 @@ namespace: getkimball
 resources:
 - cluster-role-binding.yaml
 - cluster-role.yaml
-- deployment.yaml
+- deployment-api.yaml
+- deployment-sidecar.yaml
 - namespace.yaml
 - service-account.yaml
 - service.yaml
+- service-sidecar.yaml

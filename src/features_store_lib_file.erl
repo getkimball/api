@@ -12,7 +12,7 @@
 %%%%
 
 init() ->
-    Path = <<"/features/data">>,
+    {ok, Path} = application:get_env(features, file_store_path),
     #state{path=Path}.
 
 get_all(State=#state{path=Path}) ->
@@ -22,9 +22,8 @@ get_all(State=#state{path=Path}) ->
 
     {Data, State}.
 
-store(_Data, _State=#state{}) ->
-    throw("Storing is not supported for this store").
-
+store(_Data, State=#state{}) ->
+    State.
 
 %%%%
 %   Internal
