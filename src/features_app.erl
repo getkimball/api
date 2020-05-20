@@ -58,11 +58,18 @@ setup_additional_namespace_config() ->
     NamespacesString = os:getenv("ADDITIONAL_NAMESPACES", ""),
     NamespacesBin = binary:list_to_bin(NamespacesString),
     Namespaces = binary:split(NamespacesBin, <<",">>),
-    application:set_env(features, namespaces, Namespaces),
+    Config = additional_namespaces_to_list(Namespaces),
+    application:set_env(features, namespaces, Config),
 
     ?LOG_INFO(#{what=>"Sync to additional namespaces",
                 namespaces=>Namespaces}),
     ok.
+
+% Removes empty response from split
+additional_namespaces_to_list([<<>>]) ->
+    [];
+additional_namespaces_to_list(List) ->
+    List.
 
 setup_sentry() ->
     DSN = os:getenv("SENTRY_DSN"),
