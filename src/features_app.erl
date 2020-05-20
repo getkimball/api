@@ -70,7 +70,8 @@ setup_sentry() ->
         false ->
             ?LOG_INFO(#{what=>"Sentry not setup. Set 'SENTRY_DSN'"});
         ActualDSN ->
-            logger:add_handler(
+            ?LOG_INFO(#{what=>"Sentry configured"}),
+            ok = logger:add_handler(
                 eraven,
                 er_logger_handler,
                 #{level => warning,
