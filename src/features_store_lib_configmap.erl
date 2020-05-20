@@ -26,6 +26,10 @@ init() ->
     {ok, Namespaces} = application:get_env(features, namespaces),
     AdditionalNamespaces = [{NS, <<"getkimball-features">>} ||
                                  NS <- Namespaces],
+    ?LOG_DEBUG(#{what=><<"Additional namespaces">>,
+                 namespaces=>Namespaces,
+                 tuples=>AdditionalNamespaces}),
+
     ?LOG_DEBUG(#{what=><<"Kubernetes operations">>,
                  ops=>Ops}),
     #state{api=API,

@@ -23,12 +23,12 @@ groups() -> [{test_ets, [
 aa_write_read(_Config) ->
     {ok, Pid} = ?MUT:start_link(),
     Name = <<"feature">>,
-    Status = <<"enabled">>,
+    Enabled = true,
 
-    ok = features_store:set_binary_feature(Name, Status),
+    ok = features_store:set_binary_feature(Name, Enabled),
     Resp = features_store:get_binary_features(),
 
-    Expected = #{Name => enabled},
+    Expected = #{Name => Enabled},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -38,7 +38,7 @@ ba_external_store_init(_Config) ->
     ok = meck:new(?STORE_LIB, [non_strict]),
 
     Name = <<"feature">>,
-    Status = <<"enabled">>,
+    Enabled = true,
 
     StoreLibState = make_ref(),
 
@@ -47,14 +47,14 @@ ba_external_store_init(_Config) ->
     end),
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
-        {[#{name=>Name, status=>Status}], Ref}
+        {[#{name=>Name, enabled=>Enabled}], Ref}
     end),
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     meck:wait(?STORE_LIB, get_all, '_', 1000),
     Resp = features_store:get_binary_features(),
 
-    Expected = #{Name => enabled},
+    Expected = #{Name => Enabled},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -66,7 +66,7 @@ bb_external_store_store_data(_Config) ->
     ok = meck:new(?STORE_LIB, [non_strict]),
 
     Name = <<"feature">>,
-    Status = <<"enabled">>,
+    Enabled = true,
 
     StoreLibState = make_ref(),
 
@@ -84,9 +84,9 @@ bb_external_store_store_data(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    ok = features_store:set_binary_feature(Name, Status),
+    ok = features_store:set_binary_feature(Name, Enabled),
 
-    Expected = [#{name => Name, status => Status}],
+    Expected = [#{name => Name, enabled => Enabled}],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
 
     exit(Pid, normal),

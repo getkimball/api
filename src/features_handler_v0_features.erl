@@ -14,7 +14,7 @@ trails() ->
             responses => #{
                 <<"200">> => #{
                     description => <<"Features">>,
-                    schema => feature_schema()
+                    schema => features_return_schema()
 
                 }
             }
@@ -29,7 +29,7 @@ trails() ->
                   description => <<"Feature Object">>,
                   in => <<"body">>,
                   required => true,
-                  schema => feature_schema()
+                  schema => feature_input_schema()
                 }
             ],
             responses => #{
@@ -52,7 +52,26 @@ empty_object_schema() ->
         properties => #{}
     }.
 
-feature_schema() ->
+features_return_schema() ->
+    #{
+        required => [<<"name">>],
+        properties => #{
+           name => #{
+             type => <<"object">>,
+             description => <<"name of feature">>,
+             schema => #{
+               properties => #{
+                 enabled => #{
+                   type => <<"boolean">>,
+                   description => <<"Status of the feature">>
+                 }
+               }
+             }
+          }
+        }
+    }.
+
+feature_input_schema() ->
     #{
         required => [<<"name">>],
         properties => #{
@@ -72,10 +91,10 @@ init(Req=#{method := <<"POST">>=Method}, Opts) ->
     Data = jsx:decode(Body, [return_maps]),
     #{<<"name">>:=FeatureName, <<"enabled">>:= FeatureEnabled} = Data,
     FeatureStatus = case FeatureEnabled of
-        <<"true">> -> <<"enabled">>;
-        <<"false">> -> <<"disabled">>;
-        true -> <<"enabled">>;
-        false -> <<"disabled">>
+        <<"true">> -> true;
+        <<"false">> -> false;
+        true -> true;
+        false -> false
     end,
     ?LOG_DEBUG(#{what=><<"">>,
                  module=>?MODULE,
