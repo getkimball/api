@@ -17,7 +17,8 @@ init([Mode]) ->
         }];
        sidecar -> [
         #{id    => features_store,
-          start => {features_store, start_link, [features_store_lib_file]}
+          start => {features_store, start_link, [features_store_lib_file,
+                                                 [{refresh_interval, 15000}]]}
         }]
     end,
 

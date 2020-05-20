@@ -17,7 +17,8 @@
 
 %% API functions
 -export([start_link/0,
-         start_link/1]).
+         start_link/1,
+         start_link/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -29,9 +30,11 @@
 
 -export([set_binary_feature/2,
          get_binary_feature/1,
-         get_binary_features/0]).
+         get_binary_features/0,
+         refresh_from_store/0]).
 
--record(state, {store_lib=undefined,
+-record(state, {refresh_interval=undefined,
+                store_lib=undefined,
                 store_lib_state=undefined}).
 -define(FEATURE_REGISTRY, feature_registry_table).
 
@@ -50,6 +53,10 @@ get_binary_features() ->
     Objs = get_binary_features_pl(),
     M = maps:from_list(Objs),
     M.
+
+refresh_from_store() ->
+    ?LOG_DEBUG(#{what=><<"Refresh from store">>}),
+    gen_server:cast(?MODULE, load_from_store).
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
@@ -58,10 +65,13 @@ get_binary_features() ->
 %% @end
 %%--------------------------------------------------------------------
 start_link() ->
-    start_link(undefined).
+    start_link(undefined, []).
 
 start_link(StoreLib) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, StoreLib, []).
+    start_link(StoreLib, []).
+
+start_link(StoreLib, Opts) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [StoreLib, Opts], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -78,13 +88,16 @@ start_link(StoreLib) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init(StoreLib) ->
+init([StoreLib, Opts]) ->
     ?FEATURE_REGISTRY = ets:new(?FEATURE_REGISTRY,
                                 [set, named_table, {read_concurrency, true}]),
     gen_server:cast(?MODULE, load_from_store),
     StoreLibState = init_store_lib(StoreLib),
+    RefreshInterval = proplists:get_value(refresh_interval, Opts, undefined),
+
     {ok, #state{store_lib=StoreLib,
-                store_lib_state=StoreLibState}}.
+                store_lib_state=StoreLibState,
+                refresh_interval=RefreshInterval}}.
 
 init_store_lib(undefined) ->
     undefined;
@@ -136,10 +149,14 @@ atom_to_status(disabled) ->
 %%--------------------------------------------------------------------
 handle_cast(load_from_store, State=#state{store_lib=undefined}) ->
     {noreply, State};
-handle_cast(load_from_store, State=#state{store_lib=StoreLib,
+handle_cast(load_from_store, State=#state{refresh_interval=RefreshInterval,
+                                          store_lib=StoreLib,
                                           store_lib_state=StoreLibState}) ->
     {AllFeatures, NewStoreLibState} = StoreLib:get_all(StoreLibState),
     store_features(AllFeatures),
+
+    trigger_refresh_get(RefreshInterval),
+
     {noreply, State#state{store_lib_state=NewStoreLibState}};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -210,6 +227,16 @@ store_in_storelib(State=#state{store_lib=StoreLib,
     FeatureMaps = features_pl_to_maps(AllFeatures),
     {Resp, NewStoreLibState} = StoreLib:store(FeatureMaps, StoreLibState),
     {Resp, State#state{store_lib_state=NewStoreLibState}}.
+
+
+trigger_refresh_get(undefined) ->
+    ok;
+trigger_refresh_get(RefreshInterval) ->
+    ?LOG_DEBUG(#{what=><<"Sending store refresh">>,
+                 refresh_interval=>RefreshInterval}),
+    {ok, _Ref} = timer:apply_after(
+        RefreshInterval, ?MODULE, refresh_from_store, []),
+    ok.
 
 get_binary_features_pl() ->
     Objs = ets:match_object(?FEATURE_REGISTRY, {'$0', '$1'}),

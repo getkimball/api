@@ -82,7 +82,11 @@ setup_sentry() ->
     ok.
 
 setup_file_store_path() ->
-    application:set_env(features, file_store_path, "/features/data").
+    Name = file_store_path,
+    case application:get_env(features, Name) of
+        undefined -> application:set_env(features, Name, "/features/data");
+        _ -> ok
+    end.
 
 get_features_mode() ->
     Mode = os:getenv("FEATURES_MODE"),

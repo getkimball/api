@@ -35,14 +35,22 @@ trails() ->
             responses => #{
                 <<"200">> => #{
                     description => <<"Features">>,
-                    schema => feature_schema()
-
+                    schema => empty_object_schema()
+                },
+                <<"405">> => #{
+                    description => <<"Features">>,
+                    schema => empty_object_schema()
                 }
             }
       }
     },
     [trails:trail("/v0/features", ?MODULE, [], Metadata)].
 
+empty_object_schema() ->
+    #{
+        required => [],
+        properties => #{}
+    }.
 
 feature_schema() ->
     #{
@@ -75,9 +83,12 @@ init(Req=#{method := <<"POST">>=Method}, Opts) ->
                  feature_name=> FeatureName,
                  feature_status=> FeatureStatus,
                  method=>Method}),
-    ok = features_store:set_binary_feature(FeatureName, FeatureStatus),
-
-    respond(Req1, 200, #{}, Opts);
+    Resp = features_store:set_binary_feature(FeatureName, FeatureStatus),
+    Code = case Resp of
+        ok -> 200;
+        not_suported -> 405
+    end,
+    respond(Req1, Code, #{}, Opts);
 init(Req=#{method := <<"GET">>}, Opts) ->
     Features = features_store:get_binary_features(),
     Data = #{<<"features">> => Features},
