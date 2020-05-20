@@ -34,7 +34,7 @@ write_read_test() ->
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     io:format("here!~n"),
-    State = ?MUT:store(Data, State),
+    {ok, State} = ?MUT:store(Data, State),
     io:format("here!~n"),
 
     StoreOps = meck:capture(first, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
@@ -65,7 +65,7 @@ first_write_test() ->
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     io:format("here!~n"),
-    State = ?MUT:store(Data, State),
+    {ok, State} = ?MUT:store(Data, State),
     io:format("here!~n"),
 
     ReplaceOps = meck:capture(first, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
@@ -95,7 +95,7 @@ push_to_namespaces_test() ->
 
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
-    State = ?MUT:store(Data, State),
+    {ok, State} = ?MUT:store(Data, State),
 
     StoreOps = meck:capture(last, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
     ConfigMapNamespace = proplists:get_value(<<"namespace">>, StoreOps),

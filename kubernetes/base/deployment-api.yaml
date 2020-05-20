@@ -37,4 +37,6 @@ spec:
               name: features
               key: sentry_dsn
         - name: "ADDITIONAL_NAMESPACES"
-          value: "default"
+          value: "default,getkimball"
+        - name: "FEATURES_MODE"
+          value: "api"

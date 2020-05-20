@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: features-sidecar
+  namespace: getkimball
+  labels:
+    app: features-sidecar
+spec:
+  replicas: 1
+  minReadySeconds: 30
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: features-sidecar
+  template:
+    metadata:
+      namespace: getkimball
+      labels:
+        app: features-sidecar
+    spec:
+      containers:
+      - name: features
+        image: 422221479733.dkr.ecr.us-east-1.amazonaws.com/features:master-2e54aa93098c31f63a6aa49cadd3bdf38e828fc3
+        ports:
+        - name: api
+          containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /alive
+            port: api
+        env:
+        - name: "SENTRY_DSN"
+          valueFrom:
+            secretKeyRef:
+              name: features
+              key: sentry_dsn
+        - name: "FEATURES_MODE"
+          value: "sidecar"
+        volumeMounts:
+        - name: features-data
+          mountPath: /features
+
+      volumes:
+      - name: features-data
+        configMap:
+          name: features-state-store

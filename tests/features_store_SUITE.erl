@@ -15,7 +15,8 @@ all() -> [{group, test_ets}].
 groups() -> [{test_ets, [
                 aa_write_read,
                 ba_external_store_init,
-                bb_external_store_store_data
+                bb_external_store_store_data,
+                bc_external_store_not_supporting_store
               ]}
             ].
 
@@ -87,6 +88,35 @@ bb_external_store_store_data(_Config) ->
 
     Expected = [#{name => Name, status => Status}],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
+
+    exit(Pid, normal),
+    true = meck:validate(?STORE_LIB),
+    ok = meck:unload(?STORE_LIB),
+    ok.
+
+bc_external_store_not_supporting_store(_Config) ->
+    ok = meck:new(?STORE_LIB, [non_strict]),
+
+    Name = <<"feature">>,
+    Status = <<"enabled">>,
+
+    StoreLibState = make_ref(),
+
+    ok = meck:expect(?STORE_LIB, init, fun() ->
+        StoreLibState
+    end),
+    ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
+        ?assertEqual(StoreLibState, Ref),
+        {[], Ref}
+    end),
+    ok = meck:expect(?STORE_LIB, store, ['_', '_'],
+                                        {not_suported, StoreLibState}),
+
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
+
+    Resp = features_store:set_binary_feature(Name, Status),
+
+    ?assertEqual(not_suported, Resp),
 
     exit(Pid, normal),
     true = meck:validate(?STORE_LIB),

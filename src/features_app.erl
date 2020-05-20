@@ -8,6 +8,7 @@
 start(_Type, _Args) ->
     ?LOG_INFO(#{what=><<"Starting">>}),
     App = features,
+    Mode = get_features_mode(),
 
     ok = set_config(),
 
@@ -35,7 +36,7 @@ start(_Type, _Args) ->
       metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
       stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
     }),
-    features_sup:start_link().
+    features_sup:start_link(Mode).
 
 stop(_State) ->
   ok.
@@ -43,6 +44,7 @@ stop(_State) ->
 set_config() ->
     setup_sentry(),
     setup_additional_namespace_config(),
+    setup_file_store_path(),
     ok = application:set_env(trails, api_root, "/"),
     ok = application:set_env(cowboy_swagger, global_spec,
         #{swagger => "2.0",
@@ -78,3 +80,19 @@ setup_sentry() ->
         }})
     end,
     ok.
+
+setup_file_store_path() ->
+    Name = file_store_path,
+    case application:get_env(features, Name) of
+        undefined -> application:set_env(features, Name, "/features/data");
+        _ -> ok
+    end.
+
+get_features_mode() ->
+    Mode = os:getenv("FEATURES_MODE"),
+    % TODO: Do something more intelligent here to work in local dev
+    case Mode of
+        "sidecar" -> sidecar;
+        "api" -> api_server;
+        _ -> api_server
+    end.
