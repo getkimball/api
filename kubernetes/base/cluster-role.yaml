@@ -18,3 +18,11 @@ rules:
   - list
   - status
   - update
+- apiGroups:
+  - apps
+  - ''
+  resources:
+  - 'configmaps'
+  verbs:
+  # Create can't be restricted by resource name
+  - create
