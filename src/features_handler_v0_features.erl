@@ -33,38 +33,28 @@ trails() ->
                 }
             ],
             responses => #{
-                <<"200">> => #{
-                    description => <<"Features">>,
-                    schema => empty_object_schema()
+                <<"204">> => #{
+                    description => <<"Feature created">>
                 },
                 <<"405">> => #{
-                    description => <<"Features">>,
-                    schema => empty_object_schema()
+                    description => <<"Features">>
                 }
             }
       }
     },
     [trails:trail("/v0/features", ?MODULE, [], Metadata)].
 
-empty_object_schema() ->
-    #{
-        required => [],
-        properties => #{}
-    }.
-
 features_return_schema() ->
     #{
-        required => [<<"name">>],
+        type => <<"object">>,
         properties => #{
            name => #{
              type => <<"object">>,
              description => <<"name of feature">>,
-             schema => #{
-               properties => #{
-                 enabled => #{
-                   type => <<"boolean">>,
-                   description => <<"Status of the feature">>
-                 }
+             properties => #{
+               enabled => #{
+                 type => <<"boolean">>,
+                 description => <<"Status of the feature">>
                }
              }
           }
