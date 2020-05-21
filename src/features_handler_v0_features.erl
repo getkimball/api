@@ -50,7 +50,7 @@ features_return_schema() ->
     #{
         type => <<"object">>,
         properties => #{
-           features => #{
+           <<"features">> => #{
               type => <<"object">>,
               description => <<"Collection of features">>,
               additionalProperties => #{

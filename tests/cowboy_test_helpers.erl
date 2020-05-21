@@ -51,6 +51,8 @@ read_reply({ok, #{streamid:=StreamId}, _Opts}) ->
         error
     end.
 
-validate_response_against_spec(Spec, Data) ->
-    {OkOrError, _Resp} = jesse:validate_with_schema(Spec, Data),
-    OkOrError.
+validate_response_against_spec(_Spec=#{schema := #{properties:=Properties}}, Data) ->
+    SpecKeys = maps:keys(Properties),
+    DataKeys = maps:keys(Data),
+    ?assertEqual(SpecKeys, DataKeys),
+    ok.
