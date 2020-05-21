@@ -17,7 +17,7 @@ ok_test() ->
     Req = cowboy_test_helpers:req(),
     Opts = [],
 
-    CowResp = ?MUT:init(Req, Opts),
+    CowResp = cowboy_test_helpers:init(?MUT, Req, Opts),
     {response, Code, _Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
     Data = jsx:decode(Body, [return_maps]),
 
@@ -46,14 +46,14 @@ create_feature_test() ->
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     Opts = [],
 
-    CowPostResp = ?MUT:init(PostReq, Opts),
+    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
 
-    ?assertEqual(200, PostCode),
+    ?assertEqual(204, PostCode),
     ?assertEqual(<<"{}">>, PostBody),
 
     GetReq = cowboy_test_helpers:req(),
-    CowGetResp = ?MUT:init(GetReq, Opts),
+    CowGetResp = cowboy_test_helpers:init(?MUT, GetReq, Opts),
     {response, GetCode, _GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
 
     ?assertEqual(200, GetCode),
