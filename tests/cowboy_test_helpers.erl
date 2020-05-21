@@ -3,6 +3,8 @@
 -export([read_reply/1,
          req/0,
          req/3,
+         init/3,
+         validate_response_against_spec/2,
          setup/0,
          cleanup/0]).
 
@@ -16,6 +18,13 @@ cleanup() ->
     ?assert(meck:validate(cowboy_req)),
     meck:unload(cowboy_req),
     ok.
+
+init(Module, Req, Opts) ->
+    InitResp = Module:init(Req, Opts),
+    handle_init_response(Module, InitResp).
+
+handle_init_response(Module, {UpgradeMod, Req, State}) ->
+    UpgradeMod:upgrade(Req, #{}, Module, State).
 
 req() ->
     req(<<"GET">>, #{}).
@@ -39,3 +48,7 @@ read_reply({ok, #{streamid:=StreamId}, _Opts}) ->
     after 10 ->
         error
     end.
+
+validate_response_against_spec(Spec, Data) ->
+    {OkOrError, _Resp} = jesse:validate_with_schema(Spec, Data),
+    OkOrError.

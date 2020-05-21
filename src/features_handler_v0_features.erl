@@ -3,23 +3,25 @@
 -export([trails/0]).
 -export([init/2]).
 
+-export([handle_req/2]).
+
 
 trails() ->
     Metadata =    #{
-        get => #{
+        <<"get">> => #{
             operationId => getFeatures,
             tags => ["Features"],
             description => "Gets features and their status",
             produces => ["application/json"],
             responses => #{
-                <<"200">> => #{
+                200 => #{
                     description => <<"Features">>,
                     schema => features_return_schema()
 
                 }
             }
         },
-        post => #{
+        <<"post">> => #{
             operationId => setFeature,
             tags => ["Features"],
             description => "Sets a feature status",
@@ -33,10 +35,10 @@ trails() ->
                 }
             ],
             responses => #{
-                <<"204">> => #{
+                204 => #{
                     description => <<"Feature created">>
                 },
-                <<"405">> => #{
+                405 => #{
                     description => <<"Features">>
                 }
             }
@@ -48,16 +50,14 @@ features_return_schema() ->
     #{
         type => <<"object">>,
         properties => #{
-           name => #{
-             type => <<"object">>,
-             description => <<"name of feature">>,
-             properties => #{
-               enabled => #{
-                 type => <<"boolean">>,
-                 description => <<"Status of the feature">>
-               }
-             }
-          }
+           features => #{
+              type => <<"object">>,
+              description => <<"Collection of features">>,
+              additionalProperties => #{
+                type => <<"object">>,
+                description => <<"Maps of object to enabled status">>
+              }
+           }
         }
     }.
 
@@ -76,7 +76,10 @@ feature_input_schema() ->
        }
     }.
 
-init(Req=#{method := <<"POST">>=Method}, Opts) ->
+init(Req, Opts) ->
+    {swagger_specified_handler, Req, Opts}.
+
+handle_req(Req=#{method := <<"POST">>=Method}, Opts) ->
     {ok, Body, Req1} = cowboy_req:read_body(Req),
     Data = jsx:decode(Body, [return_maps]),
     #{<<"name">>:=FeatureName, <<"enabled">>:= FeatureEnabled} = Data,
@@ -94,19 +97,13 @@ init(Req=#{method := <<"POST">>=Method}, Opts) ->
                  method=>Method}),
     Resp = features_store:set_binary_feature(FeatureName, FeatureStatus),
     Code = case Resp of
-        ok -> 200;
+        ok -> 204;
         not_suported -> 405
     end,
-    respond(Req1, Code, #{}, Opts);
-init(Req=#{method := <<"GET">>}, Opts) ->
+    {Req1, Code, #{}, Opts};
+handle_req(Req=#{method := <<"GET">>}, Opts) ->
     Features = features_store:get_binary_features(),
     Data = #{<<"features">> => Features},
-    respond(Req, 200, Data, Opts);
-init(Req, Opts) ->
-    respond(Req, 200, #{}, Opts).
-
-respond(Req, Code, Value, Opts) ->
-    Resp = cowboy_req:reply(Code, #{
-        <<"content-type">> => <<"application/json">>
-    }, jsx:encode(Value), Req),
-    {ok, Resp, Opts}.
+    {Req, 200, Data, Opts};
+handle_req(Req, Opts) ->
+    {Req, 200, #{}, Opts}.
