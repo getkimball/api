@@ -7,6 +7,7 @@ BUILD_DEPS = elvis_mk
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
+DIALYZER_DIRS = --src src tests
 
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.7.0
 dep_trails = hex 2.0.0

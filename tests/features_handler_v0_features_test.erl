@@ -5,7 +5,7 @@
 
 setup_test() ->
     [Trail] = ?MUT:trails(),
-    #{ path_match := Path } = Trail,
+    Path = trails:path_match(Trail),
     ?assertEqual("/v0/features", Path),
     ok.
 
@@ -23,6 +23,8 @@ ok_test() ->
 
     ?assertEqual(200, Code),
     ?assertEqual(#{<<"features">> => []}, Data),
+    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
+    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, #{foo=>bar}),
 
     ok = meck:unload(features_store),
     ok = cowboy_test_helpers:cleanup(),

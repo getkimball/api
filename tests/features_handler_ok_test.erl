@@ -15,7 +15,7 @@ ok_test() ->
     Req = cowboy_test_helpers:req(),
     Opts = [],
 
-    CowResp = ?MUT:init(Req, Opts),
+    CowResp = cowboy_test_helpers:init(?MUT, Req, Opts),
     {response, Code, _Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
 
     ?assertEqual(200, Code),

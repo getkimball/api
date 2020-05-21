@@ -23,6 +23,8 @@ init(Module, Req, Opts) ->
     InitResp = Module:init(Req, Opts),
     handle_init_response(Module, InitResp).
 
+handle_init_response(_Module, {ok, Resp, State}) ->
+    {ok, Resp, State};
 handle_init_response(Module, {UpgradeMod, Req, State}) ->
     UpgradeMod:upgrade(Req, #{}, Module, State).
 
