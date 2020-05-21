@@ -50,16 +50,14 @@ features_return_schema() ->
     #{
         type => <<"object">>,
         properties => #{
-           name => #{
-             type => <<"object">>,
-             description => <<"name of feature">>,
-             properties => #{
-               enabled => #{
-                 type => <<"boolean">>,
-                 description => <<"Status of the feature">>
-               }
-             }
-          }
+           features => #{
+              type => <<"object">>,
+              description => <<"Collection of features">>,
+              additionalProperties => #{
+                type => <<"object">>,
+                description => <<"Maps of object to enabled status">>
+              }
+           }
         }
     }.
 

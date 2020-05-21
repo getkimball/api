@@ -2,6 +2,10 @@
 -include_lib("kernel/include/logger.hrl").
 -export([upgrade/4]).
 
+-export([method_metadata/2,
+         response_spec/2,
+         response_spec/3]).
+
 
 -callback handle_req(cowboy_req:req(), any()) ->
                 {cowboy_req:req(),
@@ -38,3 +42,6 @@ response_spec(Spec, Code) ->
     CodeSpec = maps:get(Code, Responses),
     CodeSpec.
 
+response_spec(Handler, Method, Code) ->
+    Spec = method_metadata(Handler, Method),
+    response_spec(Spec, Code).
