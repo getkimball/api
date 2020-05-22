@@ -35,6 +35,10 @@
 -record(state, {refresh_interval=undefined,
                 store_lib=undefined,
                 store_lib_state=undefined}).
+
+-record(feature, {name=undefined,
+                  enabled=undefined}).
+
 -define(FEATURE_REGISTRY, feature_registry_table).
 
 %%%===================================================================
@@ -85,7 +89,10 @@ start_link(StoreLib, Opts) ->
 %%--------------------------------------------------------------------
 init([StoreLib, Opts]) ->
     ?FEATURE_REGISTRY = ets:new(?FEATURE_REGISTRY,
-                                [set, named_table, {read_concurrency, true}]),
+                                [set,
+                                 named_table,
+                                 {read_concurrency, true},
+                                 {keypos, #feature.name}]),
     gen_server:cast(?MODULE, load_from_store),
     StoreLibState = init_store_lib(StoreLib),
     RefreshInterval = proplists:get_value(refresh_interval, Opts, undefined),
@@ -205,7 +212,8 @@ store_features([]) ->
 store_features([#{<<"name">> := Name, <<"enabled">> := Enabled} | T]) ->
     store_features([#{name=>Name, enabled=>Enabled} | T]);
 store_features([#{name := Name, enabled := Enabled} | T]) ->
-    true = ets:insert(?FEATURE_REGISTRY, {Name, Enabled}),
+    R = #feature{name=Name, enabled=Enabled},
+    true = ets:insert(?FEATURE_REGISTRY, R),
 
     ?LOG_DEBUG(#{what=>feature_stored,
                  module=>?MODULE,
@@ -235,18 +243,14 @@ trigger_refresh_get(RefreshInterval) ->
     ok.
 
 get_binary_features_pl() ->
-    Objs = ets:match_object(?FEATURE_REGISTRY, {'$0', '$1'}),
+    Objs = ets:match_object(?FEATURE_REGISTRY, #feature{_='_'}),
     Objs.
 
 feature_tuples_to_maps([]) ->
     [];
-feature_tuples_to_maps([{Name, Enabled}|T]) when is_binary(Enabled) ->
-    M = #{name=>Name,
-          enabled=>Enabled},
-    [M] ++ feature_tuples_to_maps(T);
-feature_tuples_to_maps([{Name, Enabled}|T]) when is_atom(Enabled) ->
-    M = #{name=>Name,
-          enabled=>enabled_status_to_atom(Enabled)},
+feature_tuples_to_maps([Feature=#feature{}|T]) ->
+    M = #{name=>Feature#feature.name,
+          enabled=>Feature#feature.enabled},
     [M] ++ feature_tuples_to_maps(T).
 
 feature_tuples_to_single_map(Tup) ->
@@ -254,6 +258,7 @@ feature_tuples_to_single_map(Tup) ->
 
 feature_tuples_to_single_map([], M) ->
     M;
-feature_tuples_to_single_map([{Name, Enabled}|T], M) ->
-    NewM = maps:put(Name, enabled_status_to_atom(Enabled), M),
+feature_tuples_to_single_map([Feature=#feature{}|T], M) ->
+    NewM = maps:put(Feature#feature.name,
+                    enabled_status_to_atom(Feature#feature.enabled), M),
     feature_tuples_to_single_map(T, NewM).
