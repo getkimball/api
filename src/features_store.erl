@@ -28,9 +28,8 @@
          terminate/2,
          code_change/3]).
 
--export([set_binary_feature/2,
-         get_binary_feature/1,
-         get_binary_features/0,
+-export([set_feature/3,
+         get_features/0,
          refresh_from_store/0]).
 
 -record(state, {refresh_interval=undefined,
@@ -42,14 +41,10 @@
 %%% API functions
 %%%===================================================================
 
-set_binary_feature(Name, Enabled) ->
-    gen_server:call(?MODULE, {set_binary_feature, Name, Enabled}).
+set_feature(Name, binary, Enabled) ->
+    gen_server:call(?MODULE, {set_feature, Name, binary, Enabled}).
 
-get_binary_feature(Name) ->
-    [{Name, AtomStatus}] = ets:lookup(?FEATURE_REGISTRY, Name),
-    AtomStatus.
-
-get_binary_features() ->
+get_features() ->
     Objs = get_binary_features_pl(),
     M = feature_tuples_to_single_map(Objs),
     M.
@@ -118,7 +113,7 @@ init_store_lib(StoreLib) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({set_binary_feature, Name, Enabled}, _From, State) ->
+handle_call({set_feature, Name, binary, Enabled}, _From, State) ->
     ok = store_features([#{name=>Name, enabled=>Enabled}]),
     {Resp, NewState} = store_in_storelib(State),
     {reply, Resp, NewState};

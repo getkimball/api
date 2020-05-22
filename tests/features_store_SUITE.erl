@@ -25,8 +25,8 @@ aa_write_read(_Config) ->
     Name = <<"feature">>,
     Enabled = true,
 
-    ok = features_store:set_binary_feature(Name, Enabled),
-    Resp = features_store:get_binary_features(),
+    ok = features_store:set_feature(Name, binary, Enabled),
+    Resp = features_store:get_features(),
 
     Expected = #{Name => Enabled},
     ?assertEqual(Expected, Resp),
@@ -52,7 +52,7 @@ ba_external_store_init(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     meck:wait(?STORE_LIB, get_all, '_', 1000),
-    Resp = features_store:get_binary_features(),
+    Resp = features_store:get_features(),
 
     Expected = #{Name => Enabled},
     ?assertEqual(Expected, Resp),
@@ -84,7 +84,7 @@ bb_external_store_store_data(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    ok = features_store:set_binary_feature(Name, Enabled),
+    ok = features_store:set_feature(Name, binary, Enabled),
 
     Expected = [#{name => Name, enabled => Enabled}],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
@@ -114,7 +114,7 @@ bc_external_store_not_supporting_store(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    Resp = features_store:set_binary_feature(Name, Status),
+    Resp = features_store:set_feature(Name, binary, Status),
 
     ?assertEqual(not_suported, Resp),
 

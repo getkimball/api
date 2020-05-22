@@ -12,7 +12,7 @@ setup_test() ->
 ok_test() ->
     ok = cowboy_test_helpers:setup(),
     ok = meck:new(features_store),
-    ok = meck:expect(features_store, get_binary_features, fun() -> [] end),
+    ok = meck:expect(features_store, get_features, fun() -> [] end),
 
     Req = cowboy_test_helpers:req(),
     Opts = [],
@@ -41,9 +41,9 @@ create_feature_test() ->
     },
 
     ok = meck:new(features_store),
-    ok = meck:expect(features_store, set_binary_feature, fun(_, _) -> ok end),
+    ok = meck:expect(features_store, set_feature, fun(_, binary, _) -> ok end),
     ok = cowboy_test_helpers:setup(),
-    ok = meck:expect(features_store, get_binary_features, fun() ->
+    ok = meck:expect(features_store, get_features, fun() ->
             #{Name => Enabled}
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
