@@ -19,16 +19,10 @@ start(_Type, _Args) ->
         {"/[...]", cowboy_static, {priv_dir, App, "public"}}
     ],
 
-    Handlers = [
-        features_handler_ok,
-        features_handler_v0_features,
-        cowboy_swagger_handler
-    ],
-    Trails = trails:trails(Handlers),
+    Trails = setup_trails(),
 
     AllRoutes = Routes ++ Trails ++  StaticRoute,
 
-    trails:store(Trails),
     Dispatch = trails:single_host_compile(AllRoutes),
 
     {ok, _} = cowboy:start_clear(http, [{port, 8080}], #{
@@ -40,6 +34,16 @@ start(_Type, _Args) ->
 
 stop(_State) ->
   ok.
+
+setup_trails() ->
+    Handlers = [
+        features_handler_ok,
+        features_handler_v0_features,
+        cowboy_swagger_handler
+    ],
+    Trails = trails:trails(Handlers),
+    trails:store(Trails),
+    Trails.
 
 set_config() ->
     setup_sentry(),

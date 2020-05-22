@@ -39,7 +39,7 @@ trails() ->
                     description => <<"Feature created">>
                 },
                 405 => #{
-                    description => <<"Features">>
+                    description => <<"Sidecar unable to update features">>
                 }
             }
       }
@@ -50,12 +50,12 @@ features_return_schema() ->
     #{
         type => <<"object">>,
         properties => #{
-           features => #{
+           <<"features">> => #{
               type => <<"object">>,
               description => <<"Collection of features">>,
               additionalProperties => #{
                 type => <<"object">>,
-                description => <<"Maps of object to enabled status">>
+                description => <<"Maps of feature name to bool enabled status">>
               }
            }
         }
