@@ -29,7 +29,8 @@ aa_write_read(_Config) ->
     ok = features_store:set_feature(Name, boolean, Boolean),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => defaulted_feature_spec(#{boolean => Boolean})},
+    Expected = #{Name => test_utils:defaulted_feature_spec(
+      #{boolean => Boolean})},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -55,7 +56,8 @@ ba_external_store_init(_Config) ->
     meck:wait(?STORE_LIB, get_all, '_', 1000),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => defaulted_feature_spec(#{boolean => Boolean})},
+    Expected = #{Name => test_utils:defaulted_feature_spec(
+                         #{boolean => Boolean})},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -134,18 +136,9 @@ ca_write_read_rollout(_Config) ->
     ok = features_store:set_feature(Name, rollout, Start, End),
     Resp = features_store:get_features(),
 
-    Expected = #{Name =>
-      defaulted_feature_spec(#{rollout_start=>Start, rollout_end=>End})},
+    Expected = #{Name => test_utils:defaulted_feature_spec(
+      #{rollout_start=>Start, rollout_end=>End})},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
     ok.
-
-
-defaulted_feature_spec(Spec) ->
-    Default = #{
-      boolean => false,
-      rollout_start => undefined,
-      rollout_end => undefined
-    },
-    maps:merge(Default, Spec).
