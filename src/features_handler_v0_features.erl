@@ -82,7 +82,8 @@ init(Req, Opts) ->
 handle_req(Req=#{method := <<"POST">>=Method}, Opts) ->
     {ok, Body, Req1} = cowboy_req:read_body(Req),
     Data = jsx:decode(Body, [return_maps]),
-    #{<<"name">>:=FeatureName, <<"boolean">>:= FeatureBoolean} = Data,
+    #{<<"name">> := FeatureName,
+      <<"enabled">>:= FeatureBoolean} = Data,
     FeatureStatus = case FeatureBoolean of
         <<"true">> -> true;
         <<"false">> -> false;
