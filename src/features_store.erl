@@ -133,7 +133,8 @@ handle_call({set_feature, Name, boolean, Boolean}, _From, State) ->
     {Resp, NewState} = store_in_storelib(State),
     {reply, Resp, NewState};
 handle_call({set_feature, Name, rollout, Start, End}, _From, State) ->
-    ok = store_features([#{name=>Name, rollout_start=>Start, rollout_end=>End}]),
+    ok = store_features(
+        [#{name=>Name, rollout_start=>Start, rollout_end=>End}]),
     {Resp, NewState} = store_in_storelib(State),
     {reply, Resp, NewState};
 handle_call(_Request, _From, State) ->
@@ -223,7 +224,9 @@ store_features([]) ->
     ok;
 store_features([#{<<"name">> := Name, <<"boolean">> := Boolean} | T]) ->
     store_features([#{name=>Name, boolean=>Boolean} | T]);
-store_features([#{name := Name, rollout_start := Start, rollout_end := End} | T]) ->
+store_features([#{name := Name,
+                  rollout_start := Start,
+                  rollout_end := End} | T]) ->
     R = #rollout_spec{start=Start, 'end'=End},
     F = #feature{name=Name, rollout=R},
     true = ets:insert(?FEATURE_REGISTRY, F),
