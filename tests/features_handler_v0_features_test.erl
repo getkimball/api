@@ -31,7 +31,7 @@ ok_test() ->
 
     ok.
 
-get_features_test() ->
+get_boolean_features_test() ->
     FeatureName = <<"feature_foo">>,
     Features = #{
         FeatureName => #{
