@@ -82,8 +82,8 @@ init(Req, Opts) ->
 handle_req(Req=#{method := <<"POST">>=Method}, Opts) ->
     {ok, Body, Req1} = cowboy_req:read_body(Req),
     Data = jsx:decode(Body, [return_maps]),
-    #{<<"name">>:=FeatureName, <<"enabled">>:= FeatureEnabled} = Data,
-    FeatureStatus = case FeatureEnabled of
+    #{<<"name">>:=FeatureName, <<"boolean">>:= FeatureBoolean} = Data,
+    FeatureStatus = case FeatureBoolean of
         <<"true">> -> true;
         <<"false">> -> false;
         true -> true;
@@ -95,14 +95,14 @@ handle_req(Req=#{method := <<"POST">>=Method}, Opts) ->
                  feature_name=> FeatureName,
                  feature_status=> FeatureStatus,
                  method=>Method}),
-    Resp = features_store:set_binary_feature(FeatureName, FeatureStatus),
+    Resp = features_store:set_feature(FeatureName, boolean, FeatureStatus),
     Code = case Resp of
         ok -> 204;
         not_suported -> 405
     end,
     {Req1, Code, #{}, Opts};
 handle_req(Req=#{method := <<"GET">>}, Opts) ->
-    Features = features_store:get_binary_features(),
+    Features = features_store:get_features(),
     Data = #{<<"features">> => Features},
     {Req, 200, Data, Opts};
 handle_req(Req, Opts) ->

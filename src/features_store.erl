@@ -28,29 +28,36 @@
          terminate/2,
          code_change/3]).
 
--export([set_binary_feature/2,
-         get_binary_feature/1,
-         get_binary_features/0,
+-export([set_feature/3,
+         set_feature/4,
+         get_features/0,
          refresh_from_store/0]).
 
 -record(state, {refresh_interval=undefined,
                 store_lib=undefined,
                 store_lib_state=undefined}).
+
+-record(rollout_spec, {start=undefined,
+                       'end'=undefined}).
+
+-record(feature, {name=undefined,
+                  boolean=false,
+                  rollout=#rollout_spec{}}).
+
 -define(FEATURE_REGISTRY, feature_registry_table).
 
 %%%===================================================================
 %%% API functions
 %%%===================================================================
 
-set_binary_feature(Name, Enabled) ->
-    gen_server:call(?MODULE, {set_binary_feature, Name, Enabled}).
+set_feature(Name, boolean, Boolean) ->
+    gen_server:call(?MODULE, {set_feature, Name, boolean, Boolean}).
 
-get_binary_feature(Name) ->
-    [{Name, AtomStatus}] = ets:lookup(?FEATURE_REGISTRY, Name),
-    AtomStatus.
+set_feature(Name, rollout, Start, End) ->
+    gen_server:call(?MODULE, {set_feature, Name, rollout, Start, End}).
 
-get_binary_features() ->
-    Objs = get_binary_features_pl(),
+get_features() ->
+    Objs = get_boolean_features_pl(),
     M = feature_tuples_to_single_map(Objs),
     M.
 
@@ -90,7 +97,10 @@ start_link(StoreLib, Opts) ->
 %%--------------------------------------------------------------------
 init([StoreLib, Opts]) ->
     ?FEATURE_REGISTRY = ets:new(?FEATURE_REGISTRY,
-                                [set, named_table, {read_concurrency, true}]),
+                                [set,
+                                 named_table,
+                                 {read_concurrency, true},
+                                 {keypos, #feature.name}]),
     gen_server:cast(?MODULE, load_from_store),
     StoreLibState = init_store_lib(StoreLib),
     RefreshInterval = proplists:get_value(refresh_interval, Opts, undefined),
@@ -118,25 +128,29 @@ init_store_lib(StoreLib) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({set_binary_feature, Name, Enabled}, _From, State) ->
-    ok = store_features([#{name=>Name, enabled=>Enabled}]),
+handle_call({set_feature, Name, boolean, Boolean}, _From, State) ->
+    ok = store_features([#{name=>Name, boolean=>Boolean}]),
+    {Resp, NewState} = store_in_storelib(State),
+    {reply, Resp, NewState};
+handle_call({set_feature, Name, rollout, Start, End}, _From, State) ->
+    ok = store_features([#{name=>Name, rollout_start=>Start, rollout_end=>End}]),
     {Resp, NewState} = store_in_storelib(State),
     {reply, Resp, NewState};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-enabled_status_to_atom(enabled) ->
+boolean_to_atom(enabled) ->
     true;
-enabled_status_to_atom(true) ->
+boolean_to_atom(true) ->
     true;
-enabled_status_to_atom(<<"true">>) ->
+boolean_to_atom(<<"true">>) ->
     true;
-enabled_status_to_atom(disabled) ->
+boolean_to_atom(disabled) ->
     false;
-enabled_status_to_atom(false) ->
+boolean_to_atom(false) ->
     false;
-enabled_status_to_atom(<<"false">>) ->
+boolean_to_atom(<<"false">>) ->
     false.
 
 
@@ -207,15 +221,29 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 store_features([]) ->
     ok;
-store_features([#{<<"name">> := Name, <<"enabled">> := Enabled} | T]) ->
-    store_features([#{name=>Name, enabled=>Enabled} | T]);
-store_features([#{name := Name, enabled := Enabled} | T]) ->
-    true = ets:insert(?FEATURE_REGISTRY, {Name, Enabled}),
+store_features([#{<<"name">> := Name, <<"boolean">> := Boolean} | T]) ->
+    store_features([#{name=>Name, boolean=>Boolean} | T]);
+store_features([#{name := Name, rollout_start := Start, rollout_end := End} | T]) ->
+    R = #rollout_spec{start=Start, 'end'=End},
+    F = #feature{name=Name, rollout=R},
+    true = ets:insert(?FEATURE_REGISTRY, F),
 
     ?LOG_DEBUG(#{what=>feature_stored,
                  module=>?MODULE,
                  feature=>Name,
-                 enabled=>Enabled
+                 rollout_start=>Start,
+                 rollout_end=>End
+    }),
+
+    store_features(T);
+store_features([#{name := Name, boolean := Boolean} | T]) ->
+    F = #feature{name=Name, boolean=Boolean},
+    true = ets:insert(?FEATURE_REGISTRY, F),
+
+    ?LOG_DEBUG(#{what=>feature_stored,
+                 module=>?MODULE,
+                 feature=>Name,
+                 boolean=>Boolean
     }),
 
     store_features(T).
@@ -224,7 +252,7 @@ store_in_storelib(State=#state{store_lib=undefined}) ->
     {ok, State};
 store_in_storelib(State=#state{store_lib=StoreLib,
                                store_lib_state=StoreLibState}) ->
-    AllFeatures = get_binary_features_pl(),
+    AllFeatures = get_boolean_features_pl(),
     FeatureMaps = feature_tuples_to_maps(AllFeatures),
     {Resp, NewStoreLibState} = StoreLib:store(FeatureMaps, StoreLibState),
     {Resp, State#state{store_lib_state=NewStoreLibState}}.
@@ -239,19 +267,15 @@ trigger_refresh_get(RefreshInterval) ->
         RefreshInterval, ?MODULE, refresh_from_store, []),
     ok.
 
-get_binary_features_pl() ->
-    Objs = ets:match_object(?FEATURE_REGISTRY, {'$0', '$1'}),
+get_boolean_features_pl() ->
+    Objs = ets:match_object(?FEATURE_REGISTRY, #feature{_='_'}),
     Objs.
 
 feature_tuples_to_maps([]) ->
     [];
-feature_tuples_to_maps([{Name, Enabled}|T]) when is_binary(Enabled) ->
-    M = #{name=>Name,
-          enabled=>Enabled},
-    [M] ++ feature_tuples_to_maps(T);
-feature_tuples_to_maps([{Name, Enabled}|T]) when is_atom(Enabled) ->
-    M = #{name=>Name,
-          enabled=>enabled_status_to_atom(Enabled)},
+feature_tuples_to_maps([Feature=#feature{}|T]) ->
+    M = #{name=>Feature#feature.name,
+          boolean=>Feature#feature.boolean},
     [M] ++ feature_tuples_to_maps(T).
 
 feature_tuples_to_single_map(Tup) ->
@@ -259,6 +283,11 @@ feature_tuples_to_single_map(Tup) ->
 
 feature_tuples_to_single_map([], M) ->
     M;
-feature_tuples_to_single_map([{Name, Enabled}|T], M) ->
-    NewM = maps:put(Name, enabled_status_to_atom(Enabled), M),
+feature_tuples_to_single_map([Feature=#feature{}|T], M) ->
+    Spec = #{
+        boolean => boolean_to_atom(Feature#feature.boolean),
+        rollout_start => Feature#feature.rollout#rollout_spec.start,
+        rollout_end   => Feature#feature.rollout#rollout_spec.'end'
+    },
+    NewM = maps:put(Feature#feature.name, Spec , M),
     feature_tuples_to_single_map(T, NewM).
