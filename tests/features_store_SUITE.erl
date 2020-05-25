@@ -16,8 +16,8 @@ groups() -> [{test_ets, [
                 aa_write_read,
                 ba_external_store_init,
                 bb_external_store_store_data,
-                bc_external_store_not_supporting_store
-                %ca_write_read_rollout_type
+                bc_external_store_not_supporting_store,
+                ca_write_read_rollout
               ]}
             ].
 
@@ -29,7 +29,7 @@ aa_write_read(_Config) ->
     ok = features_store:set_feature(Name, boolean, Boolean),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => Boolean},
+    Expected = #{Name => defaulted_feature_spec(#{boolean => Boolean})},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -55,7 +55,7 @@ ba_external_store_init(_Config) ->
     meck:wait(?STORE_LIB, get_all, '_', 1000),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => Boolean},
+    Expected = #{Name => defaulted_feature_spec(#{boolean => Boolean})},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -123,3 +123,29 @@ bc_external_store_not_supporting_store(_Config) ->
     true = meck:validate(?STORE_LIB),
     ok = meck:unload(?STORE_LIB),
     ok.
+
+
+ca_write_read_rollout(_Config) ->
+    {ok, Pid} = ?MUT:start_link(),
+    Name = <<"feature">>,
+    Start = {{2020, 5, 22}, {11, 12, 23}},
+    End = {{2020, 5, 29}, {11, 12, 23}},
+
+    ok = features_store:set_feature(Name, rollout, Start, End),
+    Resp = features_store:get_features(),
+
+    Expected = #{Name =>
+      defaulted_feature_spec(#{rollout_start=>Start, rollout_end=>End})},
+    ?assertEqual(Expected, Resp),
+
+    exit(Pid, normal),
+    ok.
+
+
+defaulted_feature_spec(Spec) ->
+    Default = #{
+      boolean => false,
+      rollout_start => undefined,
+      rollout_end => undefined
+    },
+    maps:merge(Default, Spec).
