@@ -12,7 +12,7 @@ setup_test() ->
 ok_test() ->
     ok = cowboy_test_helpers:setup(),
     ok = meck:new(features_store),
-    ok = meck:expect(features_store, get_features, fun() -> [] end),
+    ok = meck:expect(features_store, get_features, fun() -> #{} end),
 
     Req = cowboy_test_helpers:req(),
     Opts = [],
@@ -22,7 +22,7 @@ ok_test() ->
     Data = jsx:decode(Body, [return_maps]),
 
     ?assertEqual(200, Code),
-    ?assertEqual(#{<<"features">> => []}, Data),
+    ?assertEqual(#{<<"features">> => #{}}, Data),
     GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
 
@@ -31,6 +31,34 @@ ok_test() ->
 
     ok.
 
+get_features_test() ->
+    FeatureName = <<"feature_foo">>,
+    Features = #{
+        FeatureName => #{
+            boolean => false,
+            rollout_start => undefined,
+            rollout_end => undefined
+    }},
+    ok = cowboy_test_helpers:setup(),
+    ok = meck:new(features_store),
+    ok = meck:expect(features_store, get_features, fun() -> Features end),
+
+    Req = cowboy_test_helpers:req(),
+    Opts = [],
+
+    CowResp = cowboy_test_helpers:init(?MUT, Req, Opts),
+    {response, Code, _Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
+    Data = jsx:decode(Body, [return_maps]),
+
+    ?assertEqual(200, Code),
+    ?assertEqual(#{<<"features">>=>#{FeatureName=>false}}, Data),
+    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
+    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
+
+    ok = meck:unload(features_store),
+    ok = cowboy_test_helpers:cleanup(),
+
+    ok.
 
 create_feature_test() ->
     Name = <<"feature_name">>,
@@ -44,7 +72,7 @@ create_feature_test() ->
     ok = meck:expect(features_store, set_feature, fun(_, boolean, _) -> ok end),
     ok = cowboy_test_helpers:setup(),
     ok = meck:expect(features_store, get_features, fun() ->
-            #{Name => Boolean}
+            #{Name => #{boolean=>Boolean}}
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     Opts = [],
