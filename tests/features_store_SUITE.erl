@@ -130,8 +130,8 @@ bc_external_store_not_supporting_store(_Config) ->
 ca_write_read_rollout(_Config) ->
     {ok, Pid} = ?MUT:start_link(),
     Name = <<"feature">>,
-    Start = {{2020, 5, 22}, {11, 12, 23}},
-    End = {{2020, 5, 29}, {11, 12, 23}},
+    Start = erlang:system_time(seconds),
+    End = erlang:system_time(seconds) + 100,
 
     ok = features_store:set_feature(Name, rollout, Start, End),
     Resp = features_store:get_features(),

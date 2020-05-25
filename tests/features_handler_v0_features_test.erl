@@ -72,7 +72,7 @@ create_feature_test() ->
     ok = meck:expect(features_store, set_feature, fun(_, boolean, _) -> ok end),
     ok = cowboy_test_helpers:setup(),
     ok = meck:expect(features_store, get_features, fun() ->
-            #{Name => #{boolean=>Boolean}}
+            #{Name => test_utils:defaulted_feature_spec(#{boolean=>Boolean})}
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     Opts = [],
