@@ -37,7 +37,7 @@ create_feature_test() ->
     Boolean = true,
     Doc = #{
         name => Name,
-        boolean => Boolean
+        enabled => Boolean
     },
 
     ok = meck:new(features_store),
