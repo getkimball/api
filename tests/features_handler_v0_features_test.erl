@@ -34,17 +34,17 @@ ok_test() ->
 
 create_feature_test() ->
     Name = <<"feature_name">>,
-    Enabled = true,
+    Boolean = true,
     Doc = #{
         name => Name,
-        enabled => Enabled
+        boolean => Boolean
     },
 
     ok = meck:new(features_store),
-    ok = meck:expect(features_store, set_feature, fun(_, binary, _) -> ok end),
+    ok = meck:expect(features_store, set_feature, fun(_, boolean, _) -> ok end),
     ok = cowboy_test_helpers:setup(),
     ok = meck:expect(features_store, get_features, fun() ->
-            #{Name => Enabled}
+            #{Name => Boolean}
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     Opts = [],

@@ -37,7 +37,7 @@
                 store_lib_state=undefined}).
 
 -record(feature, {name=undefined,
-                  enabled=undefined}).
+                  boolean=undefined}).
 
 -define(FEATURE_REGISTRY, feature_registry_table).
 
@@ -45,11 +45,11 @@
 %%% API functions
 %%%===================================================================
 
-set_feature(Name, binary, Enabled) ->
-    gen_server:call(?MODULE, {set_feature, Name, binary, Enabled}).
+set_feature(Name, boolean, Boolean) ->
+    gen_server:call(?MODULE, {set_feature, Name, boolean, Boolean}).
 
 get_features() ->
-    Objs = get_binary_features_pl(),
+    Objs = get_boolean_features_pl(),
     M = feature_tuples_to_single_map(Objs),
     M.
 
@@ -120,25 +120,25 @@ init_store_lib(StoreLib) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({set_feature, Name, binary, Enabled}, _From, State) ->
-    ok = store_features([#{name=>Name, enabled=>Enabled}]),
+handle_call({set_feature, Name, boolean, Boolean}, _From, State) ->
+    ok = store_features([#{name=>Name, boolean=>Boolean}]),
     {Resp, NewState} = store_in_storelib(State),
     {reply, Resp, NewState};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-enabled_status_to_atom(enabled) ->
+boolean_to_atom(enabled) ->
     true;
-enabled_status_to_atom(true) ->
+boolean_to_atom(true) ->
     true;
-enabled_status_to_atom(<<"true">>) ->
+boolean_to_atom(<<"true">>) ->
     true;
-enabled_status_to_atom(disabled) ->
+boolean_to_atom(disabled) ->
     false;
-enabled_status_to_atom(false) ->
+boolean_to_atom(false) ->
     false;
-enabled_status_to_atom(<<"false">>) ->
+boolean_to_atom(<<"false">>) ->
     false.
 
 
@@ -209,16 +209,16 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 store_features([]) ->
     ok;
-store_features([#{<<"name">> := Name, <<"enabled">> := Enabled} | T]) ->
-    store_features([#{name=>Name, enabled=>Enabled} | T]);
-store_features([#{name := Name, enabled := Enabled} | T]) ->
-    R = #feature{name=Name, enabled=Enabled},
+store_features([#{<<"name">> := Name, <<"boolean">> := Boolean} | T]) ->
+    store_features([#{name=>Name, boolean=>Boolean} | T]);
+store_features([#{name := Name, boolean := Boolean} | T]) ->
+    R = #feature{name=Name, boolean=Boolean},
     true = ets:insert(?FEATURE_REGISTRY, R),
 
     ?LOG_DEBUG(#{what=>feature_stored,
                  module=>?MODULE,
                  feature=>Name,
-                 enabled=>Enabled
+                 boolean=>Boolean
     }),
 
     store_features(T).
@@ -227,7 +227,7 @@ store_in_storelib(State=#state{store_lib=undefined}) ->
     {ok, State};
 store_in_storelib(State=#state{store_lib=StoreLib,
                                store_lib_state=StoreLibState}) ->
-    AllFeatures = get_binary_features_pl(),
+    AllFeatures = get_boolean_features_pl(),
     FeatureMaps = feature_tuples_to_maps(AllFeatures),
     {Resp, NewStoreLibState} = StoreLib:store(FeatureMaps, StoreLibState),
     {Resp, State#state{store_lib_state=NewStoreLibState}}.
@@ -242,7 +242,7 @@ trigger_refresh_get(RefreshInterval) ->
         RefreshInterval, ?MODULE, refresh_from_store, []),
     ok.
 
-get_binary_features_pl() ->
+get_boolean_features_pl() ->
     Objs = ets:match_object(?FEATURE_REGISTRY, #feature{_='_'}),
     Objs.
 
@@ -250,7 +250,7 @@ feature_tuples_to_maps([]) ->
     [];
 feature_tuples_to_maps([Feature=#feature{}|T]) ->
     M = #{name=>Feature#feature.name,
-          enabled=>Feature#feature.enabled},
+          boolean=>Feature#feature.boolean},
     [M] ++ feature_tuples_to_maps(T).
 
 feature_tuples_to_single_map(Tup) ->
@@ -260,5 +260,5 @@ feature_tuples_to_single_map([], M) ->
     M;
 feature_tuples_to_single_map([Feature=#feature{}|T], M) ->
     NewM = maps:put(Feature#feature.name,
-                    enabled_status_to_atom(Feature#feature.enabled), M),
+                    boolean_to_atom(Feature#feature.boolean), M),
     feature_tuples_to_single_map(T, NewM).

@@ -17,18 +17,19 @@ groups() -> [{test_ets, [
                 ba_external_store_init,
                 bb_external_store_store_data,
                 bc_external_store_not_supporting_store
+                %ca_write_read_rollout_type
               ]}
             ].
 
 aa_write_read(_Config) ->
     {ok, Pid} = ?MUT:start_link(),
     Name = <<"feature">>,
-    Enabled = true,
+    Boolean = true,
 
-    ok = features_store:set_feature(Name, binary, Enabled),
+    ok = features_store:set_feature(Name, boolean, Boolean),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => Enabled},
+    Expected = #{Name => Boolean},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -38,7 +39,7 @@ ba_external_store_init(_Config) ->
     ok = meck:new(?STORE_LIB, [non_strict]),
 
     Name = <<"feature">>,
-    Enabled = true,
+    Boolean = true,
 
     StoreLibState = make_ref(),
 
@@ -47,14 +48,14 @@ ba_external_store_init(_Config) ->
     end),
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
-        {[#{name=>Name, enabled=>Enabled}], Ref}
+        {[#{name=>Name, boolean=>Boolean}], Ref}
     end),
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     meck:wait(?STORE_LIB, get_all, '_', 1000),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => Enabled},
+    Expected = #{Name => Boolean},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -66,7 +67,7 @@ bb_external_store_store_data(_Config) ->
     ok = meck:new(?STORE_LIB, [non_strict]),
 
     Name = <<"feature">>,
-    Enabled = true,
+    Boolean = true,
 
     StoreLibState = make_ref(),
 
@@ -84,9 +85,9 @@ bb_external_store_store_data(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    ok = features_store:set_feature(Name, binary, Enabled),
+    ok = features_store:set_feature(Name, boolean, Boolean),
 
-    Expected = [#{name => Name, enabled => Enabled}],
+    Expected = [#{name => Name, boolean => Boolean}],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
 
     exit(Pid, normal),
@@ -114,7 +115,7 @@ bc_external_store_not_supporting_store(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    Resp = features_store:set_feature(Name, binary, Status),
+    Resp = features_store:set_feature(Name, boolean, Status),
 
     ?assertEqual(not_suported, Resp),
 
