@@ -75,23 +75,31 @@ match_schema(Schema=#{properties:=Properties}, Data) ->
         % Data in from jsx will be binaries, not atoms
         KBin = erlang:atom_to_binary(K, utf8),
         DataValue = maps:get(KBin, Data, undefined),
-        validate_property_spec(DataValue, PropSpec),
-        maps:put(K, DataValue, AccIn)
+        ValidDataValue = validate_property_spec(DataValue, PropSpec),
+        maps:put(K, ValidDataValue, AccIn)
     end,
 
     Params = maps:fold(Fun, #{}, Properties),
     assert_has_keys(Required, Params),
     Params.
 
+validate_property_spec(undefined, _Spec) ->
+    undefined;
 validate_property_spec(Value, _Spec=#{type := boolean}) ->
     case Value of
-        true -> ok;
-        false -> ok;
+        true -> Value;
+        false -> Value;
         _ -> throw({incorrect_type, {Value, boolean}})
+    end;
+validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
+    case is_binary(Value) of
+        false -> throw({incorrect_type, {Value, string}});
+        _ -> StringValue = binary:bin_to_list(Value),
+             calendar:rfc3339_to_system_time(StringValue)
     end;
 validate_property_spec(Value, _Spec=#{type := string}) ->
     case is_binary(Value) of
-        true -> ok;
+        true -> Value;
         false -> throw({incorrect_type, {Value, string}})
     end.
 

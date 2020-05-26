@@ -3,6 +3,20 @@
 
 -define(MUT, features_handler_v0_features).
 
+load() ->
+    ok = cowboy_test_helpers:setup(),
+    ok = meck:new(features_store),
+    ok = meck:expect(features_store, get_features, fun() -> #{} end),
+    ok = meck:expect(features_store, set_feature, fun(_, boolean, _) -> ok end),
+    ok = meck:expect(features_store, set_feature, fun(_, rollout, _, _) -> ok end),
+    ok.
+
+unload() ->
+    ?assert(meck:validate(features_store)),
+    ok = meck:unload(features_store),
+    ok = cowboy_test_helpers:cleanup(),
+    ok.
+
 setup_test() ->
     [Trail] = ?MUT:trails(),
     Path = trails:path_match(Trail),
@@ -10,9 +24,7 @@ setup_test() ->
     ok.
 
 ok_test() ->
-    ok = cowboy_test_helpers:setup(),
-    ok = meck:new(features_store),
-    ok = meck:expect(features_store, get_features, fun() -> #{} end),
+    load(),
 
     Req = cowboy_test_helpers:req(),
     Opts = [],
@@ -26,12 +38,10 @@ ok_test() ->
     GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
 
-    ok = meck:unload(features_store),
-    ok = cowboy_test_helpers:cleanup(),
-
-    ok.
+    unload().
 
 get_boolean_features_test() ->
+    load(),
     FeatureName = <<"feature_foo">>,
     Features = #{
         FeatureName => #{
@@ -39,8 +49,7 @@ get_boolean_features_test() ->
             rollout_start => undefined,
             rollout_end => undefined
     }},
-    ok = cowboy_test_helpers:setup(),
-    ok = meck:new(features_store),
+
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     Req = cowboy_test_helpers:req(),
@@ -55,12 +64,10 @@ get_boolean_features_test() ->
     GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
 
-    ok = meck:unload(features_store),
-    ok = cowboy_test_helpers:cleanup(),
+    unload().
 
-    ok.
-
-create_feature_test() ->
+create_feature_boolean_test() ->
+    load(),
     Name = <<"feature_name">>,
     Boolean = true,
     Doc = #{
@@ -68,9 +75,6 @@ create_feature_test() ->
         enabled => Boolean
     },
 
-    ok = meck:new(features_store),
-    ok = meck:expect(features_store, set_feature, fun(_, boolean, _) -> ok end),
-    ok = cowboy_test_helpers:setup(),
     ok = meck:expect(features_store, get_features, fun() ->
             #{Name => test_utils:defaulted_feature_spec(#{boolean=>Boolean})}
     end),
@@ -98,11 +102,52 @@ create_feature_test() ->
     }},
     ?assertEqual(ExpectedData, Data),
 
-    ?assert(meck:validate(features_store)),
-    ok = meck:unload(features_store),
-    ok = cowboy_test_helpers:cleanup(),
+    unload().
 
-    ok.
+create_feature_rollout_test() ->
+    load(),
+    Name = <<"feature_name">>,
+    Now = erlang:system_time(seconds),
+    Later = Now + 100,
+    Doc = #{
+        name => Name,
+        rollout_start => binary:list_to_bin(calendar:system_time_to_rfc3339(Now)),
+        rollout_end => binary:list_to_bin(calendar:system_time_to_rfc3339(Later))
+    },
+
+    ok = meck:expect(features_store, get_features, fun() ->
+            #{Name => test_utils:defaulted_feature_spec(
+                #{rollout_start => Now,
+                  rollout_end => Later})}
+    end),
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Opts = [],
+
+    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
+    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+
+    ?assertEqual(Now, meck:capture(first, features_store, set_feature, '_', 3)),
+    ?assertEqual(Later, meck:capture(first, features_store, set_feature, '_', 4)),
+
+    ?assertEqual(204, PostCode),
+    ?assertEqual(<<"{}">>, PostBody),
+
+    GetReq = cowboy_test_helpers:req(),
+    CowGetResp = cowboy_test_helpers:init(?MUT, GetReq, Opts),
+    {response, GetCode, _GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
+    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, GetCode),
+
+    ?assertEqual(200, GetCode),
+    Data = jsx:decode(GetBody, [return_maps]),
+    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
+
+    ExpectedData = #{
+        <<"features">> => #{
+            Name => false
+    }},
+    ?assertEqual(ExpectedData, Data),
+
+    unload().
 
 create_feature_missing_required_name_test() ->
     cowboy_test_helpers:setup(),

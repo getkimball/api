@@ -72,6 +72,16 @@ feature_input_schema() ->
            enabled => #{
                type => boolean,
                description => <<"Status of the feature">>
+           },
+           rollout_start => #{
+               type => string,
+               format => 'date-time',
+               description => <<"Start date-time for the rollout">>
+           },
+           rollout_end => #{
+               type => string,
+               format => 'date-time',
+               description => <<"Ending date-time for the rollout">>
            }
        }
     }.
@@ -79,26 +89,13 @@ feature_input_schema() ->
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 
-handle_req(Req=#{method := <<"POST">>=Method}, Params, Opts) ->
+handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
     Data = proplists:get_value(feature, Params),
-    #{name := FeatureName,
-      enabled := FeatureBoolean} = Data,
-    FeatureStatus = case FeatureBoolean of
-        <<"true">> -> true;
-        <<"false">> -> false;
-        true -> true;
-        false -> false
-    end,
-    ?LOG_DEBUG(#{what=><<"">>,
-                 module=>?MODULE,
-                 post_data=>Data,
-                 feature_name=> FeatureName,
-                 feature_status=> FeatureStatus,
-                 method=>Method}),
-    Resp = features_store:set_feature(FeatureName, boolean, FeatureStatus),
-    Code = case Resp of
-        ok -> 204;
-        not_suported -> 405
+    BooleanOk = handle_boolean(Data),
+    RolloutOk = handle_rollout(Data),
+    Code = case {BooleanOk, RolloutOk} of
+        {ok, ok} -> 204;
+        _ -> 405
     end,
     {Req, Code, #{}, Opts};
 handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
@@ -108,3 +105,29 @@ handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
     {Req, 200, Data, Opts};
 handle_req(Req, _Params, Opts) ->
     {Req, 404, #{}, Opts}.
+
+
+handle_boolean(#{name := FeatureName, enabled := undefined}) ->
+    ?LOG_DEBUG(#{what=><<"API Set Boolean - No boolean defined">>,
+                 module=>?MODULE,
+                 feature_name=> FeatureName}),
+    ok;
+handle_boolean(#{name := FeatureName, enabled := FeatureBoolean}) ->
+    FeatureStatus = case FeatureBoolean of
+        <<"true">> -> true;
+        <<"false">> -> false;
+        true -> true;
+        false -> false
+    end,
+    ?LOG_DEBUG(#{what=><<"API Set Boolean">>,
+                 module=>?MODULE,
+                 feature_name=> FeatureName,
+                 feature_status=> FeatureStatus}),
+    Resp = features_store:set_feature(FeatureName, boolean, FeatureStatus),
+    Resp.
+
+handle_rollout(#{name := FeatureName,
+                 rollout_start := Start,
+                 rollout_end := End}) ->
+    Resp = features_store:set_feature(FeatureName, rollout, Start, End),
+    Resp.
