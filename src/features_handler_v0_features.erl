@@ -48,13 +48,13 @@ trails() ->
 
 features_return_schema() ->
     #{
-        type => <<"object">>,
+        type => object,
         properties => #{
            <<"features">> => #{
-              type => <<"object">>,
+              type => object,
               description => <<"Collection of features">>,
               additionalProperties => #{
-                type => <<"object">>,
+                type => object,
                 description => <<"Maps of feature name to bool enabled status">>
               }
            }
@@ -66,11 +66,11 @@ feature_input_schema() ->
         required => [name],
         properties => #{
            name => #{
-               type => <<"string">>,
+               type => string,
                description => <<"name of feature">>
            },
            enabled => #{
-               type => <<"boolean">>,
+               type => boolean,
                description => <<"Status of the feature">>
            }
        }

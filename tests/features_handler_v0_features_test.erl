@@ -122,3 +122,57 @@ create_feature_missing_required_name_test() ->
 
     ok = cowboy_test_helpers:cleanup(),
     ok.
+
+create_feature_incorrect_boolean_type_test() ->
+    cowboy_test_helpers:setup(),
+    Name = <<"feature_name">>,
+    BadBoolean = <<"true">>,
+    Doc = #{
+        name => Name,
+        enabled => BadBoolean
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Opts = [],
+
+    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
+    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+    Data = jsx:decode(PostBody, [return_maps]),
+
+    ExpectedResponse = #{<<"error">> =>
+                           #{<<"type_expected">> => <<"boolean">>,
+                             <<"value">> => <<"true">>,
+                             <<"what">> => "Incorrect type"}},
+    ?assertEqual(400, PostCode),
+    ?assertEqual(ExpectedResponse, Data),
+
+
+    ok = cowboy_test_helpers:cleanup(),
+    ok.
+
+create_feature_incorrect_string_type_test() ->
+    cowboy_test_helpers:setup(),
+    BadName = 4,
+    Boolean = true,
+    Doc = #{
+        name => BadName,
+        enabled => Boolean
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Opts = [],
+
+    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
+    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+    Data = jsx:decode(PostBody, [return_maps]),
+
+    ExpectedResponse = #{<<"error">> =>
+                           #{<<"type_expected">> => <<"string">>,
+                             <<"value">> => 4,
+                             <<"what">> => "Incorrect type"}},
+    ?assertEqual(400, PostCode),
+    ?assertEqual(ExpectedResponse, Data),
+
+
+    ok = cowboy_test_helpers:cleanup(),
+    ok.

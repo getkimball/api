@@ -29,6 +29,13 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                     400,
                     #{error => #{what=>"Missing required element",
                                  key=>Key}},
+                    []);
+        {incorrect_type, {Value, Type}} ->
+            respond(Req,
+                    400,
+                    #{error => #{what=>"Incorrect type",
+                                 type_expected=>Type,
+                                 value=>Value}},
                     [])
     end.
 
@@ -64,16 +71,29 @@ match_params(_Params=[_H=#{name:=Name,
 
 match_schema(Schema=#{properties:=Properties}, Data) ->
     Required = maps:get(required, Schema, []),
-    Fun = fun(K, _PropSpec, AccIn) ->
+    Fun = fun(K, PropSpec, AccIn) ->
         % Data in from jsx will be binaries, not atoms
         KBin = erlang:atom_to_binary(K, utf8),
         DataValue = maps:get(KBin, Data, undefined),
+        validate_property_spec(DataValue, PropSpec),
         maps:put(K, DataValue, AccIn)
     end,
 
     Params = maps:fold(Fun, #{}, Properties),
     assert_has_keys(Required, Params),
     Params.
+
+validate_property_spec(Value, _Spec=#{type := boolean}) ->
+    case Value of
+        true -> ok;
+        false -> ok;
+        _ -> throw({incorrect_type, {Value, boolean}})
+    end;
+validate_property_spec(Value, _Spec=#{type := string}) ->
+    case is_binary(Value) of
+        true -> ok;
+        false -> throw({incorrect_type, {Value, string}})
+    end.
 
 
 method_metadata(Handler, Method) ->
