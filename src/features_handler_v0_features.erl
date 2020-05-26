@@ -3,7 +3,7 @@
 -export([trails/0]).
 -export([init/2]).
 
--export([handle_req/2]).
+-export([handle_req/3]).
 
 
 trails() ->
@@ -27,9 +27,9 @@ trails() ->
             description => "Sets a feature status",
             produces => ["application/json"],
             parameters => [
-                #{name => <<"feature">>,
+                #{name => feature,
                   description => <<"Feature Object">>,
-                  in => <<"body">>,
+                  in => body,
                   required => true,
                   schema => feature_input_schema()
                 }
@@ -63,7 +63,7 @@ features_return_schema() ->
 
 feature_input_schema() ->
     #{
-        required => [<<"name">>],
+        required => [name],
         properties => #{
            name => #{
                type => <<"string">>,
@@ -79,11 +79,10 @@ feature_input_schema() ->
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 
-handle_req(Req=#{method := <<"POST">>=Method}, Opts) ->
-    {ok, Body, Req1} = cowboy_req:read_body(Req),
-    Data = jsx:decode(Body, [return_maps]),
-    #{<<"name">> := FeatureName,
-      <<"enabled">>:= FeatureBoolean} = Data,
+handle_req(Req=#{method := <<"POST">>=Method}, Params, Opts) ->
+    Data = proplists:get_value(feature, Params),
+    #{name := FeatureName,
+      enabled := FeatureBoolean} = Data,
     FeatureStatus = case FeatureBoolean of
         <<"true">> -> true;
         <<"false">> -> false;
@@ -101,11 +100,11 @@ handle_req(Req=#{method := <<"POST">>=Method}, Opts) ->
         ok -> 204;
         not_suported -> 405
     end,
-    {Req1, Code, #{}, Opts};
-handle_req(Req=#{method := <<"GET">>}, Opts) ->
+    {Req, Code, #{}, Opts};
+handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
     Features = features_store:get_features(),
     CollapsedFeatures = features:collapse_features_map(Features),
     Data = #{<<"features">> => CollapsedFeatures},
     {Req, 200, Data, Opts};
-handle_req(Req, Opts) ->
-    {Req, 200, #{}, Opts}.
+handle_req(Req, _Params, Opts) ->
+    {Req, 404, #{}, Opts}.

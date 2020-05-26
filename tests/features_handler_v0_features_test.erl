@@ -101,4 +101,24 @@ create_feature_test() ->
     ?assert(meck:validate(features_store)),
     ok = meck:unload(features_store),
     ok = cowboy_test_helpers:cleanup(),
+
+    ok.
+
+create_feature_missing_required_name_test() ->
+    cowboy_test_helpers:setup(),
+    Boolean = true,
+    Doc = #{
+        enabled => Boolean
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Opts = [],
+
+    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
+    {response, PostCode, _PostHeaders, _PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+
+    ?assertEqual(400, PostCode),
+
+
+    ok = cowboy_test_helpers:cleanup(),
     ok.
