@@ -52,11 +52,7 @@ features_return_schema() ->
         properties => #{
            <<"features">> => #{
               type => object,
-              description => <<"Collection of features">>,
-              additionalProperties => #{
-                type => object,
-                description => <<"Maps of feature name to bool enabled status">>
-              }
+              description => <<"Collection of features">>
            }
         }
     }.
