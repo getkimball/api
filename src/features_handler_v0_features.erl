@@ -69,9 +69,9 @@ feature_input_schema() ->
                type => string,
                description => <<"name of feature">>
            },
-           enabled => #{
+           boolean => #{
                type => boolean,
-               description => <<"Status of the feature">>
+               description => <<"Basic 'enabled' status ">>
            },
            rollout_start => #{
                type => string,
@@ -109,12 +109,12 @@ handle_req(Req, _Params, Opts) ->
     {Req, 404, #{}, Opts}.
 
 
-handle_boolean(#{name := FeatureName, enabled := undefined}) ->
+handle_boolean(#{name := FeatureName, boolean := undefined}) ->
     ?LOG_DEBUG(#{what=><<"API Set Boolean - No boolean defined">>,
                  module=>?MODULE,
                  feature_name=> FeatureName}),
     ok;
-handle_boolean(#{name := FeatureName, enabled := FeatureBoolean}) ->
+handle_boolean(#{name := FeatureName, boolean := FeatureBoolean}) ->
     FeatureStatus = case FeatureBoolean of
         <<"true">> -> true;
         <<"false">> -> false;

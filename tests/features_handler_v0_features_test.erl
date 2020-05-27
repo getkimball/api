@@ -72,7 +72,7 @@ create_feature_boolean_test() ->
     Boolean = true,
     Doc = #{
         name => Name,
-        enabled => Boolean
+        boolean => Boolean
     },
 
     ok = meck:expect(features_store, get_features, fun() ->
@@ -153,7 +153,7 @@ create_feature_missing_required_name_test() ->
     cowboy_test_helpers:setup(),
     Boolean = true,
     Doc = #{
-        enabled => Boolean
+        boolean => Boolean
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
@@ -174,7 +174,7 @@ create_feature_incorrect_boolean_type_test() ->
     BadBoolean = <<"true">>,
     Doc = #{
         name => Name,
-        enabled => BadBoolean
+        boolean => BadBoolean
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
@@ -201,7 +201,7 @@ create_feature_incorrect_string_type_test() ->
     Boolean = true,
     Doc = #{
         name => BadName,
-        enabled => Boolean
+        boolean => Boolean
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
