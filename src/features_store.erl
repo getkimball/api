@@ -213,7 +213,8 @@ code_change(_OldVsn, State, _Extra) ->
 store_features([]) ->
     ok;
 
-store_features([FeatureMap | T]) when is_map(FeatureMap) ->
+store_features([FeatureMapIn | T]) when is_map(FeatureMapIn) ->
+    FeatureMap = ensure_keys_are_atoms(FeatureMapIn),
     R = #rollout_spec{
         start=maps:get(rollout_start, FeatureMap),
         'end'=maps:get(rollout_end, FeatureMap)
@@ -282,3 +283,12 @@ feature_tuples_to_single_map([Feature=#feature{}|T], M) ->
     },
     NewM = maps:put(Feature#feature.name, Spec , M),
     feature_tuples_to_single_map(T, NewM).
+
+ensure_keys_are_atoms(Map) ->
+    maps:fold(fun map_fold_fun_key_to_atom/3, #{}, Map).
+
+map_fold_fun_key_to_atom(K, V, AccIn) when is_atom(K)->
+    maps:put(K, V, AccIn);
+map_fold_fun_key_to_atom(K, V, AccIn) when is_binary(K)->
+    Ka = erlang:binary_to_atom(K, utf8),
+    maps:put(Ka, V, AccIn).

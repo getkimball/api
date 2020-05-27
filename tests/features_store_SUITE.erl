@@ -40,25 +40,33 @@ aa_write_read(_Config) ->
 ba_external_store_init(_Config) ->
     ok = meck:new(?STORE_LIB, [non_strict]),
 
-    Name = <<"feature">>,
-    Boolean = true,
+    NameA = <<"featureA">>,
+    BooleanA = true,
+    NameB = <<"featureB">>,
+    BooleanB = false,
 
     StoreLibState = make_ref(),
 
     ok = meck:expect(?STORE_LIB, init, fun() ->
         StoreLibState
     end),
+    All = [
+      test_utils:defaulted_feature_spec(#{name=>NameA, boolean=>BooleanA}),
+      replace_keys_with_binary(test_utils:defaulted_feature_spec(#{name=>NameB, boolean=>BooleanB}))
+    ],
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
-        {[test_utils:defaulted_feature_spec(#{name=>Name, boolean=>Boolean})], Ref}
+        {All, Ref}
     end),
+
+    %% TODO: ^ test with binary keys
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     meck:wait(?STORE_LIB, get_all, '_', 1000),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => test_utils:defaulted_feature_spec(
-                         #{boolean => Boolean})},
+    Expected = #{NameA => test_utils:defaulted_feature_spec(#{boolean => BooleanA}),
+                 NameB => test_utils:defaulted_feature_spec(#{boolean => BooleanB})},
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -146,3 +154,12 @@ ca_write_read_rollout(_Config) ->
 
     exit(Pid, normal),
     ok.
+
+
+replace_keys_with_binary(Map) ->
+    Fun = fun(K,V, AccIn) ->
+        Kb = erlang:atom_to_binary(K, utf8),
+        maps:put(Kb, V, AccIn)
+    end,
+
+    maps:fold(Fun, #{}, Map).
