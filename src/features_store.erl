@@ -29,7 +29,6 @@
          code_change/3]).
 
 -export([set_feature/3,
-         set_feature/4,
          get_features/0,
          refresh_from_store/0]).
 
@@ -50,11 +49,10 @@
 %%% API functions
 %%%===================================================================
 
-set_feature(Name, boolean, Boolean) ->
-    gen_server:call(?MODULE, {set_feature, Name, boolean, Boolean}).
-
-set_feature(Name, rollout, Start, End) ->
-    gen_server:call(?MODULE, {set_feature, Name, rollout, Start, End}).
+set_feature(Name, {boolean, Boolean}, {rollout, Start, End}) ->
+    R = #rollout_spec{start=Start, 'end'=End},
+    F = #feature{name=Name, boolean=Boolean, rollout=R},
+    gen_server:call(?MODULE, {set_feature, F}).
 
 get_features() ->
     Objs = get_boolean_features_pl(),
@@ -128,18 +126,10 @@ init_store_lib(StoreLib) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({set_feature, Name, boolean, Boolean}, _From, State) ->
-    ok = store_features([#{name=>Name, boolean=>Boolean}]),
+handle_call({set_feature, Feature=#feature{}}, _From, State) ->
+    ok = store_features([Feature]),
     {Resp, NewState} = store_in_storelib(State),
-    {reply, Resp, NewState};
-handle_call({set_feature, Name, rollout, Start, End}, _From, State) ->
-    ok = store_features(
-        [#{name=>Name, rollout_start=>Start, rollout_end=>End}]),
-    {Resp, NewState} = store_in_storelib(State),
-    {reply, Resp, NewState};
-handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+    {reply, Resp, NewState}.
 
 boolean_to_atom(enabled) ->
     true;
@@ -222,25 +212,27 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 store_features([]) ->
     ok;
-store_features([#{<<"name">> := Name, <<"boolean">> := Boolean} | T]) ->
-    store_features([#{name=>Name, boolean=>Boolean} | T]);
-store_features([Feature=#{name := Name} | T]) ->
-    Boolean = maps:get(boolean, Feature, false),
-    Start = maps:get(rollout_start, Feature, undefined),
-    End = maps:get(rollout_end, Feature, undefined),
 
-    R = #rollout_spec{start=Start, 'end'=End},
-    F = #feature{name=Name,
-                 boolean=Boolean,
-                 rollout=R},
-    true = ets:insert(?FEATURE_REGISTRY, F),
+store_features([FeatureMap | T]) when is_map(FeatureMap) ->
+    R = #rollout_spec{
+        start=maps:get(rollout_start, FeatureMap),
+        'end'=maps:get(rollout_end, FeatureMap)
+    },
+    F = #feature{
+        name=maps:get(name, FeatureMap),
+        boolean=maps:get(boolean, FeatureMap),
+        rollout=R
+    },
+    store_features([F|T]);
+store_features([Feature=#feature{} | T]) ->
+    true = ets:insert(?FEATURE_REGISTRY, Feature),
 
     ?LOG_DEBUG(#{what=>feature_stored,
                  module=>?MODULE,
-                 feature=>Name,
-                 boolean=>Boolean,
-                 rollout_start=>Start,
-                 rollout_end=>End
+                 feature=>Feature#feature.name,
+                 boolean=>Feature#feature.boolean,
+                 rollout_start=>Feature#feature.rollout#rollout_spec.start,
+                 rollout_end=>Feature#feature.rollout#rollout_spec.'end'
     }),
 
     store_features(T).

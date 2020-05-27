@@ -7,8 +7,7 @@ load() ->
     ok = cowboy_test_helpers:setup(),
     ok = meck:new(features_store),
     ok = meck:expect(features_store, get_features, fun() -> #{} end),
-    ok = meck:expect(features_store, set_feature, fun(_, boolean, _) -> ok end),
-    ok = meck:expect(features_store, set_feature, fun(_, rollout, _, _) -> ok end),
+    ok = meck:expect(features_store, set_feature, fun(_, _, _) -> ok end),
     ok.
 
 unload() ->
@@ -126,8 +125,8 @@ create_feature_rollout_test() ->
     CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
 
-    ?assertEqual(Now, meck:capture(first, features_store, set_feature, '_', 3)),
-    ?assertEqual(Later, meck:capture(first, features_store, set_feature, '_', 4)),
+    ?assertEqual({rollout, Now, Later},
+                 meck:capture(first, features_store, set_feature, '_', 3)),
 
     ?assertEqual(204, PostCode),
     ?assertEqual(<<"{}">>, PostBody),

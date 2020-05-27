@@ -87,10 +87,14 @@ init(Req, Opts) ->
 
 handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
     Data = proplists:get_value(feature, Params),
-    BooleanOk = handle_boolean(Data),
-    RolloutOk = handle_rollout(Data),
-    Code = case {BooleanOk, RolloutOk} of
-        {ok, ok} -> 204;
+    Ok = features_store:set_feature(
+        maps:get(name, Data),
+        {boolean, maps:get(boolean, Data)},
+        {rollout, maps:get(rollout_start, Data),
+                  maps:get(rollout_end, Data)}
+    ),
+    Code = case Ok of
+        ok -> 204;
         _ -> 405
     end,
     {Req, Code, #{}, Opts};
@@ -103,29 +107,3 @@ handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
     {Req, 200, Data, Opts};
 handle_req(Req, _Params, Opts) ->
     {Req, 404, #{}, Opts}.
-
-
-handle_boolean(#{name := FeatureName, boolean := undefined}) ->
-    ?LOG_DEBUG(#{what=><<"API Set Boolean - No boolean defined">>,
-                 module=>?MODULE,
-                 feature_name=> FeatureName}),
-    ok;
-handle_boolean(#{name := FeatureName, boolean := FeatureBoolean}) ->
-    FeatureStatus = case FeatureBoolean of
-        <<"true">> -> true;
-        <<"false">> -> false;
-        true -> true;
-        false -> false
-    end,
-    ?LOG_DEBUG(#{what=><<"API Set Boolean">>,
-                 module=>?MODULE,
-                 feature_name=> FeatureName,
-                 feature_status=> FeatureStatus}),
-    Resp = features_store:set_feature(FeatureName, boolean, FeatureStatus),
-    Resp.
-
-handle_rollout(#{name := FeatureName,
-                 rollout_start := Start,
-                 rollout_end := End}) ->
-    Resp = features_store:set_feature(FeatureName, rollout, Start, End),
-    Resp.

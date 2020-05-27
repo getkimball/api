@@ -26,7 +26,8 @@ aa_write_read(_Config) ->
     Name = <<"feature">>,
     Boolean = true,
 
-    ok = features_store:set_feature(Name, boolean, Boolean),
+    ok = features_store:set_feature(Name, {boolean, Boolean},
+                                          {rollout, undefined, undefined}),
     Resp = features_store:get_features(),
 
     Expected = #{Name => test_utils:defaulted_feature_spec(
@@ -49,7 +50,7 @@ ba_external_store_init(_Config) ->
     end),
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
-        {[#{name=>Name, boolean=>Boolean}], Ref}
+        {[test_utils:defaulted_feature_spec(#{name=>Name, boolean=>Boolean})], Ref}
     end),
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
@@ -87,7 +88,8 @@ bb_external_store_store_data(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    ok = features_store:set_feature(Name, boolean, Boolean),
+    ok = features_store:set_feature(Name, {boolean, Boolean},
+                                          {rollout, undefined, undefined}),
 
     Expected = [test_utils:defaulted_feature_spec(#{name=>Name,
                                                     boolean=>Boolean})],
@@ -118,8 +120,8 @@ bc_external_store_not_supporting_store(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    Resp = features_store:set_feature(Name, boolean, Status),
-
+    Resp = features_store:set_feature(Name, {boolean, Status},
+                                            {rollout, undefined, undefined}),
     ?assertEqual(not_suported, Resp),
 
     exit(Pid, normal),
@@ -134,7 +136,8 @@ ca_write_read_rollout(_Config) ->
     Start = erlang:system_time(seconds),
     End = erlang:system_time(seconds) + 100,
 
-    ok = features_store:set_feature(Name, rollout, Start, End),
+    ok = features_store:set_feature(Name, {boolean, false},
+                                          {rollout, Start, End}),
     Resp = features_store:get_features(),
 
     Expected = #{Name => test_utils:defaulted_feature_spec(
