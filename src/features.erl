@@ -1,12 +1,14 @@
 -module(features).
-
+-include_lib("kernel/include/logger.hrl").
 -export([collapse_to_boolean/3,
          collapse_features_map/1]).
 
 collapse_to_boolean(#{boolean := Boolean,
                       rollout_end := undefined},
-                    _Now,
+                    Now,
                     _Rand) ->
+    ?LOG_DEBUG(#{what => "Collapse boolean",
+                 now => Now}),
     Boolean;
 collapse_to_boolean(#{rollout_start := Start,
                       rollout_end := End},
@@ -21,6 +23,13 @@ collapse_to_boolean(#{rollout_start := Start,
         true -> collapse_rollout_progress(
                   Start, End, Now, Rand)
     end,
+    ?LOG_DEBUG(#{what => "Collapse boolean rollout",
+                 start => Start,
+                 quick_false => Now =< Start,
+                 quick_true => Now >= End,
+                 'end' => End,
+                 boolean => Boolean,
+                 now => Now}),
     Boolean.
 
 collapse_features_map(Map) ->
@@ -45,4 +54,11 @@ collapse_rollout_progress(Start, End, Now, Rand) ->
     Chance = ProgressTime / Duration,
 
     Boolean = Rand =< Chance,
+    ?LOG_INFO(#{what => "Collapse rollout",
+                start => Start,
+                'end' => End,
+                duration => Duration,
+                progress_time => ProgressTime,
+                rand => Rand,
+                chance => Chance}),
     Boolean.

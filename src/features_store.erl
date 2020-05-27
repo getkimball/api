@@ -224,29 +224,23 @@ store_features([]) ->
     ok;
 store_features([#{<<"name">> := Name, <<"boolean">> := Boolean} | T]) ->
     store_features([#{name=>Name, boolean=>Boolean} | T]);
-store_features([#{name := Name,
-                  rollout_start := Start,
-                  rollout_end := End} | T]) ->
+store_features([Feature=#{name := Name} | T]) ->
+    Boolean = maps:get(boolean, Feature, false),
+    Start = maps:get(rollout_start, Feature, undefined),
+    End = maps:get(rollout_end, Feature, undefined),
+
     R = #rollout_spec{start=Start, 'end'=End},
-    F = #feature{name=Name, rollout=R},
+    F = #feature{name=Name,
+                 boolean=Boolean,
+                 rollout=R},
     true = ets:insert(?FEATURE_REGISTRY, F),
 
     ?LOG_DEBUG(#{what=>feature_stored,
                  module=>?MODULE,
                  feature=>Name,
+                 boolean=>Boolean,
                  rollout_start=>Start,
                  rollout_end=>End
-    }),
-
-    store_features(T);
-store_features([#{name := Name, boolean := Boolean} | T]) ->
-    F = #feature{name=Name, boolean=Boolean},
-    true = ets:insert(?FEATURE_REGISTRY, F),
-
-    ?LOG_DEBUG(#{what=>feature_stored,
-                 module=>?MODULE,
-                 feature=>Name,
-                 boolean=>Boolean
     }),
 
     store_features(T).
@@ -278,6 +272,8 @@ feature_tuples_to_maps([]) ->
     [];
 feature_tuples_to_maps([Feature=#feature{}|T]) ->
     M = #{name=>Feature#feature.name,
+          rollout_start => Feature#feature.rollout#rollout_spec.start,
+          rollout_end => Feature#feature.rollout#rollout_spec.'end',
           boolean=>Feature#feature.boolean},
     [M] ++ feature_tuples_to_maps(T).
 

@@ -89,7 +89,8 @@ bb_external_store_store_data(_Config) ->
 
     ok = features_store:set_feature(Name, boolean, Boolean),
 
-    Expected = [#{name => Name, boolean => Boolean}],
+    Expected = [test_utils:defaulted_feature_spec(#{name=>Name,
+                                                    boolean=>Boolean})],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
 
     exit(Pid, normal),
