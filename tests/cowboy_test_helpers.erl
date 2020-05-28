@@ -33,6 +33,8 @@ req() ->
 
 req(post, json, Body) ->
     Data = jsx:encode(Body),
+    req(<<"POST">>, #{'_test_body' => Data, has_body=>true});
+req(post, binary, Data) ->
     req(<<"POST">>, #{'_test_body' => Data, has_body=>true}).
 
 req(Method, Opts) when is_binary(Method) and erlang:is_map(Opts) ->

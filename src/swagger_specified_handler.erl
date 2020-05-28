@@ -38,6 +38,12 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                     #{error => #{what=>Msg,
                                  value=>ensure_binary(Value)}},
                     []);
+        invalid_json ->
+            Msg = <<"The request body is not valid JSON">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg}},
+                    []);
         {incorrect_type, {Value, Type}} ->
             respond(Req,
                     400,
@@ -138,8 +144,11 @@ params_from_request(Req=#{has_body:=HasBody},
     {Req1, BodyData} = case HasBody of
         false -> {Req, #{}};
         true -> {ok, Body, CaseReq} = cowboy_req:read_body(Req),
-                Data = jsx:decode(Body, [return_maps]),
-                {CaseReq, Data}
+                case jsx:is_json(Body) of
+                    true -> Data = jsx:decode(Body, [return_maps]),
+                            {CaseReq, Data};
+                    false -> throw(invalid_json)
+                end
     end,
 
     Params = match_params(SpecParams, BodyData),
