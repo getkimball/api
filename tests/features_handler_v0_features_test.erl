@@ -124,6 +124,18 @@ create_feature_rollout_test() ->
     unload().
 
 
+create_feature_invalid_json_test() ->
+    load(),
+    Data = <<"{:not valid json">>,
+
+    PostReq = cowboy_test_helpers:req(post, binary, Data),
+    Body = http_post(PostReq, 400),
+    Msg = <<"The request body is not valid JSON">>,
+    Expected = #{<<"error">> => #{<<"what">> => Msg}},
+    ?assertEqual(Expected, Body),
+
+    unload().
+
 create_feature_missing_required_name_test() ->
     load(),
     Boolean = true,
