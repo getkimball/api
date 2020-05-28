@@ -38,6 +38,9 @@ trails() ->
                 204 => #{
                     description => <<"Feature created">>
                 },
+                400 => #{
+                    description => <<"Bad request, see response for details">>
+                },
                 405 => #{
                     description => <<"Sidecar unable to update features">>
                 }
