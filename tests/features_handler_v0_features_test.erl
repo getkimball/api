@@ -136,7 +136,7 @@ create_feature_missing_required_name_test() ->
 
     Expected = #{<<"error">> => #{
                         <<"key">> => <<"name">>,
-                        <<"what">> => "Missing required element"}},
+                        <<"what">> => <<"Missing required element">>}},
     ?assertEqual(Expected, Body),
 
     unload().
@@ -156,7 +156,7 @@ create_feature_incorrect_boolean_type_test() ->
     ExpectedResponse = #{<<"error">> =>
                            #{<<"type_expected">> => <<"boolean">>,
                              <<"value">> => <<"true">>,
-                             <<"what">> => "Incorrect type"}},
+                             <<"what">> => <<"Incorrect type">>}},
     ?assertEqual(ExpectedResponse, Data),
 
     unload().
@@ -176,7 +176,7 @@ create_feature_incorrect_string_type_test() ->
     ExpectedResponse = #{<<"error">> =>
                            #{<<"type_expected">> => <<"string">>,
                              <<"value">> => 4,
-                             <<"what">> => "Incorrect type"}},
+                             <<"what">> => <<"Incorrect type">>}},
     ?assertEqual(ExpectedResponse, Data),
 
     unload().
@@ -189,7 +189,7 @@ create_feature_rollout_missing_end_test() ->
         name => Name,
         rollout_start => binary:list_to_bin(calendar:system_time_to_rfc3339(Now))
     },
-    ErrorMessage = "Rollout start requires a rollout end",
+    ErrorMessage = <<"Rollout start requires a rollout end">>,
 
     ok = meck:expect(features_store, set_feature, ['_', '_', '_'],
                      meck:raise(throw, {invalid_feature, ErrorMessage})),
@@ -198,7 +198,7 @@ create_feature_rollout_missing_end_test() ->
     Data = http_post(PostReq, 400),
 
     ExpectedResponse = #{<<"error">> =>
-                           #{<<"what">> => "Invalid feature",
+                           #{<<"what">> => <<"Invalid feature">>,
                              <<"description">> => ErrorMessage}},
     ?assertEqual(ExpectedResponse, Data),
     unload().
@@ -209,11 +209,11 @@ create_feature_rollout_invalid_date_format_test() ->
         name => <<"feature_name">>,
         rollout_start => <<"2020">>
     },
-    ErrorMessage = "Date doesn't appear to be the right format",
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     Data = http_post(PostReq, 400),
 
+    ErrorMessage = <<"Date doesn't appear to be the right format">>,
     ExpectedResponse = #{<<"error">> =>
                            #{<<"what">> => ErrorMessage,
                              <<"value">> => <<"2020">>}},

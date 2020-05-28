@@ -22,26 +22,26 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
         {missing_required_key, Key} ->
             respond(Req,
                     400,
-                    #{error => #{what=>"Missing required element",
+                    #{error => #{what=><<"Missing required element">>,
                                  key=>Key}},
                     []);
         {invalid_feature, Message} ->
             respond(Req,
                     400,
-                    #{error => #{what=>"Invalid feature",
-                                 description=>Message}},
+                    #{error => #{what=><<"Invalid feature">>,
+                                 description=>ensure_binary(Message)}},
                     []);
         {invalid_date, Value} ->
-            Msg = "Date doesn't appear to be the right format",
+            Msg = <<"Date doesn't appear to be the right format">>,
             respond(Req,
                     400,
                     #{error => #{what=>Msg,
-                                 value=>Value}},
+                                 value=>ensure_binary(Value)}},
                     []);
         {incorrect_type, {Value, Type}} ->
             respond(Req,
                     400,
-                    #{error => #{what=>"Incorrect type",
+                    #{error => #{what=><<"Incorrect type">>,
                                  type_expected=>Type,
                                  value=>Value}},
                     [])
@@ -157,3 +157,9 @@ response_spec(Spec, Code) ->
 response_spec(Handler, Method, Code) ->
     Spec = method_metadata(Handler, Method),
     response_spec(Spec, Code).
+
+
+ensure_binary(Bin) when is_binary(Bin) ->
+    Bin;
+ensure_binary(List) when is_list(List) ->
+    binary:list_to_bin(List).
