@@ -6,7 +6,9 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-    ?LOG_INFO(#{what=><<"Starting">>}),
+    {ok, VSN} = application:get_key(features, vsn),
+    ?LOG_INFO(#{what=><<"Starting">>,
+                version=>VSN}),
     App = features,
     Mode = get_features_mode(),
 
