@@ -15,30 +15,46 @@
 
 upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
     Spec = method_metadata(Handler, Method),
-    try params_from_request(Req, Spec) of
-        {Req1, Params} ->
-            {HandlerReq, Code, Data, Opts} = Handler:handle_req(
-                                                Req1,
-                                                Params,
-                                                HandlerState),
-            _ResponseSpec = response_spec(Spec, Code),
-            respond(HandlerReq, Code, Data, Opts)
+    try handle_req(Req, Spec, Handler, HandlerState) of
+        {Req1, Code, Data, State} ->
+            respond(Req1, Code, Data, State)
     catch
         {missing_required_key, Key} ->
             respond(Req,
                     400,
-                    #{error => #{what=>"Missing required element",
+                    #{error => #{what=><<"Missing required element">>,
                                  key=>Key}},
+                    []);
+        {invalid_feature, Message} ->
+            respond(Req,
+                    400,
+                    #{error => #{what=><<"Invalid feature">>,
+                                 description=>ensure_binary(Message)}},
+                    []);
+        {invalid_date, Value} ->
+            Msg = <<"Date doesn't appear to be the right format">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg,
+                                 value=>ensure_binary(Value)}},
                     []);
         {incorrect_type, {Value, Type}} ->
             respond(Req,
                     400,
-                    #{error => #{what=>"Incorrect type",
+                    #{error => #{what=><<"Incorrect type">>,
                                  type_expected=>Type,
                                  value=>Value}},
                     [])
     end.
 
+handle_req(Req, Spec, Handler, HandlerState) ->
+    {Req1, Params} = params_from_request(Req, Spec),
+    {HandlerReq, Code, Data, State} = Handler:handle_req(
+                                                Req1,
+                                                Params,
+                                                HandlerState),
+    _ResponseSpec = response_spec(Spec, Code),
+    {HandlerReq, Code, Data, State}.
 
 respond(Req, Code, Value, Opts) ->
     Resp = cowboy_req:reply(Code, #{
@@ -95,7 +111,13 @@ validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
     case is_binary(Value) of
         false -> throw({incorrect_type, {Value, string}});
         _ -> StringValue = binary:bin_to_list(Value),
-             calendar:rfc3339_to_system_time(StringValue)
+             try calendar:rfc3339_to_system_time(StringValue) of
+                Date -> Date
+             catch
+                error:{badmatch, _DateValue} ->
+                    throw({invalid_date, Value})
+             end
+
     end;
 validate_property_spec(Value, _Spec=#{type := string}) ->
     case is_binary(Value) of
@@ -135,3 +157,9 @@ response_spec(Spec, Code) ->
 response_spec(Handler, Method, Code) ->
     Spec = method_metadata(Handler, Method),
     response_spec(Spec, Code).
+
+
+ensure_binary(Bin) when is_binary(Bin) ->
+    Bin;
+ensure_binary(List) when is_list(List) ->
+    binary:list_to_bin(List).

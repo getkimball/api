@@ -52,16 +52,8 @@ get_boolean_features_test() ->
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     Req = cowboy_test_helpers:req(),
-    Opts = [],
-
-    CowResp = cowboy_test_helpers:init(?MUT, Req, Opts),
-    {response, Code, _Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
-    Data = jsx:decode(Body, [return_maps]),
-
-    ?assertEqual(200, Code),
+    Data = http_get(Req, 200),
     ?assertEqual(#{<<"features">>=>#{FeatureName=>false}}, Data),
-    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
-    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
 
     unload().
 
@@ -87,13 +79,7 @@ create_feature_boolean_test() ->
     ?assertEqual(<<"{}">>, PostBody),
 
     GetReq = cowboy_test_helpers:req(),
-    CowGetResp = cowboy_test_helpers:init(?MUT, GetReq, Opts),
-    {response, GetCode, _GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
-    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, GetCode),
-
-    ?assertEqual(200, GetCode),
-    Data = jsx:decode(GetBody, [return_maps]),
-    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
+    Data = http_get(GetReq, 200),
 
     ExpectedData = #{
         <<"features">> => #{
@@ -120,26 +106,15 @@ create_feature_rollout_test() ->
                   rollout_end => Later})}
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Opts = [],
-
-    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
-    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+    PostBody = http_post(PostReq, 204),
 
     ?assertEqual({rollout, Now, Later},
                  meck:capture(first, features_store, set_feature, '_', 3)),
 
-    ?assertEqual(204, PostCode),
-    ?assertEqual(<<"{}">>, PostBody),
+    ?assertEqual(#{}, PostBody),
 
     GetReq = cowboy_test_helpers:req(),
-    CowGetResp = cowboy_test_helpers:init(?MUT, GetReq, Opts),
-    {response, GetCode, _GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
-    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, GetCode),
-
-    ?assertEqual(200, GetCode),
-    Data = jsx:decode(GetBody, [return_maps]),
-    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
-
+    Data = http_get(GetReq, 200),
     ExpectedData = #{
         <<"features">> => #{
             Name => false
@@ -148,27 +123,26 @@ create_feature_rollout_test() ->
 
     unload().
 
+
 create_feature_missing_required_name_test() ->
-    cowboy_test_helpers:setup(),
+    load(),
     Boolean = true,
     Doc = #{
         boolean => Boolean
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Opts = [],
+    Body = http_post(PostReq, 400),
 
-    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
-    {response, PostCode, _PostHeaders, _PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+    Expected = #{<<"error">> => #{
+                        <<"key">> => <<"name">>,
+                        <<"what">> => <<"Missing required element">>}},
+    ?assertEqual(Expected, Body),
 
-    ?assertEqual(400, PostCode),
-
-
-    ok = cowboy_test_helpers:cleanup(),
-    ok.
+    unload().
 
 create_feature_incorrect_boolean_type_test() ->
-    cowboy_test_helpers:setup(),
+    load(),
     Name = <<"feature_name">>,
     BadBoolean = <<"true">>,
     Doc = #{
@@ -177,25 +151,18 @@ create_feature_incorrect_boolean_type_test() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Opts = [],
-
-    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
-    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
-    Data = jsx:decode(PostBody, [return_maps]),
+    Data = http_post(PostReq, 400),
 
     ExpectedResponse = #{<<"error">> =>
                            #{<<"type_expected">> => <<"boolean">>,
                              <<"value">> => <<"true">>,
-                             <<"what">> => "Incorrect type"}},
-    ?assertEqual(400, PostCode),
+                             <<"what">> => <<"Incorrect type">>}},
     ?assertEqual(ExpectedResponse, Data),
 
-
-    ok = cowboy_test_helpers:cleanup(),
-    ok.
+    unload().
 
 create_feature_incorrect_string_type_test() ->
-    cowboy_test_helpers:setup(),
+    load(),
     BadName = 4,
     Boolean = true,
     Doc = #{
@@ -204,19 +171,74 @@ create_feature_incorrect_string_type_test() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Opts = [],
-
-    CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
-    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
-    Data = jsx:decode(PostBody, [return_maps]),
+    Data = http_post(PostReq, 400),
 
     ExpectedResponse = #{<<"error">> =>
                            #{<<"type_expected">> => <<"string">>,
                              <<"value">> => 4,
-                             <<"what">> => "Incorrect type"}},
-    ?assertEqual(400, PostCode),
+                             <<"what">> => <<"Incorrect type">>}},
     ?assertEqual(ExpectedResponse, Data),
 
+    unload().
 
-    ok = cowboy_test_helpers:cleanup(),
-    ok.
+create_feature_rollout_missing_end_test() ->
+    load(),
+    Name = <<"feature_name">>,
+    Now = erlang:system_time(seconds),
+    Doc = #{
+        name => Name,
+        rollout_start => binary:list_to_bin(calendar:system_time_to_rfc3339(Now))
+    },
+    ErrorMessage = <<"Rollout start requires a rollout end">>,
+
+    ok = meck:expect(features_store, set_feature, ['_', '_', '_'],
+                     meck:raise(throw, {invalid_feature, ErrorMessage})),
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Data = http_post(PostReq, 400),
+
+    ExpectedResponse = #{<<"error">> =>
+                           #{<<"what">> => <<"Invalid feature">>,
+                             <<"description">> => ErrorMessage}},
+    ?assertEqual(ExpectedResponse, Data),
+    unload().
+
+create_feature_rollout_invalid_date_format_test() ->
+    load(),
+    Doc = #{
+        name => <<"feature_name">>,
+        rollout_start => <<"2020">>
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Data = http_post(PostReq, 400),
+
+    ErrorMessage = <<"Date doesn't appear to be the right format">>,
+    ExpectedResponse = #{<<"error">> =>
+                           #{<<"what">> => ErrorMessage,
+                             <<"value">> => <<"2020">>}},
+    ?assertEqual(ExpectedResponse, Data),
+    unload().
+
+
+%%%%
+%   Test helpers
+%%%%
+
+http_get(Req, ExpectedCode) ->
+    CowGetResp = cowboy_test_helpers:init(?MUT, Req, []),
+    {response, GetCode, _GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
+    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, GetCode),
+
+    ?assertEqual(ExpectedCode, GetCode),
+    Data = jsx:decode(GetBody, [return_maps]),
+    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
+    Data.
+
+http_post(Req, ExpectedCode) ->
+    CowPostResp = cowboy_test_helpers:init(?MUT, Req, []),
+    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+    Data = jsx:decode(PostBody, [return_maps]),
+
+    ?assertEqual(ExpectedCode, PostCode),
+    Data.
