@@ -87,12 +87,13 @@ init(Req, Opts) ->
 
 handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
     Data = proplists:get_value(feature, Params),
-    Ok = features_store:set_feature(
-        maps:get(name, Data),
-        {boolean, maps:get(boolean, Data)},
-        {rollout, maps:get(rollout_start, Data),
-                  maps:get(rollout_end, Data)}
-    ),
+    Name = maps:get(name, Data),
+    Boolean =  {boolean,
+                  maps:get(boolean, Data)},
+    Rollout =  {rollout,
+                  maps:get(rollout_start, Data),
+                  maps:get(rollout_end, Data)},
+    Ok = features_store:set_feature(Name, Boolean, Rollout),
     Code = case Ok of
         ok -> 204;
         _ -> 405

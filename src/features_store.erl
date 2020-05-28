@@ -52,6 +52,7 @@
 set_feature(Name, {boolean, Boolean}, {rollout, Start, End}) ->
     R = #rollout_spec{start=Start, 'end'=End},
     F = #feature{name=Name, boolean=Boolean, rollout=R},
+    ok = validate_feature(F),
     gen_server:call(?MODULE, {set_feature, F}).
 
 get_features() ->
@@ -292,3 +293,24 @@ map_fold_fun_key_to_atom(K, V, AccIn) when is_atom(K)->
 map_fold_fun_key_to_atom(K, V, AccIn) when is_binary(K)->
     Ka = erlang:binary_to_atom(K, utf8),
     maps:put(Ka, V, AccIn).
+
+validate_feature(Feature=#feature{}) ->
+    validate_rollout(Feature).
+
+
+validate_rollout(#feature{rollout=#rollout_spec{
+                                            start=undefined,
+                                            'end'=undefined}}) ->
+    ok;
+validate_rollout(#feature{rollout=#rollout_spec{
+                                            start=_RS,
+                                            'end'=undefined}}) ->
+    throw({invalid_feature, "Rollout start must have an end"});
+validate_rollout(#feature{rollout=#rollout_spec{
+                                            start=Start,
+                                            'end'=End}}) ->
+    case Start > End of
+        true -> throw({invalid_feature,
+                       "Rollout start cannot be after the end"});
+        false -> ok
+    end.

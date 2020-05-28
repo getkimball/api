@@ -14,6 +14,8 @@ all() -> [{group, test_ets}].
 
 groups() -> [{test_ets, [
                 aa_write_read,
+                ab_invalid_feature_missing_rollout_end,
+                ac_invalid_feature_before_after_end,
                 ba_external_store_init,
                 bb_external_store_store_data,
                 bc_external_store_not_supporting_store,
@@ -36,6 +38,20 @@ aa_write_read(_Config) ->
 
     exit(Pid, normal),
     ok.
+
+ab_invalid_feature_missing_rollout_end(_Config) ->
+    Throw = {invalid_feature, "Rollout start must have an end"},
+    Name = <<"name">>,
+    Boolean = {boolean, undefined},
+    Rollout = {rollout, 1, undefined},
+    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout)).
+
+ac_invalid_feature_before_after_end(_Config) ->
+    Throw = {invalid_feature, "Rollout start cannot be after the end"},
+    Name = <<"name">>,
+    Boolean = {boolean, undefined},
+    Rollout = {rollout, 2, 1},
+    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout)).
 
 ba_external_store_init(_Config) ->
     ok = meck:new(?STORE_LIB, [non_strict]),

@@ -181,6 +181,46 @@ create_feature_incorrect_string_type_test() ->
 
     unload().
 
+create_feature_rollout_missing_end_test() ->
+    load(),
+    Name = <<"feature_name">>,
+    Now = erlang:system_time(seconds),
+    Doc = #{
+        name => Name,
+        rollout_start => binary:list_to_bin(calendar:system_time_to_rfc3339(Now))
+    },
+    ErrorMessage = "Rollout start requires a rollout end",
+
+    ok = meck:expect(features_store, set_feature, ['_', '_', '_'],
+                     meck:raise(throw, {invalid_feature, ErrorMessage})),
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Data = http_post(PostReq, 400),
+
+    ExpectedResponse = #{<<"error">> =>
+                           #{<<"what">> => "Invalid feature",
+                             <<"description">> => ErrorMessage}},
+    ?assertEqual(ExpectedResponse, Data),
+    unload().
+
+create_feature_rollout_invalid_date_format_test() ->
+    load(),
+    Doc = #{
+        name => <<"feature_name">>,
+        rollout_start => <<"2020">>
+    },
+    ErrorMessage = "Date doesn't appear to be the right format",
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Data = http_post(PostReq, 400),
+
+    ExpectedResponse = #{<<"error">> =>
+                           #{<<"what">> => ErrorMessage,
+                             <<"value">> => <<"2020">>}},
+    ?assertEqual(ExpectedResponse, Data),
+    unload().
+
+
 %%%%
 %   Test helpers
 %%%%
