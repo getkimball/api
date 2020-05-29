@@ -6,7 +6,9 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-    ?LOG_INFO(#{what=><<"Starting">>}),
+    {ok, VSN} = application:get_key(features, vsn),
+    ?LOG_INFO(#{what=><<"Starting">>,
+                version=>VSN}),
     App = features,
     Mode = get_features_mode(),
 
@@ -76,6 +78,9 @@ additional_namespaces_to_list(List) ->
     List.
 
 setup_sentry() ->
+    {ok, VSN} = application:get_key(features, vsn),
+    VSNBin = binary:list_to_bin(VSN),
+    Version = << <<"features-">>/binary, VSNBin/binary >>,
     DSN = os:getenv("SENTRY_DSN"),
     case DSN of
         false ->
@@ -87,10 +92,13 @@ setup_sentry() ->
                 er_logger_handler,
                 #{level => warning,
                   config => #{
-
                     dsn => ActualDSN
         }})
     end,
+    ok = eraven:set_environment_context(eraven,
+                                   <<"server">>,
+                                   <<"environment">>,
+                                   Version),
     ok.
 
 setup_file_store_path() ->

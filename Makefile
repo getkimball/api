@@ -1,9 +1,8 @@
 PROJECT = features
 PROJECT_DESCRIPTION = New project
-PROJECT_VERSION = 0.1.0
 
 DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven
-BUILD_DEPS = elvis_mk
+BUILD_DEPS = elvis_mk version.mk
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
@@ -22,8 +21,9 @@ dep_prometheus_cowboy = hex 0.1.8
 dep_ranch = git https://github.com/ninenines/ranch.git 1.7.1
 dep_kuberlnetes = git https://github.com/philipcristiano/kuberlnetes.git v0.0.5
 dep_swaggerl = git https://github.com/philipcristiano/swaggerl.git v0.0.7
+dep_version.mk = git https://github.com/manifest/version.mk.git v0.2.0
 
-DEP_PLUGINS = elvis_mk
+DEP_PLUGINS = elvis_mk version.mk
 
 SHELL_OPTS = -eval 'application:ensure_all_started(features).' -config sys
 
