@@ -93,12 +93,12 @@ setup_sentry() ->
                 #{level => warning,
                   config => #{
                     dsn => ActualDSN
-        }})
+        }}),
+        ok = eraven:set_environment_context(eraven,
+                                       <<"server">>,
+                                       <<"environment">>,
+                                       Version)
     end,
-    ok = eraven:set_environment_context(eraven,
-                                   <<"server">>,
-                                   <<"environment">>,
-                                   Version),
     ok.
 
 setup_file_store_path() ->
