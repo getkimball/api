@@ -15,6 +15,11 @@ jobs:
   build_docker:
     runs-on: ubuntu-latest
 
+    outputs:
+      foo: bar
+      docker_tag: ${{ steps.set_docker_tag.outputs.docker_tag }}
+      deploy_config_path: ${{ steps.set_docker_tag.outputs.deploy_config_path }}
+
     steps:
     - uses: actions/checkout@v1
 
@@ -35,9 +40,9 @@ jobs:
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
       run: |
         if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
-          echo "##[set-output name=docker_tag;]$(echo ${ECR_REPOSITORY}:pr-${GITHUB_SHA})"
+          echo "##[set-output name=docker_tag;]$(echo pr-${GITHUB_SHA})"
         else
-          echo "##[set-output name=docker_tag;]$(echo ${ECR_REPOSITORY}:${GITHUB_REF##*/}-${GITHUB_SHA})"
+          echo "##[set-output name=docker_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA})"
         fi
         if [[ $GITHUB_REF = "refs/heads/master" ]] ; then
           echo "##[set-output name=deploy_config_path;]kubernetes/overlays/master"
@@ -47,23 +52,41 @@ jobs:
 
     - name: Build, tag, and push pull_request image to Amazon ECR
       env:
-        DOCKER_TAG: ${{ steps.set_docker_tag.outputs.docker_tag }}
+        DOCKER_ECR_TAG: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY}}:${{ steps.set_docker_tag.outputs.docker_tag }}
       run: |
-        docker build -t $DOCKER_TAG .
-        docker push $DOCKER_TAG
+        docker build -t $DOCKER_ECR_TAG .
+        docker push $DOCKER_ECR_TAG
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_docker
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
     - name: Kustomize and Deployment
       uses: getkimball/deploy-action@master
       env:
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
-        DOCKER_TAG: ${{ steps.set_docker_tag.outputs.docker_tag }}
-        DEPLOY_CONFIG_PATH: ${{ steps.set_docker_tag.outputs.deploy_config_path }}
+        DOCKER_TAG: ${{ needs.build_docker.outputs.docker_tag }}
+        DEPLOY_CONFIG_PATH: ${{ needs.build_docker.outputs.deploy_config_path }}
         KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       with:
         command: |
           pushd $DEPLOY_CONFIG_PATH
-          kustomize edit set image ${ECR_REPOSITORY}=${DOCKER_TAG}
+          kustomize edit set image ${ECR_REPOSITORY}=${ECR_REPOSITORY}:${DOCKER_TAG}
           kustomize edit add secret features --from-literal=sentry_dsn=${SENTRY_DSN}
           popd
 
@@ -82,3 +105,42 @@ jobs:
             kubectl -n ${NAMESPACE} rollout status deployment ${NAME} --timeout=2m
           done
           IFS=$OLDIFS
+
+  upload_to_quay:
+    runs-on: ubuntu-latest
+    needs: build_docker
+    if: github.event_name != 'pull_request'
+
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Download ECR image
+      env:
+        DOCKER_ECR_TAG: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}:${{ needs.build_docker.outputs.docker_tag }}
+      run: |
+        echo ${DOCKER_ECR_TAG}
+        docker pull ${DOCKER_ECR_TAG}
+
+    - name: Docker Login - Quay
+      uses: azure/docker-login@v1
+      with:
+        login-server: quay.io
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Upload to Quay
+      env:
+        DOCKER_ECR_TAG: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}:${{ needs.build_docker.outputs.docker_tag }}
+        DOCKER_QUAY_TAG: quay.io/${{ github.repository }}:${{ needs.build_docker.outputs.docker_tag }}
+      run: |
+        docker tag ${DOCKER_ECR_TAG} ${DOCKER_QUAY_TAG}
+        docker push ${DOCKER_QUAY_TAG}
