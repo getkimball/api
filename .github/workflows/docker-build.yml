@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      foo: bar
-      docker_tag: ${{ steps.set_docker_tag.outputs.docker_tag }}
       deploy_config_path: ${{ steps.set_docker_tag.outputs.deploy_config_path }}
+      docker_tag: ${{ steps.set_docker_tag.outputs.docker_tag }}
+      namespace: ${{ steps.set_docker_tag.outputs.namespace }}
 
     steps:
     - uses: actions/checkout@v1
@@ -41,8 +41,9 @@ jobs:
       run: |
         if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
           echo "##[set-output name=docker_tag;]$(echo pr-${GITHUB_SHA})"
+          echo "##[set-output name=namespace;]getkimball-pr"
         else
-          echo "##[set-output name=docker_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA})"
+          echo "##[set-output name=namespace;]getkimball"
         fi
         if [[ $GITHUB_REF = "refs/heads/master" ]] ; then
           echo "##[set-output name=deploy_config_path;]kubernetes/overlays/master"
@@ -75,36 +76,39 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Kustomize and Deployment
+    - name: Helm install
       uses: getkimball/deploy-action@master
       env:
-        ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
         DOCKER_TAG: ${{ needs.build_docker.outputs.docker_tag }}
-        DEPLOY_CONFIG_PATH: ${{ needs.build_docker.outputs.deploy_config_path }}
-        KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
+
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+        KUBERNETES_NAMESPACE: ${{ needs.build_docker.outputs.namespace }}
+        KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
       with:
         command: |
-          pushd $DEPLOY_CONFIG_PATH
-          kustomize edit set image ${ECR_REPOSITORY}=${ECR_REPOSITORY}:${DOCKER_TAG}
-          kustomize edit add secret features --from-literal=sentry_dsn=${SENTRY_DSN}
-          popd
+          kubectl --namespace=${KUBERNETES_NAMESPACE} create secret generic features \
+            --from-literal=sentry_dsn=${SENTRY_DSN} \
+            --dry-run \
+            -o yaml | kubectl apply -f -
 
-          kustomize build $DEPLOY_CONFIG_PATH > .action-deploy.yaml
-          cat .action-deploy.yaml
+          if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
+              serviceType=ClusterIP
+          else
+              serviceType=LoadBalancer
+          fi
 
-          kubectl apply -f .action-deploy.yaml
-
-          OLDIFS=$IFS
-          IFS=" "
-          for NAMESPACE_AND_NAME in $(yq -j . .action-deploy.yaml | jq -r 'if .kind == "Deployment" then .metadata.namespace + "," + .metadata.name  else null end | select( . == null |not)')
-          do
-            IFS=","
-            read -r NAMESPACE NAME <<< $NAMESPACE_AND_NAME
-            echo kubectl -n ${NAMESPACE} rollout status deployment ${NAME} --timeout=2m
-            kubectl -n ${NAMESPACE} rollout status deployment ${NAME} --timeout=2m
-          done
-          IFS=$OLDIFS
+          helm upgrade kimball-api ./helm  --install \
+            --namespace ${KUBERNETES_NAMESPACE} \
+            --create-namespace \
+            --wait \
+            --timeout 2m \
+            --set image.repository="${ECR_REPOSITORY}" \
+            --set image.tag=${DOCKER_TAG} \
+            --set service.type=${SERVICE_TYPE} \
+            --set kimball.additional_namespaces=${KUBERNETES_NAMESPACE} \
+            --set kimball.mode=api
 
   upload_to_quay:
     runs-on: ubuntu-latest
