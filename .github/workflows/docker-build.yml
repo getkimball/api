@@ -43,6 +43,7 @@ jobs:
           echo "##[set-output name=docker_tag;]$(echo pr-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball-pr"
         else
+          echo "##[set-output name=docker_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball"
         fi
         if [[ $GITHUB_REF = "refs/heads/master" ]] ; then
