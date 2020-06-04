@@ -1,28 +1,30 @@
+{{- if .Values.kimball.enableDaemonset -}}
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: {{ include "kimball-api.fullname" . }}
   labels:
     {{- include "kimball-api.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
   minReadySeconds: 30
-  revisionHistoryLimit: 3
   selector:
     matchLabels:
-      {{- include "kimball-api.APISelectorLabels" . | nindent 6 }}
+      {{- include "kimball-api.DSSelectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "kimball-api.APISelectorLabels" . | nindent 8 }}
+        {{- include "kimball-api.DSSelectorLabels" . | nindent 8 }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      serviceAccountName: {{ include "kimball-api.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: features-data
+          configMap:
+            name: features-state-store
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -32,6 +34,7 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+              hostPort: {{ .Values.kimball.daemonsetPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -49,14 +52,11 @@ spec:
               secretKeyRef:
                 name: features
                 key: sentry_dsn
-          - name: "ADDITIONAL_NAMESPACES"
-            value: {{ .Release.Namespace }}
           - name: "FEATURES_MODE"
-            value: {{ .Values.kimball.mode }}
-          - name: NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
+            value: sidecar
+          volumeMounts:
+          - name: features-data
+            mountPath: /features
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -69,3 +69,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+{{- end -}}

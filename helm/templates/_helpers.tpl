@@ -55,6 +55,11 @@ app.kubernetes.io/component: api
 app.kubernetes.io/component: api
 {{- end -}}
 
+{{- define "kimball-api.DSSelectorLabels" -}}
+{{ include "kimball-api.genericSelectorLabels" . }}
+app.kubernetes.io/component: daemonset
+{{- end -}}
+
 {{/*
 Create the name of the service account to use
 */}}

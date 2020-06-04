@@ -53,4 +53,5 @@ affinity: {}
 
 kimball:
   mode: "api"
-  additional_namespaces: "getkimball"
+  enableDaemonset: true
+  daemonsetPort: 7232

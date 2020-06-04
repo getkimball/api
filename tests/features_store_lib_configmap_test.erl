@@ -9,7 +9,6 @@ init_test() ->
 
     API = make_ref(),
 
-    ok = meck:expect(application, get_env, [features, namespaces], {ok, []}),
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
 
@@ -24,7 +23,6 @@ write_read_test() ->
 
     API = make_ref(),
 
-    ok = meck:expect(application, get_env, [features, namespaces], {ok, []}),
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
     ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
@@ -53,7 +51,6 @@ first_write_test() ->
     load(),
     API = make_ref(),
 
-    ok = meck:expect(application, get_env, [features, namespaces], {ok, []}),
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
     ok = meck:expect(swaggerl, op, [{[API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>404}},
@@ -86,7 +83,8 @@ push_to_namespaces_test() ->
     API = make_ref(),
     Namespace = <<"test_namespace">>,
 
-    ok = meck:expect(application, get_env, [features, namespaces], {ok, [Namespace]}),
+    ok = meck:expect(application, get_env, [{[features, namespaces], {ok, [Namespace]}},
+                                            {[features, namespace], {ok, <<"getkimball">>}}]),
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
     ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
@@ -123,6 +121,9 @@ load() ->
     ok = meck:new(application, [unstick]),
     ok = meck:new(kuberlnetes),
     ok = meck:new(swaggerl),
+
+    ok = meck:expect(application, get_env, [{[features, namespaces], {ok, []}},
+                                            {[features, namespace], {ok, <<"getkimball">>}}]),
     ok.
 
 unload() ->

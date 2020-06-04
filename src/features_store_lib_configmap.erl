@@ -14,7 +14,8 @@
 %%%%
 
 init() ->
-    ConfigmapRef = #{namespace=><<"getkimball">>,
+    {ok, Namespace} = application:get_env(features, namespace),
+    ConfigmapRef = #{namespace=>Namespace,
                      name=><<"features-state-store">>},
     Operations = [
         <<"createCoreV1NamespacedConfigMap">>,
