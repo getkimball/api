@@ -36,7 +36,7 @@ Common labels
 */}}
 {{- define "kimball-api.labels" -}}
 helm.sh/chart: {{ include "kimball-api.chart" . }}
-{{ include "kimball-api.selectorLabels" . }}
+{{ include "kimball-api.genericSelectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -46,9 +46,13 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "kimball-api.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "kimball-api.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+{{- define "kimball-api.genericSelectorLabels" -}}
+app.kubernetes.io/component: api
+{{- end -}}
+
+{{- define "kimball-api.APISelectorLabels" -}}
+{{ include "kimball-api.genericSelectorLabels" . }}
+app.kubernetes.io/component: api
 {{- end -}}
 
 {{/*

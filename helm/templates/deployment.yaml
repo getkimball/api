@@ -10,11 +10,11 @@ spec:
   revisionHistoryLimit: 3
   selector:
     matchLabels:
-      {{- include "kimball-api.selectorLabels" . | nindent 6 }}
+      {{- include "kimball-api.APISelectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "kimball-api.selectorLabels" . | nindent 8 }}
+        {{- include "kimball-api.APISelectorLabels" . | nindent 8 }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
