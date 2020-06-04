@@ -1,13 +1,15 @@
 ---
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: getkimball-{{ .Release.Namespace }}
+  name: getkimball
+  namespace: {{ .Release.Namespace }}
 subjects:
 - kind: ServiceAccount
   name: {{ include "kimball-api.serviceAccountName" . }}
-  namespace: getkimball-{{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace }}
 roleRef:
-  kind: ClusterRole
-  name: getkimball-{{ .Release.Namespace }}
+  kind: Role
+  name: getkimball
+  namespace: {{ .Release.Namespace }}
   apiGroup: rbac.authorization.k8s.io
