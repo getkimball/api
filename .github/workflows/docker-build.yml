@@ -95,9 +95,9 @@ jobs:
             -o yaml | kubectl apply -f -
 
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
-              serviceType=ClusterIP
+              SERVICE_TYPE=ClusterIP
           else
-              serviceType=LoadBalancer
+              SERVICE_TYPE=LoadBalancer
           fi
 
           helm upgrade kimball-api ./helm  --install \
