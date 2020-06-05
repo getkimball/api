@@ -13,3 +13,21 @@
   echo "Visit http://127.0.0.1:8080 to use your application"
   kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:80
 {{- end }}
+
+Configuring your clients
+
+{{- if .Values.kimball.enableDaemonset }}
+
+A daemonset was installed that provides a node-local API for other pods to request.
+
+Add to your application pod containers:
+
+  - env:
+    - name: KIMBALL_API_HOST
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+
+    - name: KIMBALL_API_PORT
+      value: {{ .Values.kimball.daemonsetPort }}
+{{- end -}}
