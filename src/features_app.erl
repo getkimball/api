@@ -49,6 +49,7 @@ setup_trails() ->
 
 set_config() ->
     setup_sentry(),
+    setup_namespace(),
     setup_additional_namespace_config(),
     setup_file_store_path(),
     ok = application:set_env(trails, api_root, "/"),
@@ -59,6 +60,11 @@ set_config() ->
             version => <<"0.0.0">>
     }}),
     ok.
+
+setup_namespace() ->
+    NamespaceString = os:getenv("NAMESPACE", "getkimball"),
+    NamespaceBin = binary:list_to_bin(NamespaceString),
+    application:set_env(features, namespace, NamespaceBin).
 
 setup_additional_namespace_config() ->
     NamespacesString = os:getenv("ADDITIONAL_NAMESPACES", ""),

@@ -108,7 +108,6 @@ jobs:
             --set image.repository="${ECR_REPOSITORY}" \
             --set image.tag=${DOCKER_TAG} \
             --set service.type=${SERVICE_TYPE} \
-            --set kimball.additional_namespaces=${KUBERNETES_NAMESPACE} \
 
   upload_to_quay:
     runs-on: ubuntu-latest
