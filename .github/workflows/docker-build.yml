@@ -100,7 +100,8 @@ jobs:
               SERVICE_TYPE=LoadBalancer
           fi
 
-          helm upgrade kimball-api ./helm  --install \
+          helm repo add getkimball https://getkimball.github.io/charts/stable
+          helm upgrade kimball-api getkimball/kimball-api --install \
             --namespace ${KUBERNETES_NAMESPACE} \
             --create-namespace \
             --wait \
