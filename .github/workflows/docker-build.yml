@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      deploy_config_path: ${{ steps.set_docker_tag.outputs.deploy_config_path }}
       docker_tag: ${{ steps.set_docker_tag.outputs.docker_tag }}
       namespace: ${{ steps.set_docker_tag.outputs.namespace }}
 
@@ -45,11 +44,6 @@ jobs:
         else
           echo "##[set-output name=docker_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball"
-        fi
-        if [[ $GITHUB_REF = "refs/heads/master" ]] ; then
-          echo "##[set-output name=deploy_config_path;]kubernetes/overlays/master"
-        else
-          echo "##[set-output name=deploy_config_path;]kubernetes/base"
         fi
 
     - name: Build, tag, and push pull_request image to Amazon ECR
