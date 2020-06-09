@@ -83,11 +83,6 @@ jobs:
         KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
       with:
         command: |
-          kubectl --namespace=${KUBERNETES_NAMESPACE} create secret generic features \
-            --from-literal=sentry_dsn=${SENTRY_DSN} \
-            --dry-run \
-            -o yaml | kubectl apply -f -
-
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
               SERVICE_TYPE=ClusterIP
           else
@@ -103,6 +98,7 @@ jobs:
             --set image.repository="${ECR_REPOSITORY}" \
             --set image.tag=${DOCKER_TAG} \
             --set service.type=${SERVICE_TYPE} \
+            --set kimball.sentry_dsn=${SENTRY_DSN}
 
   upload_to_quay:
     runs-on: ubuntu-latest
