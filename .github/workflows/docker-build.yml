@@ -144,7 +144,7 @@ jobs:
     - name: Upload to Quay
       env:
         DOCKER_ECR_TAG: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}:${{ needs.build_docker.outputs.docker_tag }}
-        DOCKER_QUAY_TAG: quay.io/${{ github.repository }}:${{ needs.build_docker.outputs.docker_tag }}
+        DOCKER_QUAY_TAG: quay.io/getkimball/api:${{ needs.build_docker.outputs.docker_tag }}
       run: |
         docker tag ${DOCKER_ECR_TAG} ${DOCKER_QUAY_TAG}
         docker push ${DOCKER_QUAY_TAG}
