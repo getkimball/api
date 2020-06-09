@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      deploy_config_path: ${{ steps.set_docker_tag.outputs.deploy_config_path }}
       docker_tag: ${{ steps.set_docker_tag.outputs.docker_tag }}
       namespace: ${{ steps.set_docker_tag.outputs.namespace }}
 
@@ -45,11 +44,6 @@ jobs:
         else
           echo "##[set-output name=docker_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball"
-        fi
-        if [[ $GITHUB_REF = "refs/heads/master" ]] ; then
-          echo "##[set-output name=deploy_config_path;]kubernetes/overlays/master"
-        else
-          echo "##[set-output name=deploy_config_path;]kubernetes/base"
         fi
 
     - name: Build, tag, and push pull_request image to Amazon ECR
@@ -89,11 +83,6 @@ jobs:
         KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
       with:
         command: |
-          kubectl --namespace=${KUBERNETES_NAMESPACE} create secret generic features \
-            --from-literal=sentry_dsn=${SENTRY_DSN} \
-            --dry-run \
-            -o yaml | kubectl apply -f -
-
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
               SERVICE_TYPE=ClusterIP
           else
@@ -109,6 +98,7 @@ jobs:
             --set image.repository="${ECR_REPOSITORY}" \
             --set image.tag=${DOCKER_TAG} \
             --set service.type=${SERVICE_TYPE} \
+            --set kimball.sentry_dsn=${SENTRY_DSN}
 
   upload_to_quay:
     runs-on: ubuntu-latest
