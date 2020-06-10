@@ -1,19 +1,25 @@
 -module(features).
 -include_lib("kernel/include/logger.hrl").
--export([collapse_to_boolean/3,
-         collapse_features_to_map/1]).
+-export([collapse_to_boolean/4,
+         collapse_features_to_map/2]).
 
+% Default case, only boolean defined
 collapse_to_boolean(#{name := Name,
                       boolean := Boolean,
-                      rollout_end := undefined},
+                      rollout_end := undefined,
+                      user := undefined},
+                    _User,
                     Now,
                     _Rand) ->
     ?LOG_DEBUG(#{what => "Collapse boolean",
                  now => Now}),
     {Name, Boolean};
+% Rollout defined
 collapse_to_boolean(#{name := Name,
                       rollout_start := Start,
-                      rollout_end := End},
+                      rollout_end := End,
+                      user := undefined},
+                    _User,
                     Now,
                     Rand) ->
     Boolean = if
@@ -32,13 +38,25 @@ collapse_to_boolean(#{name := Name,
                  'end' => End,
                  boolean => Boolean,
                  now => Now}),
-    {Name, Boolean}.
+    {Name, Boolean};
+% User spec
+collapse_to_boolean(Spec = #{name := Name,
+                             user := UserSpec},
+                    User,
+                    Now,
+                    Rand) ->
+    CollapsedUserVal = collapse_user_with_user_spec(User, UserSpec),
+    case CollapsedUserVal of
+        true -> {Name, true};
+        false -> SpecWithoutUser = maps:put(user, undefined, Spec),
+                 collapse_to_boolean(SpecWithoutUser, User, Now, Rand)
+    end.
 
-collapse_features_to_map(Features) ->
+collapse_features_to_map(Features, User) ->
     Now = erlang:system_time(seconds),
     Rand = rand:uniform(),
 
-    Collapsed = [collapse_to_boolean(F, Now, Rand) || F <- Features],
+    Collapsed = [collapse_to_boolean(F, User, Now, Rand) || F <- Features],
     Map = maps:from_list(Collapsed),
     Map.
 
@@ -64,3 +82,12 @@ collapse_rollout_progress(Start, End, Now, Rand) ->
                 rand => Rand,
                 chance => Chance}),
     Boolean.
+
+collapse_user_with_user_spec(_User, _Specs=[]) ->
+    false;
+collapse_user_with_user_spec(User, _Specs=[{Prop, '=', Val}|T]) ->
+    UserVal = maps:get(Prop, User, undefined),
+    case UserVal == Val of
+        true -> true;
+        false -> collapse_user_with_user_spec(User, T)
+    end.

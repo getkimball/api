@@ -7,6 +7,7 @@ defaulted_feature_spec(Name, Spec) ->
       name => Name,
       boolean => false,
       rollout_start => undefined,
-      rollout_end => undefined
+      rollout_end => undefined,
+      user => undefined
     },
     maps:merge(Default, Spec).

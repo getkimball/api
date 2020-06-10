@@ -274,7 +274,11 @@ feature_tuples_to_maps([Feature=#feature{}|T]) ->
     M = #{name=>Feature#feature.name,
           rollout_start => Feature#feature.rollout#rollout_spec.start,
           rollout_end => Feature#feature.rollout#rollout_spec.'end',
-          boolean=>boolean_to_atom(Feature#feature.boolean)},
+          boolean => boolean_to_atom(Feature#feature.boolean),
+          % user will be undefined, just want to have it in the reponse to aid
+          % in other signatures
+          user => undefined},
+
     [M] ++ feature_tuples_to_maps(T).
 
 ensure_keys_are_atoms(Map) ->
