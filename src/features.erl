@@ -1,16 +1,18 @@
 -module(features).
 -include_lib("kernel/include/logger.hrl").
 -export([collapse_to_boolean/3,
-         collapse_features_map/1]).
+         collapse_features_to_map/1]).
 
-collapse_to_boolean(#{boolean := Boolean,
+collapse_to_boolean(#{name := Name,
+                      boolean := Boolean,
                       rollout_end := undefined},
                     Now,
                     _Rand) ->
     ?LOG_DEBUG(#{what => "Collapse boolean",
                  now => Now}),
-    Boolean;
-collapse_to_boolean(#{rollout_start := Start,
+    {Name, Boolean};
+collapse_to_boolean(#{name := Name,
+                      rollout_start := Start,
                       rollout_end := End},
                     Now,
                     Rand) ->
@@ -30,16 +32,16 @@ collapse_to_boolean(#{rollout_start := Start,
                  'end' => End,
                  boolean => Boolean,
                  now => Now}),
-    Boolean.
+    {Name, Boolean}.
 
-collapse_features_map(Map) ->
+collapse_features_to_map(Features) ->
     Now = erlang:system_time(seconds),
     Rand = rand:uniform(),
-    CollapseFun = fun(K, V, AccIn) ->
-      NewV = collapse_to_boolean(V, Now, Rand),
-      maps:put(K, NewV, AccIn)
-    end,
-    maps:fold(CollapseFun, #{}, Map).
+
+    Collapsed = [collapse_to_boolean(F, Now, Rand) || F <- Features],
+    Map = maps:from_list(Collapsed),
+    Map.
+
 
 %%%%
 %   Internal

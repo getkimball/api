@@ -32,8 +32,8 @@ aa_write_read(_Config) ->
                                           {rollout, undefined, undefined}),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => test_utils:defaulted_feature_spec(
-      #{boolean => Boolean})},
+    Expected = [test_utils:defaulted_feature_spec(Name,
+      #{boolean => Boolean})],
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -67,8 +67,8 @@ ba_external_store_init(_Config) ->
         StoreLibState
     end),
     All = [
-      test_utils:defaulted_feature_spec(#{name=>NameA, boolean=>BooleanA}),
-      replace_keys_with_binary(test_utils:defaulted_feature_spec(#{name=>NameB, boolean=>BooleanB}))
+      test_utils:defaulted_feature_spec(NameA, #{boolean=>BooleanA}),
+      replace_keys_with_binary(test_utils:defaulted_feature_spec(NameB, #{boolean=>BooleanB}))
     ],
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
@@ -81,8 +81,8 @@ ba_external_store_init(_Config) ->
     meck:wait(?STORE_LIB, get_all, '_', 1000),
     Resp = features_store:get_features(),
 
-    Expected = #{NameA => test_utils:defaulted_feature_spec(#{boolean => BooleanA}),
-                 NameB => test_utils:defaulted_feature_spec(#{boolean => BooleanB})},
+    Expected = [test_utils:defaulted_feature_spec(NameA, #{boolean => BooleanA}),
+                test_utils:defaulted_feature_spec(NameB, #{boolean => BooleanB})],
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
@@ -115,8 +115,7 @@ bb_external_store_store_data(_Config) ->
     ok = features_store:set_feature(Name, {boolean, Boolean},
                                           {rollout, undefined, undefined}),
 
-    Expected = [test_utils:defaulted_feature_spec(#{name=>Name,
-                                                    boolean=>Boolean})],
+    Expected = [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean})],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
 
     exit(Pid, normal),
@@ -164,8 +163,8 @@ ca_write_read_rollout(_Config) ->
                                           {rollout, Start, End}),
     Resp = features_store:get_features(),
 
-    Expected = #{Name => test_utils:defaulted_feature_spec(
-      #{rollout_start=>Start, rollout_end=>End})},
+    Expected = [test_utils:defaulted_feature_spec(Name,
+      #{rollout_start=>Start, rollout_end=>End})],
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
