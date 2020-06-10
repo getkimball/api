@@ -56,9 +56,9 @@ set_feature(Name, {boolean, Boolean}, {rollout, Start, End}) ->
     gen_server:call(?MODULE, {set_feature, F}).
 
 get_features() ->
-    Objs = get_boolean_features_pl(),
-    M = feature_tuples_to_single_map(Objs),
-    M.
+    AllFeatures = get_boolean_features_pl(),
+    FeatureMaps = feature_tuples_to_maps(AllFeatures),
+    FeatureMaps.
 
 refresh_from_store() ->
     ?LOG_DEBUG(#{what=><<"Refresh from store">>}),
@@ -138,11 +138,17 @@ boolean_to_atom(true) ->
     true;
 boolean_to_atom(<<"true">>) ->
     true;
+boolean_to_atom(<<"enabled">>) ->
+    true;
+boolean_to_atom(undefined) ->
+    false;
 boolean_to_atom(disabled) ->
     false;
 boolean_to_atom(false) ->
     false;
 boolean_to_atom(<<"false">>) ->
+    false;
+boolean_to_atom(<<"disabled">>) ->
     false.
 
 
@@ -268,22 +274,8 @@ feature_tuples_to_maps([Feature=#feature{}|T]) ->
     M = #{name=>Feature#feature.name,
           rollout_start => Feature#feature.rollout#rollout_spec.start,
           rollout_end => Feature#feature.rollout#rollout_spec.'end',
-          boolean=>Feature#feature.boolean},
+          boolean=>boolean_to_atom(Feature#feature.boolean)},
     [M] ++ feature_tuples_to_maps(T).
-
-feature_tuples_to_single_map(Tup) ->
-    feature_tuples_to_single_map(Tup, #{}).
-
-feature_tuples_to_single_map([], M) ->
-    M;
-feature_tuples_to_single_map([Feature=#feature{}|T], M) ->
-    Spec = #{
-        boolean => boolean_to_atom(Feature#feature.boolean),
-        rollout_start => Feature#feature.rollout#rollout_spec.start,
-        rollout_end   => Feature#feature.rollout#rollout_spec.'end'
-    },
-    NewM = maps:put(Feature#feature.name, Spec , M),
-    feature_tuples_to_single_map(T, NewM).
 
 ensure_keys_are_atoms(Map) ->
     maps:fold(fun map_fold_fun_key_to_atom/3, #{}, Map).

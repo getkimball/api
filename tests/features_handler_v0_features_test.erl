@@ -6,7 +6,7 @@
 load() ->
     ok = cowboy_test_helpers:setup(),
     ok = meck:new(features_store),
-    ok = meck:expect(features_store, get_features, fun() -> #{} end),
+    ok = meck:expect(features_store, get_features, fun() -> [] end),
     ok = meck:expect(features_store, set_feature, fun(_, _, _) -> ok end),
     ok.
 
@@ -42,13 +42,7 @@ ok_test() ->
 get_boolean_features_test() ->
     load(),
     FeatureName = <<"feature_foo">>,
-    Features = #{
-        FeatureName => #{
-            boolean => false,
-            rollout_start => undefined,
-            rollout_end => undefined
-    }},
-
+    Features = [test_utils:defaulted_feature_spec(FeatureName, #{boolean=>false})],
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     Req = cowboy_test_helpers:req(),
@@ -67,7 +61,7 @@ create_feature_boolean_test() ->
     },
 
     ok = meck:expect(features_store, get_features, fun() ->
-            #{Name => test_utils:defaulted_feature_spec(#{boolean=>Boolean})}
+            [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean})]
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     Opts = [],
@@ -101,9 +95,9 @@ create_feature_rollout_test() ->
     },
 
     ok = meck:expect(features_store, get_features, fun() ->
-            #{Name => test_utils:defaulted_feature_spec(
+            [test_utils:defaulted_feature_spec(Name,
                 #{rollout_start => Now,
-                  rollout_end => Later})}
+                  rollout_end => Later})]
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     PostBody = http_post(PostReq, 204),

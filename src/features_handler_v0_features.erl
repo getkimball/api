@@ -104,7 +104,7 @@ handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
     {Req, Code, #{}, Opts};
 handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
     Features = features_store:get_features(),
-    CollapsedFeatures = features:collapse_features_map(Features),
+    CollapsedFeatures = features:collapse_features_to_map(Features),
     ?LOG_DEBUG(#{what=> "collapse map",
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
