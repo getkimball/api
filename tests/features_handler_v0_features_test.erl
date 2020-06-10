@@ -7,7 +7,7 @@ load() ->
     ok = cowboy_test_helpers:setup(),
     ok = meck:new(features_store),
     ok = meck:expect(features_store, get_features, fun() -> [] end),
-    ok = meck:expect(features_store, set_feature, fun(_, _, _) -> ok end),
+    ok = meck:expect(features_store, set_feature, fun(_, _, _, _) -> ok end),
     ok.
 
 unload() ->
@@ -101,7 +101,6 @@ create_feature_rollout_test() ->
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     PostBody = http_post(PostReq, 204),
-
     ?assertEqual({rollout, Now, Later},
                  meck:capture(first, features_store, set_feature, '_', 3)),
 
@@ -197,7 +196,7 @@ create_feature_rollout_missing_end_test() ->
     },
     ErrorMessage = <<"Rollout start requires a rollout end">>,
 
-    ok = meck:expect(features_store, set_feature, ['_', '_', '_'],
+    ok = meck:expect(features_store, set_feature, ['_', '_', '_', '_'],
                      meck:raise(throw, {invalid_feature, ErrorMessage})),
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),

@@ -7,7 +7,7 @@
 collapse_to_boolean(#{name := Name,
                       boolean := Boolean,
                       rollout_end := undefined,
-                      user := undefined},
+                      user := []},
                     _User,
                     Now,
                     _Rand) ->
@@ -18,7 +18,7 @@ collapse_to_boolean(#{name := Name,
 collapse_to_boolean(#{name := Name,
                       rollout_start := Start,
                       rollout_end := End,
-                      user := undefined},
+                      user := []},
                     _User,
                     Now,
                     Rand) ->
@@ -48,7 +48,7 @@ collapse_to_boolean(Spec = #{name := Name,
     CollapsedUserVal = collapse_user_with_user_spec(User, UserSpec),
     case CollapsedUserVal of
         true -> {Name, true};
-        false -> SpecWithoutUser = maps:put(user, undefined, Spec),
+        false -> SpecWithoutUser = maps:put(user, [], Spec),
                  collapse_to_boolean(SpecWithoutUser, User, Now, Rand)
     end.
 

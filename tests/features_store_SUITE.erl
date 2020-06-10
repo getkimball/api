@@ -16,6 +16,7 @@ groups() -> [{test_ets, [
                 aa_write_read,
                 ab_invalid_feature_missing_rollout_end,
                 ac_invalid_feature_before_after_end,
+                ad_user_spec_write_read,
                 ba_external_store_init,
                 bb_external_store_store_data,
                 bc_external_store_not_supporting_store,
@@ -29,7 +30,8 @@ aa_write_read(_Config) ->
     Boolean = true,
 
     ok = features_store:set_feature(Name, {boolean, Boolean},
-                                          {rollout, undefined, undefined}),
+                                          {rollout, undefined, undefined},
+                                          {user, undefined}),
     Resp = features_store:get_features(),
 
     Expected = [test_utils:defaulted_feature_spec(Name,
@@ -44,14 +46,35 @@ ab_invalid_feature_missing_rollout_end(_Config) ->
     Name = <<"name">>,
     Boolean = {boolean, undefined},
     Rollout = {rollout, 1, undefined},
-    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout)).
+    User = {user, []},
+    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout, User)).
 
 ac_invalid_feature_before_after_end(_Config) ->
     Throw = {invalid_feature, "Rollout start cannot be after the end"},
     Name = <<"name">>,
     Boolean = {boolean, undefined},
     Rollout = {rollout, 2, 1},
-    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout)).
+    User = {user, []},
+    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout, User)).
+
+ad_user_spec_write_read(_Config) ->
+    {ok, Pid} = ?MUT:start_link(),
+    Name = <<"feature">>,
+    Boolean = true,
+    UserSpec = [{<<"user_id">>, '=', 42}],
+
+    ok = features_store:set_feature(Name, {boolean, Boolean},
+                                          {rollout, undefined, undefined},
+                                          {user, UserSpec}),
+    Resp = features_store:get_features(),
+
+    Expected = [test_utils:defaulted_feature_spec(Name,
+      #{boolean => Boolean,
+        user => UserSpec})],
+    ?assertEqual(Expected, Resp),
+
+    exit(Pid, normal),
+    ok.
 
 ba_external_store_init(_Config) ->
     ok = meck:new(?STORE_LIB, [non_strict]),
@@ -113,7 +136,8 @@ bb_external_store_store_data(_Config) ->
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
     ok = features_store:set_feature(Name, {boolean, Boolean},
-                                          {rollout, undefined, undefined}),
+                                          {rollout, undefined, undefined},
+                                          {user, []}),
 
     Expected = [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean})],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
@@ -144,7 +168,8 @@ bc_external_store_not_supporting_store(_Config) ->
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
     Resp = features_store:set_feature(Name, {boolean, Status},
-                                            {rollout, undefined, undefined}),
+                                            {rollout, undefined, undefined},
+                                            {user, []}),
     ?assertEqual(not_suported, Resp),
 
     exit(Pid, normal),
@@ -160,7 +185,8 @@ ca_write_read_rollout(_Config) ->
     End = erlang:system_time(seconds) + 100,
 
     ok = features_store:set_feature(Name, {boolean, false},
-                                          {rollout, Start, End}),
+                                          {rollout, Start, End},
+                                          {user, []}),
     Resp = features_store:get_features(),
 
     Expected = [test_utils:defaulted_feature_spec(Name,

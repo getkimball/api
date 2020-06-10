@@ -96,7 +96,8 @@ handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
     Rollout =  {rollout,
                   maps:get(rollout_start, Data),
                   maps:get(rollout_end, Data)},
-    Ok = features_store:set_feature(Name, Boolean, Rollout),
+    User = {user, []},
+    Ok = features_store:set_feature(Name, Boolean, Rollout, User),
     Code = case Ok of
         ok -> 204;
         _ -> 405
