@@ -85,8 +85,10 @@ jobs:
         command: |
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
               SERVICE_TYPE=ClusterIP
+              DAEMONSET_PORT=7233
           else
               SERVICE_TYPE=LoadBalancer
+              DAEMONSET_PORT=7232
           fi
 
           helm repo add getkimball https://getkimball.github.io/charts/stable
@@ -98,7 +100,8 @@ jobs:
             --set image.repository="${ECR_REPOSITORY}" \
             --set image.tag=${DOCKER_TAG} \
             --set service.type=${SERVICE_TYPE} \
-            --set kimball.sentry_dsn=${SENTRY_DSN}
+            --set kimball.sentry_dsn=${SENTRY_DSN} \
+            --set kimball.daemonsetPort=${DAEMONSET_PORT}
 
   upload_to_quay:
     runs-on: ubuntu-latest
