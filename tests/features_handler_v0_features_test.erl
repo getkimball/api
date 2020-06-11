@@ -226,6 +226,84 @@ create_feature_rollout_invalid_date_format_test() ->
     unload().
 
 
+
+%%%%
+%   Create feature with user spec
+%%%%
+
+create_feature_user_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = <<"=">>,
+    Value = <<"42">>,
+
+    Doc = #{
+        name => Name,
+        user => [#{property => UserProp,
+                   comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    PostBody = http_post(PostReq, 204),
+    ?assertEqual({user, [{UserProp, '=', Value}]},
+                 meck:capture(first, features_store, set_feature, '_', 4)),
+
+    ?assertEqual(#{}, PostBody),
+
+    unload().
+
+create_feature_user_missing_required_property_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = <<"invalid comparator">>,
+    Value = <<"42">>,
+
+    Doc = #{
+        name => Name,
+        user => [#{property=> UserProp,
+                   comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Body = http_post(PostReq, 400),
+
+    Expected = #{<<"error">> => #{
+                        <<"value">> => Comparator,
+                        <<"choices">> => [<<"=">>],
+                        <<"what">> => <<"Value not in enum">>}},
+    ?assertEqual(Expected, Body),
+
+    unload().
+
+create_feature_user_value_not_in_enum_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    Comparator = <<"=">>,
+    Value = <<"42">>,
+
+    Doc = #{
+        name => Name,
+        user => [#{comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Body = http_post(PostReq, 400),
+
+    Expected = #{<<"error">> => #{
+                        <<"key">> => <<"property">>,
+                        <<"what">> => <<"Missing required element">>}},
+    ?assertEqual(Expected, Body),
+
+    unload().
+
 %%%%
 %   Test helpers
 %%%%

@@ -81,7 +81,27 @@ feature_input_schema() ->
                type => string,
                format => 'date-time',
                description => <<"Ending date-time for the rollout">>
-           }
+           },
+           user => #{
+               type => array,
+               items => #{
+                   type => object,
+                   required => [property, comparator, value],
+                   properties => #{
+                       property => #{
+                          type => string
+                       },
+                       comparator => #{
+                          type => string,
+                          enum => [<<"=">>]
+                       },
+                       value => #{
+                          % This eventually should be anyOf multple types
+                          type => string
+                       }
+                   }
+             }
+          }
        }
     }.
 
@@ -96,7 +116,10 @@ handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
     Rollout =  {rollout,
                   maps:get(rollout_start, Data),
                   maps:get(rollout_end, Data)},
-    User = {user, []},
+
+    UserSpecIn = maps:get(user, Data),
+    UserSpec = process_user_spec_input(UserSpecIn),
+    User = {user, UserSpec},
     Ok = features_store:set_feature(Name, Boolean, Rollout, User),
     Code = case Ok of
         ok -> 204;
@@ -112,3 +135,17 @@ handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
     {Req, 200, Data, Opts};
 handle_req(Req, _Params, Opts) ->
     {Req, 404, #{}, Opts}.
+
+
+
+process_user_spec_input(undefined) ->
+    [];
+process_user_spec_input([]) ->
+    [];
+process_user_spec_input([#{property := Property,
+                           comparator := Comparator,
+                           value := Value} | T]) ->
+    ComparatorAtom = comparator_bin_to_atom(Comparator),
+    [{Property, ComparatorAtom, Value}|process_user_spec_input(T)].
+
+comparator_bin_to_atom(<<"=">>) -> '='.

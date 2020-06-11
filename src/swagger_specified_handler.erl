@@ -38,6 +38,14 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                     #{error => #{what=>Msg,
                                  value=>ensure_binary(Value)}},
                     []);
+        {invalid_enum, Value, Enum} ->
+            Msg = <<"Value not in enum">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg,
+                                 choices=>Enum,
+                                 value=>ensure_binary(Value)}},
+                    []);
         invalid_json ->
             Msg = <<"The request body is not valid JSON">>,
             respond(Req,
@@ -98,6 +106,7 @@ match_schema(Schema=#{properties:=Properties}, Data) ->
         KBin = erlang:atom_to_binary(K, utf8),
         DataValue = maps:get(KBin, Data, undefined),
         ValidDataValue = validate_property_spec(DataValue, PropSpec),
+        ok = validate_enum(ValidDataValue, PropSpec),
         maps:put(K, ValidDataValue, AccIn)
     end,
 
@@ -129,8 +138,24 @@ validate_property_spec(Value, _Spec=#{type := string}) ->
     case is_binary(Value) of
         true -> Value;
         false -> throw({incorrect_type, {Value, string}})
+    end;
+validate_property_spec(Value, _Spec=#{type := array,
+                                      items := ItemSpec}) ->
+    case is_list(Value) of
+        true -> Value;
+        false -> throw({incorrect_type, {Value, array}})
+    end,
+    case maps:get(type, ItemSpec) of
+        object -> [match_schema(ItemSpec, V) || V <- Value]
     end.
 
+validate_enum(Value, #{enum := Enum} ) ->
+    case lists:member(Value, Enum) of
+        true -> ok;
+        false -> throw({invalid_enum, Value, Enum})
+    end;
+validate_enum(_Value, #{}) ->
+    ok.
 
 method_metadata(Handler, Method) ->
     LowerMethod = string:lowercase(Method),
