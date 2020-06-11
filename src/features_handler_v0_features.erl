@@ -13,11 +13,25 @@ trails() ->
             tags => ["Features"],
             description => "Gets features and their status",
             produces => ["application/json"],
+            parameters => [
+                #{name => user_obj,
+                  description => <<"User Object JSON serialized
+                                    then Base64 encoded">>,
+                  in => query,
+                  type => string,
+                  format => byte,
+                  required => false
+                }
+            ],
             responses => #{
                 200 => #{
                     description => <<"Features">>,
                     schema => features_return_schema()
 
+                },
+                400 => #{
+                    description => <<"Bad request, see response for details">>,
+                    schema => error_schema()
                 }
             }
         },
@@ -60,6 +74,16 @@ features_return_schema() ->
         }
     }.
 
+error_schema() ->
+    #{
+        type => object,
+        properties => #{
+           <<"error">> => #{
+              type => object,
+              description => <<"Object describing the error">>
+           }
+        }
+    }.
 feature_input_schema() ->
     #{
         required => [name],
@@ -126,9 +150,16 @@ handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
         _ -> 405
     end,
     {Req, Code, #{}, Opts};
-handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
+handle_req(Req=#{method := <<"GET">>}, Params, Opts) ->
+    UserObjString = proplists:get_value(user_obj, Params),
+    UserObj = case UserObjString of
+        undefined -> #{};
+        JSON -> features_json:decode_or_throw(
+                  JSON,
+                  {invalid_json, user_obj})
+    end,
     Features = features_store:get_features(),
-    CollapsedFeatures = features:collapse_features_to_map(Features, #{}),
+    CollapsedFeatures = features:collapse_features_to_map(Features, UserObj),
     ?LOG_DEBUG(#{what=> "collapse map",
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},

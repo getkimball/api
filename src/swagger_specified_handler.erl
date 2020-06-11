@@ -46,11 +46,12 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                                  choices=>Enum,
                                  value=>ensure_binary(Value)}},
                     []);
-        invalid_json ->
-            Msg = <<"The request body is not valid JSON">>,
+        {invalid_json, Object} ->
+            Msg = <<"The object is not valid JSON">>,
             respond(Req,
                     400,
-                    #{error => #{what=>Msg}},
+                    #{error => #{what=>Msg,
+                                 object=>Object}},
                     []);
         {incorrect_type, {Value, Type}} ->
             respond(Req,
@@ -90,14 +91,24 @@ assert_has_keys([H|T], Map) ->
     assert_has_keys(T, Map),
     ok.
 
-match_params(_Params=[], _BodyData) ->
+match_params(_Params=[], _BodyData, _Req) ->
     [];
+match_params(_Params=[Spec=#{name:=Name,
+                             in:=query,
+                             required:=false,
+                             type:=string}|T],
+             BodyData,
+             Req) ->
+    #{Name := Value} = cowboy_req:match_qs([{Name, [], undefined}], Req),
+    Param = validate_property_spec(Value, Spec),
+    [{Name, Param} | match_params(T, BodyData, Req)];
 match_params(_Params=[_H=#{name:=Name,
                            in:=body,
                            schema:=Schema}|T],
-             BodyData) ->
+             BodyData,
+             Req) ->
     Param = match_schema(Schema, BodyData),
-    [{Name, Param} | match_params(T, BodyData)].
+    [{Name, Param} | match_params(T, BodyData, Req)].
 
 match_schema(Schema=#{properties:=Properties}, Data) ->
     Required = maps:get(required, Schema, []),
@@ -134,6 +145,11 @@ validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
              end
 
     end;
+validate_property_spec(Value, _Spec=#{type := string, format := byte}) ->
+    case is_binary(Value) of
+        true -> base64:decode(Value);
+        false -> throw({incorrect_type, {Value, string}})
+    end;
 validate_property_spec(Value, _Spec=#{type := string}) ->
     case is_binary(Value) of
         true -> Value;
@@ -169,14 +185,11 @@ params_from_request(Req=#{has_body:=HasBody},
     {Req1, BodyData} = case HasBody of
         false -> {Req, #{}};
         true -> {ok, Body, CaseReq} = cowboy_req:read_body(Req),
-                case jsx:is_json(Body) of
-                    true -> Data = jsx:decode(Body, [return_maps]),
-                            {CaseReq, Data};
-                    false -> throw(invalid_json)
-                end
+                Data = features_json:decode_or_throw(
+                        Body, {invalid_json, post_body}),
+                {CaseReq, Data}
     end,
-
-    Params = match_params(SpecParams, BodyData),
+    Params = match_params(SpecParams, BodyData, Req1),
 
     {Req1, Params};
 params_from_request(Req, _Spec) ->
