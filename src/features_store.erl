@@ -28,7 +28,7 @@
          terminate/2,
          code_change/3]).
 
--export([set_feature/3,
+-export([set_feature/4,
          get_features/0,
          refresh_from_store/0]).
 
@@ -39,9 +39,15 @@
 -record(rollout_spec, {start=undefined,
                        'end'=undefined}).
 
+-record(user_spec, {prop=undefined,
+                    comparator_atom=undefined,
+                    value=undefined}).
+
 -record(feature, {name=undefined,
                   boolean=false,
-                  rollout=#rollout_spec{}}).
+                  rollout=#rollout_spec{},
+                  user_specs=[]}).
+
 
 -define(FEATURE_REGISTRY, feature_registry_table).
 
@@ -49,9 +55,14 @@
 %%% API functions
 %%%===================================================================
 
-set_feature(Name, {boolean, Boolean}, {rollout, Start, End}) ->
+set_feature(Name, {boolean, Boolean},
+                  {rollout, Start, End},
+                  {user, UserSpecIn}) ->
     R = #rollout_spec{start=Start, 'end'=End},
-    F = #feature{name=Name, boolean=Boolean, rollout=R},
+    US = build_user_specs(UserSpecIn),
+    F = #feature{name=Name, boolean=Boolean,
+                            rollout=R,
+                            user_specs=US},
     ok = validate_feature(F),
     gen_server:call(?MODULE, {set_feature, F}).
 
@@ -274,7 +285,9 @@ feature_tuples_to_maps([Feature=#feature{}|T]) ->
     M = #{name=>Feature#feature.name,
           rollout_start => Feature#feature.rollout#rollout_spec.start,
           rollout_end => Feature#feature.rollout#rollout_spec.'end',
-          boolean=>boolean_to_atom(Feature#feature.boolean)},
+          boolean => boolean_to_atom(Feature#feature.boolean),
+          user => userspecs_to_lists(Feature#feature.user_specs)},
+
     [M] ++ feature_tuples_to_maps(T).
 
 ensure_keys_are_atoms(Map) ->
@@ -306,3 +319,26 @@ validate_rollout(#feature{rollout=#rollout_spec{
                        "Rollout start cannot be after the end"});
         false -> ok
     end.
+
+build_user_specs(undefined) ->
+    [];
+build_user_specs([]) ->
+    [];
+build_user_specs([{UserProp, ComparatorAtom='=', Value}|T]) ->
+    US = #user_spec{prop=UserProp,
+                    comparator_atom=ComparatorAtom,
+                    value=Value},
+    [US | build_user_specs(T)];
+build_user_specs([{_UserProp, _ComparatorAtom, _Value}|_T]) ->
+    throw({invalid_feature, "User flag can only do `=` comparisons"});
+build_user_specs([_H|_T]) ->
+    throw({invalid_feature, "Incorrect number of terms for user flag"}).
+
+userspecs_to_lists([]) ->
+    [];
+
+userspecs_to_lists([#user_spec{prop=Prop,
+                               comparator_atom=CA,
+                               value=Value} |T]) ->
+    Spec = {Prop, CA, Value},
+    [Spec|userspecs_to_lists(T)].

@@ -13,11 +13,25 @@ trails() ->
             tags => ["Features"],
             description => "Gets features and their status",
             produces => ["application/json"],
+            parameters => [
+                #{name => user_obj,
+                  description => <<"User Object JSON serialized
+                                    then Base64 encoded">>,
+                  in => query,
+                  type => string,
+                  format => byte,
+                  required => false
+                }
+            ],
             responses => #{
                 200 => #{
                     description => <<"Features">>,
                     schema => features_return_schema()
 
+                },
+                400 => #{
+                    description => <<"Bad request, see response for details">>,
+                    schema => error_schema()
                 }
             }
         },
@@ -60,6 +74,16 @@ features_return_schema() ->
         }
     }.
 
+error_schema() ->
+    #{
+        type => object,
+        properties => #{
+           <<"error">> => #{
+              type => object,
+              description => <<"Object describing the error">>
+           }
+        }
+    }.
 feature_input_schema() ->
     #{
         required => [name],
@@ -81,7 +105,27 @@ feature_input_schema() ->
                type => string,
                format => 'date-time',
                description => <<"Ending date-time for the rollout">>
-           }
+           },
+           user => #{
+               type => array,
+               items => #{
+                   type => object,
+                   required => [property, comparator, value],
+                   properties => #{
+                       property => #{
+                          type => string
+                       },
+                       comparator => #{
+                          type => string,
+                          enum => [<<"=">>]
+                       },
+                       value => #{
+                          % This eventually should be anyOf multple types
+                          type => string
+                       }
+                   }
+             }
+          }
        }
     }.
 
@@ -96,18 +140,43 @@ handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
     Rollout =  {rollout,
                   maps:get(rollout_start, Data),
                   maps:get(rollout_end, Data)},
-    Ok = features_store:set_feature(Name, Boolean, Rollout),
+
+    UserSpecIn = maps:get(user, Data),
+    UserSpec = process_user_spec_input(UserSpecIn),
+    User = {user, UserSpec},
+    Ok = features_store:set_feature(Name, Boolean, Rollout, User),
     Code = case Ok of
         ok -> 204;
         _ -> 405
     end,
     {Req, Code, #{}, Opts};
-handle_req(Req=#{method := <<"GET">>}, _Params, Opts) ->
+handle_req(Req=#{method := <<"GET">>}, Params, Opts) ->
+    UserObjString = proplists:get_value(user_obj, Params),
+    UserObj = case UserObjString of
+        undefined -> #{};
+        JSON -> features_json:decode_or_throw(
+                  JSON,
+                  {invalid_json, user_obj})
+    end,
     Features = features_store:get_features(),
-    CollapsedFeatures = features:collapse_features_to_map(Features),
+    CollapsedFeatures = features:collapse_features_to_map(Features, UserObj),
     ?LOG_DEBUG(#{what=> "collapse map",
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
     {Req, 200, Data, Opts};
 handle_req(Req, _Params, Opts) ->
     {Req, 404, #{}, Opts}.
+
+
+
+process_user_spec_input(undefined) ->
+    [];
+process_user_spec_input([]) ->
+    [];
+process_user_spec_input([#{property := Property,
+                           comparator := Comparator,
+                           value := Value} | T]) ->
+    ComparatorAtom = comparator_bin_to_atom(Comparator),
+    [{Property, ComparatorAtom, Value}|process_user_spec_input(T)].
+
+comparator_bin_to_atom(<<"=">>) -> '='.

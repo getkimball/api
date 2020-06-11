@@ -2,6 +2,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -export([read_reply/1,
          req/0,
+         req/2,
          req/3,
          init/3,
          validate_response_against_spec/2,
@@ -37,10 +38,15 @@ req(post, json, Body) ->
 req(post, binary, Data) ->
     req(<<"POST">>, #{'_test_body' => Data, has_body=>true}).
 
+req(get, QueryArgs) ->
+    QS = uri_string:compose_query(QueryArgs),
+    req(<<"GET">>, #{qs=>QS});
 req(Method, Opts) when is_binary(Method) and erlang:is_map(Opts) ->
     Ref = make_ref(),
     Req = #{pid => self(),
+      has_body => false,
       method => Method,
+      qs => <<"">>,
       streamid => Ref},
     MergedReq = maps:merge(Req, Opts),
     MergedReq.

@@ -13,8 +13,8 @@ collapse_to_boolean_with_boolean_test() ->
         Name,
         #{boolean => true}),
 
-    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, 0, 0)),
-    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(TrueSpec, 0, 0)),
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, #{}, 0, 0)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(TrueSpec, #{}, 0, 0)),
 
     unload().
 
@@ -48,10 +48,41 @@ collapse_to_boolean_with_rollout_test() ->
         #{rollout_start => Now - 60,
           rollout_end => Now - 10}),
 
-    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(BeforeSpec, Now, Rand)),
-    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(NotReachedSpec, Now, Rand)),
-    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(ReachedSpec, Now, Rand)),
-    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(AfterSpec, Now, Rand)),
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(BeforeSpec, #{}, Now, Rand)),
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(NotReachedSpec, #{}, Now, Rand)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(ReachedSpec, #{}, Now, Rand)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(AfterSpec, #{}, Now, Rand)),
+
+    unload().
+
+collapse_to_boolean_with_user_id_test() ->
+    load(),
+    Name = <<"example_name">>,
+    TrueSpec = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => false,
+          user => [{<<"user_id">>, '=', 42}]}),
+    FalseSpec = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => false,
+          user => [{<<"user_id">>, '=', 24}]}),
+    LongTrueSpec = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => false,
+          user => [ {<<"user_id">>, '=', 24},
+                   {<<"user_id">>, '=', 42}]}),
+    LongFalseSpec = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => false,
+          user => [ {<<"user_id">>, '=', 1},
+                   {<<"user_id">>, '=', 2}]}),
+
+    User = #{<<"user_id">> => 42},
+
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, User, 0, 0)),
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(LongFalseSpec, User, 0, 0)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(TrueSpec, User, 0, 0)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(LongTrueSpec, User, 0, 0)),
 
     unload().
 
@@ -71,7 +102,7 @@ collapse_features_to_map_test() ->
         <<"true">> => true
     },
 
-    Value = ?MUT:collapse_features_to_map(Spec),
+    Value = ?MUT:collapse_features_to_map(Spec, #{}),
 
     ?assertEqual(Expected, Value),
 

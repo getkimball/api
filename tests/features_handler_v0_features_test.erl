@@ -7,7 +7,7 @@ load() ->
     ok = cowboy_test_helpers:setup(),
     ok = meck:new(features_store),
     ok = meck:expect(features_store, get_features, fun() -> [] end),
-    ok = meck:expect(features_store, set_feature, fun(_, _, _) -> ok end),
+    ok = meck:expect(features_store, set_feature, fun(_, _, _, _) -> ok end),
     ok.
 
 unload() ->
@@ -101,7 +101,6 @@ create_feature_rollout_test() ->
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     PostBody = http_post(PostReq, 204),
-
     ?assertEqual({rollout, Now, Later},
                  meck:capture(first, features_store, set_feature, '_', 3)),
 
@@ -124,8 +123,10 @@ create_feature_invalid_json_test() ->
 
     PostReq = cowboy_test_helpers:req(post, binary, Data),
     Body = http_post(PostReq, 400),
-    Msg = <<"The request body is not valid JSON">>,
-    Expected = #{<<"error">> => #{<<"what">> => Msg}},
+    Msg = <<"The object is not valid JSON">>,
+    Expected = #{<<"error">> => #{
+                    <<"what">> => Msg,
+                    <<"object">> => <<"post_body">>}},
     ?assertEqual(Expected, Body),
 
     unload().
@@ -197,7 +198,7 @@ create_feature_rollout_missing_end_test() ->
     },
     ErrorMessage = <<"Rollout start requires a rollout end">>,
 
-    ok = meck:expect(features_store, set_feature, ['_', '_', '_'],
+    ok = meck:expect(features_store, set_feature, ['_', '_', '_', '_'],
                      meck:raise(throw, {invalid_feature, ErrorMessage})),
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
@@ -224,6 +225,124 @@ create_feature_rollout_invalid_date_format_test() ->
                            #{<<"what">> => ErrorMessage,
                              <<"value">> => <<"2020">>}},
     ?assertEqual(ExpectedResponse, Data),
+    unload().
+
+%%%%
+%   Create feature with user spec
+%%%%
+
+create_feature_user_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = <<"=">>,
+    Value = <<"42">>,
+
+    Doc = #{
+        name => Name,
+        user => [#{property => UserProp,
+                   comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    PostBody = http_post(PostReq, 204),
+    ?assertEqual({user, [{UserProp, '=', Value}]},
+                 meck:capture(first, features_store, set_feature, '_', 4)),
+
+    ?assertEqual(#{}, PostBody),
+
+    unload().
+
+create_feature_user_missing_required_property_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = <<"invalid comparator">>,
+    Value = <<"42">>,
+
+    Doc = #{
+        name => Name,
+        user => [#{property=> UserProp,
+                   comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Body = http_post(PostReq, 400),
+
+    Expected = #{<<"error">> => #{
+                        <<"value">> => Comparator,
+                        <<"choices">> => [<<"=">>],
+                        <<"what">> => <<"Value not in enum">>}},
+    ?assertEqual(Expected, Body),
+
+    unload().
+
+create_feature_user_value_not_in_enum_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    Comparator = <<"=">>,
+    Value = <<"42">>,
+
+    Doc = #{
+        name => Name,
+        user => [#{comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    Body = http_post(PostReq, 400),
+
+    Expected = #{<<"error">> => #{
+                        <<"key">> => <<"property">>,
+                        <<"what">> => <<"Missing required element">>}},
+    ?assertEqual(Expected, Body),
+
+    unload().
+
+%%%%
+%   Get user features tests
+%%%%
+
+get_user_features_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = '=',
+    Value = <<"42">>,
+
+    UserSpec = [{UserProp, Comparator, Value}],
+
+    UserObj = #{UserProp => Value},
+
+    Features = [test_utils:defaulted_feature_spec(Name, #{user=>UserSpec})],
+    ok = meck:expect(features_store, get_features, fun() -> Features end),
+
+    UserQuery = base64:encode(jsx:encode(UserObj)),
+
+    Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
+    Data = http_get(Req, 200),
+    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+
+    unload().
+
+get_user_features_invalid_json_test() ->
+    load(),
+    UserQuery = base64:encode(<<"{ not valid json ]">>),
+
+    Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
+    Data = http_get(Req, 400),
+
+    Msg = <<"The object is not valid JSON">>,
+    Expected = #{<<"error">> => #{<<"what">> => Msg,
+                                  <<"object">> => <<"user_obj">>}},
+    ?assertEqual(Expected, Data),
+
     unload().
 
 
