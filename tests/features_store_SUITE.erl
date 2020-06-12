@@ -61,7 +61,7 @@ ad_user_spec_write_read(_Config) ->
     {ok, Pid} = ?MUT:start_link(),
     Name = <<"feature">>,
     Boolean = true,
-    UserSpec = [{<<"user_id">>, '=', 42}],
+    UserSpec = [[<<"user_id">>, '=', 42]],
 
     ok = features_store:set_feature(Name, {boolean, Boolean},
                                           {rollout, undefined, undefined},
@@ -118,6 +118,7 @@ bb_external_store_store_data(_Config) ->
 
     Name = <<"feature">>,
     Boolean = true,
+    UserSpecs = [[<<"user_id">>, '=', <<"42">>]],
 
     StoreLibState = make_ref(),
 
@@ -137,9 +138,10 @@ bb_external_store_store_data(_Config) ->
 
     ok = features_store:set_feature(Name, {boolean, Boolean},
                                           {rollout, undefined, undefined},
-                                          {user, []}),
+                                          {user, UserSpecs}),
 
-    Expected = [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean})],
+    Expected = [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
+                                                          user=>UserSpecs})],
     ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
 
     exit(Pid, normal),

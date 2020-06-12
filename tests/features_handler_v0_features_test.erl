@@ -248,7 +248,7 @@ create_feature_user_test() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     PostBody = http_post(PostReq, 204),
-    ?assertEqual({user, [{UserProp, '=', Value}]},
+    ?assertEqual({user, [[UserProp, '=', Value]]},
                  meck:capture(first, features_store, set_feature, '_', 4)),
 
     ?assertEqual(#{}, PostBody),
@@ -316,7 +316,7 @@ get_user_features_test() ->
     Comparator = '=',
     Value = <<"42">>,
 
-    UserSpec = [{UserProp, Comparator, Value}],
+    UserSpec = [[UserProp, Comparator, Value]],
 
     UserObj = #{UserProp => Value},
 

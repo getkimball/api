@@ -85,7 +85,7 @@ collapse_rollout_progress(Start, End, Now, Rand) ->
 
 collapse_user_with_user_spec(_User, _Specs=[]) ->
     false;
-collapse_user_with_user_spec(User, _Specs=[{Prop, '=', Val}|T]) ->
+collapse_user_with_user_spec(User, _Specs=[[Prop, '=', Val]|T]) ->
     UserVal = maps:get(Prop, User, undefined),
     case UserVal == Val of
         true -> true;
