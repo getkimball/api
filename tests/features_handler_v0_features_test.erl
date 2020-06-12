@@ -345,6 +345,20 @@ get_user_features_invalid_json_test() ->
 
     unload().
 
+get_user_features_invalid_base64_test() ->
+    load(),
+    UserQuery = <<"b'badb64">>,
+
+    Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
+    Data = http_get(Req, 400),
+
+    Msg = <<"The object cannot be base64 decoded">>,
+    Expected = #{<<"error">> => #{<<"what">> => Msg,
+                                  <<"object">> => UserQuery}},
+    ?assertEqual(Expected, Data),
+
+    unload().
+
 
 %%%%
 %   Test helpers
