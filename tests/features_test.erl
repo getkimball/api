@@ -61,21 +61,21 @@ collapse_to_boolean_with_user_id_test() ->
     TrueSpec = test_utils:defaulted_feature_spec(
         Name,
         #{boolean => false,
-          user => [{<<"user_id">>, '=', 42}]}),
+          user => [[<<"user_id">>, '=', 42]]}),
     FalseSpec = test_utils:defaulted_feature_spec(
         Name,
         #{boolean => false,
-          user => [{<<"user_id">>, '=', 24}]}),
+          user => [[<<"user_id">>, '=', 24]]}),
     LongTrueSpec = test_utils:defaulted_feature_spec(
         Name,
         #{boolean => false,
-          user => [ {<<"user_id">>, '=', 24},
-                   {<<"user_id">>, '=', 42}]}),
+          user => [ [<<"user_id">>, '=', 24],
+                   [<<"user_id">>, '=', 42]]}),
     LongFalseSpec = test_utils:defaulted_feature_spec(
         Name,
         #{boolean => false,
-          user => [ {<<"user_id">>, '=', 1},
-                   {<<"user_id">>, '=', 2}]}),
+          user => [ [<<"user_id">>, '=', 1],
+                   [<<"user_id">>, '=', 2]]}),
 
     User = #{<<"user_id">> => 42},
 

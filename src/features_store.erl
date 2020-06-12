@@ -324,12 +324,12 @@ build_user_specs(undefined) ->
     [];
 build_user_specs([]) ->
     [];
-build_user_specs([{UserProp, ComparatorAtom='=', Value}|T]) ->
+build_user_specs([[UserProp, ComparatorAtom='=', Value]|T]) ->
     US = #user_spec{prop=UserProp,
                     comparator_atom=ComparatorAtom,
                     value=Value},
     [US | build_user_specs(T)];
-build_user_specs([{_UserProp, _ComparatorAtom, _Value}|_T]) ->
+build_user_specs([[_UserProp, _ComparatorAtom, _Value]|_T]) ->
     throw({invalid_feature, "User flag can only do `=` comparisons"});
 build_user_specs([_H|_T]) ->
     throw({invalid_feature, "Incorrect number of terms for user flag"}).
@@ -340,5 +340,5 @@ userspecs_to_lists([]) ->
 userspecs_to_lists([#user_spec{prop=Prop,
                                comparator_atom=CA,
                                value=Value} |T]) ->
-    Spec = {Prop, CA, Value},
+    Spec = [Prop, CA, Value],
     [Spec|userspecs_to_lists(T)].

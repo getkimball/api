@@ -177,6 +177,6 @@ process_user_spec_input([#{property := Property,
                            comparator := Comparator,
                            value := Value} | T]) ->
     ComparatorAtom = comparator_bin_to_atom(Comparator),
-    [{Property, ComparatorAtom, Value}|process_user_spec_input(T)].
+    [[Property, ComparatorAtom, Value]|process_user_spec_input(T)].
 
 comparator_bin_to_atom(<<"=">>) -> '='.
