@@ -53,6 +53,13 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                     #{error => #{what=>Msg,
                                  object=>Object}},
                     []);
+        {invalid_base64, Object} ->
+            Msg = <<"The object cannot be base64 decoded">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg,
+                                 object=>Object}},
+                    []);
         {incorrect_type, {Value, Type}} ->
             respond(Req,
                     400,
@@ -147,7 +154,12 @@ validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
     end;
 validate_property_spec(Value, _Spec=#{type := string, format := byte}) ->
     case is_binary(Value) of
-        true -> base64:decode(Value);
+        true -> try base64:decode(Value) of
+                  Decoded -> Decoded
+                catch
+                  error:badarg ->
+                      throw({invalid_base64, Value})
+                end;
         false -> throw({incorrect_type, {Value, string}})
     end;
 validate_property_spec(Value, _Spec=#{type := string}) ->
