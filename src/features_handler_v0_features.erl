@@ -12,26 +12,33 @@ trails() ->
             operationId => getFeatures,
             tags => ["Features"],
             description => "Gets features and their status",
-            produces => ["application/json"],
             parameters => [
                 #{name => user_obj,
                   description => <<"User Object JSON serialized
                                     then Base64 encoded">>,
                   in => query,
-                  type => string,
-                  format => byte,
+                  schema => #{
+                    type => string,
+                    format => byte
+                  },
                   required => false
                 }
             ],
             responses => #{
                 200 => #{
                     description => <<"Features">>,
-                    schema => features_return_schema()
+                    content => #{
+                        'application/json' => #{
+                            schema => features_return_schema()
+                    }}
 
                 },
                 400 => #{
                     description => <<"Bad request, see response for details">>,
-                    schema => error_schema()
+                    content => #{
+                        'application/json' => #{
+                            schema => error_schema()
+                    }}
                 }
             }
         },
@@ -39,7 +46,6 @@ trails() ->
             operationId => setFeature,
             tags => ["Features"],
             description => "Sets a feature status",
-            produces => ["application/json"],
             parameters => [
                 #{name => feature,
                   description => <<"Feature Object">>,
@@ -50,14 +56,20 @@ trails() ->
             ],
             responses => #{
                 204 => #{
-                    description => <<"Feature created">>
-                },
+                    description => <<"Feature created">>,
+                    content => #{
+                        'application/json' => #{}
+                }},
                 400 => #{
-                    description => <<"Bad request, see response for details">>
-                },
+                    description => <<"Bad request, see response for details">>,
+                    content => #{
+                        'application/json' => #{}
+                }},
                 405 => #{
-                    description => <<"Sidecar unable to update features">>
-                }
+                    description => <<"Sidecar unable to update features">>,
+                    content => #{
+                        'application/json' => #{}
+                }}
             }
       }
     },

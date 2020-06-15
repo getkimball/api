@@ -54,9 +54,11 @@ set_config() ->
     setup_file_store_path(),
     ok = application:set_env(trails, api_root, "/"),
     ok = application:set_env(cowboy_swagger, global_spec,
-        #{swagger => "2.0",
+        #{
+          openapi => "3.0.0",
+          servers => [#{url => get_server()}],
           info => #{
-            title => <<"Kimball Features API">>,
+            title => "Get Kimball API",
             version => <<"0.0.0">>
     }}),
     ok.
@@ -122,3 +124,7 @@ get_features_mode() ->
         "api" -> api_server;
         _ -> api_server
     end.
+
+get_server() ->
+    %% TODO: Set this in the helm chart
+    os:getenv("OPENAPI_SERVER", "http://localhost:8080").
