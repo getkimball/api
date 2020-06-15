@@ -100,14 +100,15 @@ assert_has_keys([H|T], Map) ->
 
 match_params(_Params=[], _BodyData, _Req) ->
     [];
-match_params(_Params=[Spec=#{name:=Name,
+match_params(_Params=[_Spec=#{name:=Name,
                              in:=query,
                              required:=false,
-                             type:=string}|T],
+                             schema:=#{
+                                type:=string}=Schema}|T],
              BodyData,
              Req) ->
     #{Name := Value} = cowboy_req:match_qs([{Name, [], undefined}], Req),
-    Param = validate_property_spec(Value, Spec),
+    Param = validate_property_spec(Value, Schema),
     [{Name, Param} | match_params(T, BodyData, Req)];
 match_params(_Params=[_H=#{name:=Name,
                            in:=body,

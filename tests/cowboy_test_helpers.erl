@@ -5,7 +5,7 @@
          req/2,
          req/3,
          init/3,
-         validate_response_against_spec/2,
+         validate_response_against_spec/3,
          setup/0,
          cleanup/0]).
 
@@ -59,7 +59,11 @@ read_reply({ok, #{streamid:=StreamId}, _Opts}) ->
         error
     end.
 
-validate_response_against_spec(_Spec=#{schema := #{properties:=Properties}}, Data) ->
+validate_response_against_spec(_Spec=#{content:=Content},
+                               _Headers=#{<<"content-type">>:=ContentType},
+                               Data) ->
+    ContentTypeAtom = erlang:binary_to_atom(ContentType, utf8),
+    #{ContentTypeAtom := #{schema := #{properties:=Properties}}} = Content,
     SpecKeys = maps:keys(Properties),
     DataKeys = maps:keys(Data),
     ?assertEqual(SpecKeys, DataKeys),
