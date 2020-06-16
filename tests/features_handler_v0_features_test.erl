@@ -16,14 +16,17 @@ unload() ->
     ok = cowboy_test_helpers:cleanup(),
     ok.
 
+unload(ok) ->
+    unload().
+
 setup_test() ->
     [Trail] = ?MUT:trails(),
     Path = trails:path_match(Trail),
     ?assertEqual("/v0/features", Path),
     ok.
 
-ok_test() ->
-    load(),
+ok_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
 
     Req = cowboy_test_helpers:req(),
     Opts = [],
@@ -32,27 +35,28 @@ ok_test() ->
     {response, Code, Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
     Data = jsx:decode(Body, [return_maps]),
 
-    ?assertEqual(200, Code),
-    ?assertEqual(#{<<"features">> => #{}}, Data),
     GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Headers, Data),
 
-    unload().
+    [?_assertEqual(200, Code),
+     ?_assertEqual(#{<<"features">> => #{}}, Data)]
+    end}.
 
-get_boolean_features_test() ->
-    load(),
+
+get_boolean_features_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     FeatureName = <<"feature_foo">>,
     Features = [test_utils:defaulted_feature_spec(FeatureName, #{boolean=>false})],
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     Req = cowboy_test_helpers:req(),
     Data = http_get(Req, 200),
-    ?assertEqual(#{<<"features">>=>#{FeatureName=>false}}, Data),
+    [?_assertEqual(#{<<"features">>=>#{FeatureName=>false}}, Data)]
 
-    unload().
+    end}.
 
-create_feature_boolean_test() ->
-    load(),
+create_feature_boolean_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
     Boolean = true,
     Doc = #{
@@ -69,9 +73,6 @@ create_feature_boolean_test() ->
     CowPostResp = cowboy_test_helpers:init(?MUT, PostReq, Opts),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
 
-    ?assertEqual(204, PostCode),
-    ?assertEqual(<<"{}">>, PostBody),
-
     GetReq = cowboy_test_helpers:req(),
     Data = http_get(GetReq, 200),
 
@@ -79,12 +80,14 @@ create_feature_boolean_test() ->
         <<"features">> => #{
             Name => true
     }},
-    ?assertEqual(ExpectedData, Data),
+    [?_assertEqual(204, PostCode),
+     ?_assertEqual(<<"{}">>, PostBody),
+     ?_assertEqual(ExpectedData, Data)]
 
-    unload().
+    end}.
 
-create_feature_rollout_test() ->
-    load(),
+create_feature_rollout_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
     Now = erlang:system_time(seconds),
     Later = Now + 100,
@@ -101,10 +104,6 @@ create_feature_rollout_test() ->
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     PostBody = http_post(PostReq, 204),
-    ?assertEqual({rollout, Now, Later},
-                 meck:capture(first, features_store, set_feature, '_', 3)),
-
-    ?assertEqual(#{}, PostBody),
 
     GetReq = cowboy_test_helpers:req(),
     Data = http_get(GetReq, 200),
@@ -112,12 +111,16 @@ create_feature_rollout_test() ->
         <<"features">> => #{
             Name => false
     }},
-    ?assertEqual(ExpectedData, Data),
+    [?_assertEqual({rollout, Now, Later},
+                 meck:capture(first, features_store, set_feature, '_', 3)),
 
-    unload().
+     ?_assertEqual(#{}, PostBody),
+     ?_assertEqual(ExpectedData, Data)]
 
-create_feature_invalid_content_type_test() ->
-    load(),
+    end}.
+
+create_feature_invalid_content_type_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     ContentType = <<"invalid">>,
     RequestOpts = #{
         has_body => true,
@@ -134,12 +137,12 @@ create_feature_invalid_content_type_test() ->
                     <<"what">> => Msg,
                     <<"expected_types">> => [<<"application/json">>],
                     <<"type">> => ContentType}},
-    ?assertEqual(Expected, Body),
+    [?_assertEqual(Expected, Body)]
 
-    unload().
+    end}.
 
-create_feature_invalid_json_test() ->
-    load(),
+create_feature_invalid_json_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Data = <<"{:not valid json">>,
 
     PostReq = cowboy_test_helpers:req(post, binary, Data),
@@ -148,12 +151,12 @@ create_feature_invalid_json_test() ->
     Expected = #{<<"error">> => #{
                     <<"what">> => Msg,
                     <<"object">> => <<"post_body">>}},
-    ?assertEqual(Expected, Body),
+    [?_assertEqual(Expected, Body)]
 
-    unload().
+    end}.
 
-create_feature_missing_required_name_test() ->
-    load(),
+create_feature_missing_required_name_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Boolean = true,
     Doc = #{
         boolean => Boolean
@@ -165,12 +168,12 @@ create_feature_missing_required_name_test() ->
     Expected = #{<<"error">> => #{
                         <<"key">> => <<"name">>,
                         <<"what">> => <<"Missing required element">>}},
-    ?assertEqual(Expected, Body),
+    [?_assertEqual(Expected, Body)]
 
-    unload().
+    end}.
 
-create_feature_incorrect_boolean_type_test() ->
-    load(),
+create_feature_incorrect_boolean_type_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
     BadBoolean = <<"true">>,
     Doc = #{
@@ -185,12 +188,12 @@ create_feature_incorrect_boolean_type_test() ->
                            #{<<"type_expected">> => <<"boolean">>,
                              <<"value">> => <<"true">>,
                              <<"what">> => <<"Incorrect type">>}},
-    ?assertEqual(ExpectedResponse, Data),
+    [?_assertEqual(ExpectedResponse, Data)]
 
-    unload().
+    end}.
 
-create_feature_incorrect_string_type_test() ->
-    load(),
+create_feature_incorrect_string_type_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     BadName = 4,
     Boolean = true,
     Doc = #{
@@ -205,12 +208,12 @@ create_feature_incorrect_string_type_test() ->
                            #{<<"type_expected">> => <<"string">>,
                              <<"value">> => 4,
                              <<"what">> => <<"Incorrect type">>}},
-    ?assertEqual(ExpectedResponse, Data),
+    [?_assertEqual(ExpectedResponse, Data)]
 
-    unload().
+    end}.
 
-create_feature_rollout_missing_end_test() ->
-    load(),
+create_feature_rollout_missing_end_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
     Now = erlang:system_time(seconds),
     Doc = #{
@@ -228,11 +231,11 @@ create_feature_rollout_missing_end_test() ->
     ExpectedResponse = #{<<"error">> =>
                            #{<<"what">> => <<"Invalid feature">>,
                              <<"description">> => ErrorMessage}},
-    ?assertEqual(ExpectedResponse, Data),
-    unload().
+    [?_assertEqual(ExpectedResponse, Data)]
+    end}.
 
-create_feature_rollout_invalid_date_format_test() ->
-    load(),
+create_feature_rollout_invalid_date_format_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Doc = #{
         name => <<"feature_name">>,
         rollout_start => <<"2020">>
@@ -245,15 +248,15 @@ create_feature_rollout_invalid_date_format_test() ->
     ExpectedResponse = #{<<"error">> =>
                            #{<<"what">> => ErrorMessage,
                              <<"value">> => <<"2020">>}},
-    ?assertEqual(ExpectedResponse, Data),
-    unload().
+    [?_assertEqual(ExpectedResponse, Data)]
+    end}.
 
 %%%%
 %   Create feature with user spec
 %%%%
 
-create_feature_user_test() ->
-    load(),
+create_feature_user_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -269,15 +272,15 @@ create_feature_user_test() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     PostBody = http_post(PostReq, 204),
-    ?assertEqual({user, [[UserProp, '=', Value]]},
+    [?_assertEqual({user, [[UserProp, '=', Value]]},
                  meck:capture(first, features_store, set_feature, '_', 4)),
 
-    ?assertEqual(#{}, PostBody),
+     ?_assertEqual(#{}, PostBody)]
 
-    unload().
+    end}.
 
-create_feature_user_missing_required_property_test() ->
-    load(),
+create_feature_user_missing_required_property_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -298,12 +301,12 @@ create_feature_user_missing_required_property_test() ->
                         <<"value">> => Comparator,
                         <<"choices">> => [<<"=">>],
                         <<"what">> => <<"Value not in enum">>}},
-    ?assertEqual(Expected, Body),
+    [?_assertEqual(Expected, Body)]
 
-    unload().
+    end}.
 
-create_feature_user_value_not_in_enum_test() ->
-    load(),
+create_feature_user_value_not_in_enum_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
 
     Comparator = <<"=">>,
@@ -321,16 +324,16 @@ create_feature_user_value_not_in_enum_test() ->
     Expected = #{<<"error">> => #{
                         <<"key">> => <<"property">>,
                         <<"what">> => <<"Missing required element">>}},
-    ?assertEqual(Expected, Body),
+    [?_assertEqual(Expected, Body)]
 
-    unload().
+    end}.
 
 %%%%
 %   Get user features tests
 %%%%
 
-get_user_features_test() ->
-    load(),
+get_user_features_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -348,12 +351,11 @@ get_user_features_test() ->
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
     Data = http_get(Req, 200),
-    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+    [?_assertEqual(#{<<"features">>=>#{Name=>true}}, Data)]
+    end}.
 
-    unload().
-
-get_user_features_invalid_json_test() ->
-    load(),
+get_user_features_invalid_json_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     UserQuery = base64:encode(<<"{ not valid json ]">>),
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
@@ -362,12 +364,11 @@ get_user_features_invalid_json_test() ->
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => <<"user_obj">>}},
-    ?assertEqual(Expected, Data),
+    [?_assertEqual(Expected, Data)]
+    end}.
 
-    unload().
-
-get_user_features_invalid_base64_test() ->
-    load(),
+get_user_features_invalid_base64_test_() ->
+    {setup, fun load/0, fun unload/1, fun(_Args) ->
     UserQuery = <<"b'badb64">>,
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
@@ -376,10 +377,9 @@ get_user_features_invalid_base64_test() ->
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => UserQuery}},
-    ?assertEqual(Expected, Data),
+    [?_assertEqual(Expected, Data)]
 
-    unload().
-
+    end}.
 
 %%%%
 %   Test helpers
