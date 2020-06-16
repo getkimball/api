@@ -5,7 +5,7 @@
          req/2,
          req/3,
          init/3,
-         validate_response_against_spec/2,
+         validate_response_against_spec/3,
          setup/0,
          cleanup/0]).
 
@@ -32,11 +32,14 @@ handle_init_response(Module, {UpgradeMod, Req, State}) ->
 req() ->
     req(<<"GET">>, #{}).
 
+req(post, raw, Opts) ->
+    req(<<"POST">>, Opts);
 req(post, json, Body) ->
     Data = jsx:encode(Body),
     req(<<"POST">>, #{'_test_body' => Data, has_body=>true});
 req(post, binary, Data) ->
     req(<<"POST">>, #{'_test_body' => Data, has_body=>true}).
+
 
 req(get, QueryArgs) ->
     QS = uri_string:compose_query(QueryArgs),
@@ -46,6 +49,7 @@ req(Method, Opts) when is_binary(Method) and erlang:is_map(Opts) ->
     Req = #{pid => self(),
       has_body => false,
       method => Method,
+      headers => #{<<"content-type">> => <<"application/json">>},
       qs => <<"">>,
       streamid => Ref},
     MergedReq = maps:merge(Req, Opts),
@@ -59,7 +63,11 @@ read_reply({ok, #{streamid:=StreamId}, _Opts}) ->
         error
     end.
 
-validate_response_against_spec(_Spec=#{schema := #{properties:=Properties}}, Data) ->
+validate_response_against_spec(_Spec=#{content:=Content},
+                               _Headers=#{<<"content-type">>:=ContentType},
+                               Data) ->
+    ContentTypeAtom = erlang:binary_to_atom(ContentType, utf8),
+    #{ContentTypeAtom := #{schema := #{properties:=Properties}}} = Content,
     SpecKeys = maps:keys(Properties),
     DataKeys = maps:keys(Data),
     ?assertEqual(SpecKeys, DataKeys),

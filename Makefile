@@ -10,7 +10,7 @@ DIALYZER_DIRS = --src src tests
 
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.7.0
 dep_trails = hex 2.0.0
-dep_cowboy_swagger = hex 2.0.0
+dep_cowboy_swagger = hex 2.2.0
 dep_elvis_mk = git https://github.com/inaka/elvis.mk.git 1.0.0
 dep_eraven = git https://github.com/getkimball/eraven.git 2020-05-20
 dep_hackney = hex 1.15.2

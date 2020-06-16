@@ -29,13 +29,13 @@ ok_test() ->
     Opts = [],
 
     CowResp = cowboy_test_helpers:init(?MUT, Req, Opts),
-    {response, Code, _Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
+    {response, Code, Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
     Data = jsx:decode(Body, [return_maps]),
 
     ?assertEqual(200, Code),
     ?assertEqual(#{<<"features">> => #{}}, Data),
     GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
-    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
+    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Headers, Data),
 
     unload().
 
@@ -116,6 +116,27 @@ create_feature_rollout_test() ->
 
     unload().
 
+create_feature_invalid_content_type_test() ->
+    load(),
+    ContentType = <<"invalid">>,
+    RequestOpts = #{
+        has_body => true,
+        headers => #{
+            <<"content-type">> => ContentType
+
+        }
+    },
+
+    PostReq = cowboy_test_helpers:req(post, raw, RequestOpts),
+    Body = http_post(PostReq, 400),
+    Msg = <<"The content-type is invalid">>,
+    Expected = #{<<"error">> => #{
+                    <<"what">> => Msg,
+                    <<"expected_types">> => [<<"application/json">>],
+                    <<"type">> => ContentType}},
+    ?assertEqual(Expected, Body),
+
+    unload().
 
 create_feature_invalid_json_test() ->
     load(),
@@ -366,12 +387,12 @@ get_user_features_invalid_base64_test() ->
 
 http_get(Req, ExpectedCode) ->
     CowGetResp = cowboy_test_helpers:init(?MUT, Req, []),
-    {response, GetCode, _GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
+    {response, GetCode, GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
     GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, GetCode),
 
     ?assertEqual(ExpectedCode, GetCode),
     Data = jsx:decode(GetBody, [return_maps]),
-    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Data),
+    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
     Data.
 
 http_post(Req, ExpectedCode) ->

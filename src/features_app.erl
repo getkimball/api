@@ -12,7 +12,7 @@ start(_Type, _Args) ->
     App = features,
     Mode = get_features_mode(),
 
-    ok = set_config(),
+    ok = set_config(Mode),
 
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
@@ -47,16 +47,18 @@ setup_trails() ->
     trails:store(Trails),
     Trails.
 
-set_config() ->
+set_config(Mode) ->
     setup_sentry(),
     setup_namespace(),
     setup_additional_namespace_config(),
     setup_file_store_path(),
     ok = application:set_env(trails, api_root, "/"),
     ok = application:set_env(cowboy_swagger, global_spec,
-        #{swagger => "2.0",
+        #{
+          openapi => "3.0.0",
+          servers => [#{url => get_server(Mode)}],
           info => #{
-            title => <<"Kimball Features API">>,
+            title => "Get Kimball API",
             version => <<"0.0.0">>
     }}),
     ok.
@@ -122,3 +124,11 @@ get_features_mode() ->
         "api" -> api_server;
         _ -> api_server
     end.
+
+get_server(_Mode=api_server) ->
+    os:getenv("OPENAPI_SERVER", "http://localhost:8080");
+get_server(_Mode=sidecar) ->
+    Host = os:getenv("HOST_IP", "localhost"),
+    Port = os:getenv("HOST_PORT", "8080"),
+    Server = "http://" ++ Host ++ ":" ++ Port,
+    Server.
