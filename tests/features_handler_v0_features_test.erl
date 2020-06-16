@@ -116,6 +116,27 @@ create_feature_rollout_test() ->
 
     unload().
 
+create_feature_invalid_content_type_test() ->
+    load(),
+    ContentType = <<"invalid">>,
+    RequestOpts = #{
+        has_body => true,
+        headers => #{
+            <<"content-type">> => ContentType
+
+        }
+    },
+
+    PostReq = cowboy_test_helpers:req(post, raw, RequestOpts),
+    Body = http_post(PostReq, 400),
+    Msg = <<"The content-type is invalid">>,
+    Expected = #{<<"error">> => #{
+                    <<"what">> => Msg,
+                    <<"expected_types">> => [<<"application/json">>],
+                    <<"type">> => ContentType}},
+    ?assertEqual(Expected, Body),
+
+    unload().
 
 create_feature_invalid_json_test() ->
     load(),

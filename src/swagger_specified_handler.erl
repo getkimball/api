@@ -53,6 +53,14 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                     #{error => #{what=>Msg,
                                  object=>Object}},
                     []);
+        {invalid_contenttype, Type, Types} ->
+            Msg = <<"The content-type is invalid">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg,
+                                 type=>Type,
+                                 expected_types=>Types}},
+                    []);
         {invalid_base64, Object} ->
             Msg = <<"The object cannot be base64 decoded">>,
             respond(Req,
@@ -70,10 +78,12 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
     end.
 
 handle_req(Req, Spec, Handler, HandlerState) ->
-    {Req1, Params} = params_from_request(Req, Spec),
+    Params = params_from_request(Req, Spec),
+    {Req1, BodyData} = body_from_request(Req, Spec),
     {HandlerReq, Code, Data, State} = Handler:handle_req(
                                                 Req1,
                                                 Params,
+                                                BodyData,
                                                 HandlerState),
     _ResponseSpec = response_spec(Spec, Code),
     {HandlerReq, Code, Data, State}.
@@ -91,6 +101,9 @@ respond(Req, Code, Value, Opts) ->
 assert_has_keys([], _Map) ->
     ok;
 assert_has_keys([H|T], Map) ->
+    ?LOG_DEBUG(#{what=> <<"assert has keys">>,
+                 key => H,
+                 map => Map}),
     case maps:get(H, Map, undefined) of
         undefined -> throw({missing_required_key, H});
         _ -> ok
@@ -98,27 +111,22 @@ assert_has_keys([H|T], Map) ->
     assert_has_keys(T, Map),
     ok.
 
-match_params(_Params=[], _BodyData, _Req) ->
+match_params(_Params=[], _Req) ->
     [];
 match_params(_Params=[_Spec=#{name:=Name,
                              in:=query,
                              required:=false,
                              schema:=#{
                                 type:=string}=Schema}|T],
-             BodyData,
              Req) ->
     #{Name := Value} = cowboy_req:match_qs([{Name, [], undefined}], Req),
     Param = validate_property_spec(Value, Schema),
-    [{Name, Param} | match_params(T, BodyData, Req)];
-match_params(_Params=[_H=#{name:=Name,
-                           in:=body,
-                           schema:=Schema}|T],
-             BodyData,
-             Req) ->
-    Param = match_schema(Schema, BodyData),
-    [{Name, Param} | match_params(T, BodyData, Req)].
+    [{Name, Param} | match_params(T, Req)].
 
 match_schema(Schema=#{properties:=Properties}, Data) ->
+    ?LOG_DEBUG(#{what=> <<"Match schema">>,
+                 schema=> Schema,
+                 data=> Data}),
     Required = maps:get(required, Schema, []),
     Fun = fun(K, PropSpec, AccIn) ->
         % Data in from jsx will be binaries, not atoms
@@ -193,21 +201,34 @@ method_metadata(Handler, Method) ->
     MethodSpec = maps:get(LowerMethod, Metadata),
     MethodSpec.
 
-params_from_request(Req=#{has_body:=HasBody},
-                    _Spec=#{parameters := SpecParams}) ->
-    {Req1, BodyData} = case HasBody of
-        false -> {Req, #{}};
-        true -> {ok, Body, CaseReq} = cowboy_req:read_body(Req),
-                Data = features_json:decode_or_throw(
-                        Body, {invalid_json, post_body}),
-                {CaseReq, Data}
-    end,
-    Params = match_params(SpecParams, BodyData, Req1),
+params_from_request(Req=#{}, Spec) ->
+    SpecParams = maps:get(parameters, Spec, []),
+    Params = match_params(SpecParams, Req),
+    Params.
 
-    {Req1, Params};
-params_from_request(Req, _Spec) ->
-    % No parameters in the Spec
-    {Req, []}.
+body_from_request(_Req=#{has_body:=false},
+                  _Spec=#{requestBody:=#{required:=true}}) ->
+    throw(body_required);
+body_from_request(Req=#{has_body:=false}, _Spec) ->
+    {Req, undefined};
+body_from_request(Req=#{has_body:=true}, Spec) ->
+    SpecBody = maps:get(requestBody, Spec),
+    SpecContent = maps:get(content, SpecBody),
+    ContentType = cowboy_req:header(<<"content-type">>, Req),
+    ContentTypeAtom = erlang:binary_to_atom(ContentType, utf8),
+
+    ContentSpec = case maps:is_key(ContentTypeAtom, SpecContent) of
+        false -> Types = maps:keys(SpecContent),
+                 throw({invalid_contenttype, ContentTypeAtom, Types});
+        true -> maps:get(ContentTypeAtom, SpecContent)
+    end,
+
+    {ok, Body, Req1} = cowboy_req:read_body(Req),
+    Data = features_json:decode_or_throw(Body, {invalid_json, post_body}),
+    #{schema:=Schema} = ContentSpec,
+    ParsedData = match_schema(Schema, Data),
+
+    {Req1, ParsedData}.
 
 response_spec(Spec, Code) ->
     Responses = maps:get(responses, Spec, #{}),

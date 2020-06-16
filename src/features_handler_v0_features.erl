@@ -3,7 +3,7 @@
 -export([trails/0]).
 -export([init/2]).
 
--export([handle_req/3]).
+-export([handle_req/4]).
 
 
 trails() ->
@@ -46,14 +46,13 @@ trails() ->
             operationId => setFeature,
             tags => ["Features"],
             description => "Sets a feature status",
-            parameters => [
-                #{name => feature,
-                  description => <<"Feature Object">>,
-                  in => body,
-                  required => true,
-                  schema => feature_input_schema()
+            requestBody => #{
+                content => #{
+                    'application/json' => #{
+                        schema => feature_input_schema()
+                    }
                 }
-            ],
+            },
             responses => #{
                 204 => #{
                     description => <<"Feature created">>,
@@ -78,9 +77,12 @@ trails() ->
 features_return_schema() ->
     #{
         type => object,
+        description => <<"Feature Object">>,
         properties => #{
            <<"features">> => #{
               type => object,
+              additionalProperties => true,
+              properties => #{},
               description => <<"Collection of features">>
            }
         }
@@ -144,16 +146,15 @@ feature_input_schema() ->
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 
-handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
-    Data = proplists:get_value(feature, Params),
-    Name = maps:get(name, Data),
+handle_req(Req=#{method := <<"POST">>}, _Params, Body, Opts) ->
+    Name = maps:get(name, Body),
     Boolean =  {boolean,
-                  maps:get(boolean, Data)},
+                  maps:get(boolean, Body)},
     Rollout =  {rollout,
-                  maps:get(rollout_start, Data),
-                  maps:get(rollout_end, Data)},
+                  maps:get(rollout_start, Body),
+                  maps:get(rollout_end, Body)},
 
-    UserSpecIn = maps:get(user, Data),
+    UserSpecIn = maps:get(user, Body),
     UserSpec = process_user_spec_input(UserSpecIn),
     User = {user, UserSpec},
     Ok = features_store:set_feature(Name, Boolean, Rollout, User),
@@ -162,7 +163,7 @@ handle_req(Req=#{method := <<"POST">>}, Params, Opts) ->
         _ -> 405
     end,
     {Req, Code, #{}, Opts};
-handle_req(Req=#{method := <<"GET">>}, Params, Opts) ->
+handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, Opts) ->
     UserObjString = proplists:get_value(user_obj, Params),
     UserObj = case UserObjString of
         undefined -> #{};
@@ -176,7 +177,7 @@ handle_req(Req=#{method := <<"GET">>}, Params, Opts) ->
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
     {Req, 200, Data, Opts};
-handle_req(Req, _Params, Opts) ->
+handle_req(Req, _Params, _Body, Opts) ->
     {Req, 404, #{}, Opts}.
 
 

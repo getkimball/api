@@ -32,11 +32,14 @@ handle_init_response(Module, {UpgradeMod, Req, State}) ->
 req() ->
     req(<<"GET">>, #{}).
 
+req(post, raw, Opts) ->
+    req(<<"POST">>, Opts);
 req(post, json, Body) ->
     Data = jsx:encode(Body),
     req(<<"POST">>, #{'_test_body' => Data, has_body=>true});
 req(post, binary, Data) ->
     req(<<"POST">>, #{'_test_body' => Data, has_body=>true}).
+
 
 req(get, QueryArgs) ->
     QS = uri_string:compose_query(QueryArgs),
@@ -46,6 +49,7 @@ req(Method, Opts) when is_binary(Method) and erlang:is_map(Opts) ->
     Req = #{pid => self(),
       has_body => false,
       method => Method,
+      headers => #{<<"content-type">> => <<"application/json">>},
       qs => <<"">>,
       streamid => Ref},
     MergedReq = maps:merge(Req, Opts),
