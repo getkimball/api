@@ -103,7 +103,6 @@ create_feature_rollout_test_() ->
                   rollout_end => Later})]
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    PostBody = http_post(PostReq, 204),
 
     GetReq = cowboy_test_helpers:req(),
     Data = http_get(GetReq, 200),
@@ -111,10 +110,10 @@ create_feature_rollout_test_() ->
         <<"features">> => #{
             Name => false
     }},
+    http_post(PostReq, 204, #{}),
     [?_assertEqual({rollout, Now, Later},
                  meck:capture(first, features_store, set_feature, '_', 3)),
 
-     ?_assertEqual(#{}, PostBody),
      ?_assertEqual(ExpectedData, Data)]
 
     end}.
@@ -131,13 +130,13 @@ create_feature_invalid_content_type_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, raw, RequestOpts),
-    Body = http_post(PostReq, 400),
     Msg = <<"The content-type is invalid">>,
     Expected = #{<<"error">> => #{
                     <<"what">> => Msg,
                     <<"expected_types">> => [<<"application/json">>],
                     <<"type">> => ContentType}},
-    [?_assertEqual(Expected, Body)]
+    http_post(PostReq, 400, Expected),
+    []
 
     end}.
 
@@ -146,12 +145,12 @@ create_feature_invalid_json_test_() ->
     Data = <<"{:not valid json">>,
 
     PostReq = cowboy_test_helpers:req(post, binary, Data),
-    Body = http_post(PostReq, 400),
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{
                     <<"what">> => Msg,
                     <<"object">> => <<"post_body">>}},
-    [?_assertEqual(Expected, Body)]
+    http_post(PostReq, 400, Expected),
+    []
 
     end}.
 
@@ -163,12 +162,12 @@ create_feature_missing_required_name_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Body = http_post(PostReq, 400),
 
     Expected = #{<<"error">> => #{
                         <<"key">> => <<"name">>,
                         <<"what">> => <<"Missing required element">>}},
-    [?_assertEqual(Expected, Body)]
+    http_post(PostReq, 400, Expected),
+    []
 
     end}.
 
@@ -182,13 +181,13 @@ create_feature_incorrect_boolean_type_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Data = http_post(PostReq, 400),
 
     ExpectedResponse = #{<<"error">> =>
                            #{<<"type_expected">> => <<"boolean">>,
                              <<"value">> => <<"true">>,
                              <<"what">> => <<"Incorrect type">>}},
-    [?_assertEqual(ExpectedResponse, Data)]
+    http_post(PostReq, 400, ExpectedResponse),
+    []
 
     end}.
 
@@ -202,13 +201,13 @@ create_feature_incorrect_string_type_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Data = http_post(PostReq, 400),
 
     ExpectedResponse = #{<<"error">> =>
                            #{<<"type_expected">> => <<"string">>,
                              <<"value">> => 4,
                              <<"what">> => <<"Incorrect type">>}},
-    [?_assertEqual(ExpectedResponse, Data)]
+    http_post(PostReq, 400, ExpectedResponse),
+    []
 
     end}.
 
@@ -226,12 +225,12 @@ create_feature_rollout_missing_end_test_() ->
                      meck:raise(throw, {invalid_feature, ErrorMessage})),
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Data = http_post(PostReq, 400),
 
     ExpectedResponse = #{<<"error">> =>
                            #{<<"what">> => <<"Invalid feature">>,
                              <<"description">> => ErrorMessage}},
-    [?_assertEqual(ExpectedResponse, Data)]
+    http_post(PostReq, 400, ExpectedResponse),
+    []
     end}.
 
 create_feature_rollout_invalid_date_format_test_() ->
@@ -242,13 +241,13 @@ create_feature_rollout_invalid_date_format_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Data = http_post(PostReq, 400),
 
     ErrorMessage = <<"Date doesn't appear to be the right format">>,
     ExpectedResponse = #{<<"error">> =>
                            #{<<"what">> => ErrorMessage,
                              <<"value">> => <<"2020">>}},
-    [?_assertEqual(ExpectedResponse, Data)]
+    http_post(PostReq, 400, ExpectedResponse),
+    []
     end}.
 
 %%%%
@@ -271,11 +270,9 @@ create_feature_user_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    PostBody = http_post(PostReq, 204),
+    http_post(PostReq, 204, #{}),
     [?_assertEqual({user, [[UserProp, '=', Value]]},
-                 meck:capture(first, features_store, set_feature, '_', 4)),
-
-     ?_assertEqual(#{}, PostBody)]
+                 meck:capture(first, features_store, set_feature, '_', 4))]
 
     end}.
 
@@ -295,13 +292,13 @@ create_feature_user_missing_required_property_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Body = http_post(PostReq, 400),
 
     Expected = #{<<"error">> => #{
                         <<"value">> => Comparator,
                         <<"choices">> => [<<"=">>],
                         <<"what">> => <<"Value not in enum">>}},
-    [?_assertEqual(Expected, Body)]
+    http_post(PostReq, 400, Expected),
+    []
 
     end}.
 
@@ -319,12 +316,12 @@ create_feature_user_value_not_in_enum_test_() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    Body = http_post(PostReq, 400),
 
     Expected = #{<<"error">> => #{
                         <<"key">> => <<"property">>,
                         <<"what">> => <<"Missing required element">>}},
-    [?_assertEqual(Expected, Body)]
+    http_post(PostReq, 400, Expected),
+    []
 
     end}.
 
@@ -395,10 +392,10 @@ http_get(Req, ExpectedCode) ->
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
     Data.
 
-http_post(Req, ExpectedCode) ->
+http_post(Req, ExpectedCode, ExpectedBody) ->
     CowPostResp = cowboy_test_helpers:init(?MUT, Req, []),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
     Data = jsx:decode(PostBody, [return_maps]),
 
-    ?assertEqual(ExpectedCode, PostCode),
-    Data.
+    ?assertEqual({ExpectedCode, ExpectedBody}, {PostCode, Data}),
+    ok.
