@@ -123,21 +123,38 @@ feature_input_schema() ->
            user => #{
                type => array,
                items => #{
-                   type => object,
-                   required => [property, comparator, value],
-                   properties => #{
-                       property => #{
-                          type => string
-                       },
-                       comparator => #{
-                          type => string,
-                          enum => [<<"=">>]
-                       },
-                       value => #{
-                          % This eventually should be anyOf multple types
-                          type => string
-                       }
-                   }
+                   anyOf => [
+                        #{type => object,
+                          required => [property, comparator, value],
+                          properties => #{
+                              property => #{
+                                 type => string
+                              },
+                              comparator => #{
+                                 type => string,
+                                 enum => [<<"=">>]
+                              },
+                              value => #{
+                                 type => string
+                              }
+                          }
+                        },
+                        #{type => object,
+                          required => [property, comparator, value],
+                          properties => #{
+                              property => #{
+                                 type => string
+                              },
+                              comparator => #{
+                                 type => string,
+                                 enum => [<<"=">>]
+                              },
+                              value => #{
+                                 type => integer
+                              }
+                          }
+                        }
+                    ]
              }
           }
        }

@@ -149,6 +149,11 @@ validate_property_spec(Value, _Spec=#{type := boolean}) ->
         false -> Value;
         _ -> throw({incorrect_type, {Value, boolean}})
     end;
+validate_property_spec(Value, _Spec=#{type := integer}) ->
+    case erlang:is_integer(Value) of
+        true -> Value;
+        false -> throw({incorrect_type, {Value, integer}})
+    end;
 validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
     case is_binary(Value) of
         false -> throw({incorrect_type, {Value, string}});
@@ -172,16 +177,19 @@ validate_property_spec(Value, _Spec=#{type := string, format := byte}) ->
         false -> throw({incorrect_type, {Value, string}})
     end;
 validate_property_spec(Value, _Spec=#{type := string}) ->
-    case is_binary(Value) of
-        true -> Value;
-        false -> throw({incorrect_type, {Value, string}})
-    end;
+    is_type_or_throw(Value, fun is_binary/1, string);
+
+% Item list with anyOf definition
+validate_property_spec(Value, _Spec=#{type :=array,
+                                      items := #{anyOf :=AnyOf}}) ->
+
+    is_type_or_throw(Value, fun is_list/1, array),
+    validate_any_of(Value, AnyOf);
+
+% Item list with object definition
 validate_property_spec(Value, _Spec=#{type := array,
                                       items := ItemSpec}) ->
-    case is_list(Value) of
-        true -> Value;
-        false -> throw({incorrect_type, {Value, array}})
-    end,
+    is_type_or_throw(Value, fun is_list/1, array),
     case maps:get(type, ItemSpec) of
         object -> [match_schema(ItemSpec, V) || V <- Value]
     end.
@@ -193,6 +201,23 @@ validate_enum(Value, #{enum := Enum} ) ->
     end;
 validate_enum(_Value, #{}) ->
     ok.
+
+% Value list exhausted, everything is validated
+validate_any_of([], _Any) ->
+    [];
+% anyOf list exhausted, this isn't anyOf
+validate_any_of([Hv|_Tv], []) ->
+    throw({not_any_of, Hv});
+% Iterate values and compare to possible anyOfs
+validate_any_of([Hv|Tv], [Ha=#{type:=object}|Ta]) ->
+    Validated = try match_schema(Ha, Hv) of
+        TryValidated -> TryValidated
+    catch
+        {incorrect_type, _Rest} ->
+            [NextIsValid] = validate_any_of([Hv], Ta),
+            NextIsValid
+    end,
+    [Validated | validate_any_of(Tv, [Ha|Ta])].
 
 method_metadata(Handler, Method) ->
     LowerMethod = string:lowercase(Method),
@@ -244,3 +269,9 @@ ensure_binary(Bin) when is_binary(Bin) ->
     Bin;
 ensure_binary(List) when is_list(List) ->
     binary:list_to_bin(List).
+
+is_type_or_throw(Value, Predicate, Type) ->
+    case Predicate(Value) of
+        true -> Value;
+        false -> throw({incorrect_type, {Value, Type}})
+    end.
