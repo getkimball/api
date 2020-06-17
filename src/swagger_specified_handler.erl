@@ -68,12 +68,20 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                     #{error => #{what=>Msg,
                                  object=>Object}},
                     []);
-        {incorrect_type, {Value, Type}} ->
+        {incorrect_type, Value, Type} ->
             respond(Req,
                     400,
                     #{error => #{what=><<"Incorrect type">>,
                                  type_expected=>Type,
                                  value=>Value}},
+                    []);
+        {not_any_of, Object, Whys} ->
+            Msg = <<"The object did not match anyOf">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg,
+                                 object=>Object,
+                                 why=>tuples_to_lists(Whys)}},
                     [])
     end.
 
@@ -147,11 +155,16 @@ validate_property_spec(Value, _Spec=#{type := boolean}) ->
     case Value of
         true -> Value;
         false -> Value;
-        _ -> throw({incorrect_type, {Value, boolean}})
+        _ -> throw({incorrect_type, Value, boolean})
+    end;
+validate_property_spec(Value, _Spec=#{type := integer}) ->
+    case erlang:is_integer(Value) of
+        true -> Value;
+        false -> throw({incorrect_type, Value, integer})
     end;
 validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
     case is_binary(Value) of
-        false -> throw({incorrect_type, {Value, string}});
+        false -> throw({incorrect_type, Value, string});
         _ -> StringValue = binary:bin_to_list(Value),
              try calendar:rfc3339_to_system_time(StringValue) of
                 Date -> Date
@@ -169,21 +182,25 @@ validate_property_spec(Value, _Spec=#{type := string, format := byte}) ->
                   error:badarg ->
                       throw({invalid_base64, Value})
                 end;
-        false -> throw({incorrect_type, {Value, string}})
+        false -> throw({incorrect_type, Value, string})
     end;
 validate_property_spec(Value, _Spec=#{type := string}) ->
-    case is_binary(Value) of
-        true -> Value;
-        false -> throw({incorrect_type, {Value, string}})
-    end;
+    is_type_or_throw(Value, fun is_binary/1, string);
+
+% Item list with anyOf definition
+validate_property_spec(Value, _Spec=#{type :=array,
+                                      items := #{anyOf :=AnyOf}}) ->
+
+    is_type_or_throw(Value, fun is_list/1, array),
+    validate_any_of(Value, AnyOf);
+
+% Item list with object definition
 validate_property_spec(Value, _Spec=#{type := array,
                                       items := ItemSpec}) ->
-    case is_list(Value) of
-        true -> Value;
-        false -> throw({incorrect_type, {Value, array}})
-    end,
+    is_type_or_throw(Value, fun is_list/1, array),
     case maps:get(type, ItemSpec) of
-        object -> [match_schema(ItemSpec, V) || V <- Value]
+        object -> [match_schema(ItemSpec, V) || V <- Value];
+        integer -> [validate_property_spec(V, ItemSpec) || V <- Value]
     end.
 
 validate_enum(Value, #{enum := Enum} ) ->
@@ -193,6 +210,28 @@ validate_enum(Value, #{enum := Enum} ) ->
     end;
 validate_enum(_Value, #{}) ->
     ok.
+
+validate_any_of(Items, AnyOfs) ->
+    validate_any_of(Items, AnyOfs, []).
+
+% Value list exhausted, everything is validated
+validate_any_of([], _Any, _Errors) ->
+    [];
+% anyOf list exhausted, this isn't anyOf
+validate_any_of([Hv|_Tv], [], Errors) ->
+    throw({not_any_of, Hv, Errors});
+% Iterate values and compare to possible anyOfs
+validate_any_of([Hv|Tv], [Ha=#{type:=object}|Ta], Errors) ->
+    Validated = try match_schema(Ha, Hv) of
+        TryValidated -> TryValidated
+    catch
+        ValidationError ->
+            [NextIsValid] = validate_any_of([Hv],
+                                            Ta,
+                                            [ValidationError|Errors]),
+            NextIsValid
+    end,
+    [Validated | validate_any_of(Tv, [Ha|Ta], [])].
 
 method_metadata(Handler, Method) ->
     LowerMethod = string:lowercase(Method),
@@ -244,3 +283,15 @@ ensure_binary(Bin) when is_binary(Bin) ->
     Bin;
 ensure_binary(List) when is_list(List) ->
     binary:list_to_bin(List).
+
+is_type_or_throw(Value, Predicate, Type) ->
+    case Predicate(Value) of
+        true -> Value;
+        false -> throw({incorrect_type, Value, Type})
+    end.
+
+tuples_to_lists([]) ->
+    [];
+tuples_to_lists([H|T]) when is_tuple(H) ->
+    NewH = [element(I, H) || I <- lists:seq(1, tuple_size(H))],
+    [NewH | tuples_to_lists(T)].

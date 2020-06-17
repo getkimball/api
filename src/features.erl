@@ -96,4 +96,16 @@ collapse_user_with_user_spec(User, _Specs=[[Prop, '=', Val]|T]) ->
     case UserVal == Val of
         true -> true;
         false -> collapse_user_with_user_spec(User, T)
+    end;
+collapse_user_with_user_spec(User, _Specs=[[Prop, 'in', Val]|T]) ->
+    UserVal = maps:get(Prop, User, undefined),
+    ?LOG_DEBUG(#{what => "Collapse boolean user",
+                 user => User,
+                 user_val => UserVal,
+                 property => Prop,
+                 spec_value => Val,
+                 result => UserVal == Val}),
+    case lists:member(UserVal, Val) of
+        true -> true;
+        false -> collapse_user_with_user_spec(User, T)
     end.

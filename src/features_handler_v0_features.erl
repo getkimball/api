@@ -123,21 +123,56 @@ feature_input_schema() ->
            user => #{
                type => array,
                items => #{
-                   type => object,
-                   required => [property, comparator, value],
-                   properties => #{
-                       property => #{
-                          type => string
-                       },
-                       comparator => #{
-                          type => string,
-                          enum => [<<"=">>]
-                       },
-                       value => #{
-                          % This eventually should be anyOf multple types
-                          type => string
-                       }
-                   }
+                   anyOf => [
+                        #{type => object,
+                          required => [property, comparator, value],
+                          properties => #{
+                              property => #{
+                                 type => string
+                              },
+                              comparator => #{
+                                 type => string,
+                                 enum => [<<"=">>]
+                              },
+                              value => #{
+                                 type => string
+                              }
+                          }
+                        },
+                        #{type => object,
+                          required => [property, comparator, value],
+                          properties => #{
+                              property => #{
+                                 type => string
+                              },
+                              comparator => #{
+                                 type => string,
+                                 enum => [<<"=">>]
+                              },
+                              value => #{
+                                 type => integer
+                              }
+                          }
+                        },
+                        #{type => object,
+                          required => [property, comparator, value],
+                          properties => #{
+                              property => #{
+                                 type => string
+                              },
+                              comparator => #{
+                                 type => string,
+                                 enum => [<<"in">>]
+                              },
+                              value => #{
+                                 type => array,
+                                 items => #{
+                                     type => integer
+                                }
+                              }
+                          }
+                        }
+                    ]
              }
           }
        }
@@ -192,4 +227,5 @@ process_user_spec_input([#{property := Property,
     ComparatorAtom = comparator_bin_to_atom(Comparator),
     [[Property, ComparatorAtom, Value]|process_user_spec_input(T)].
 
-comparator_bin_to_atom(<<"=">>) -> '='.
+comparator_bin_to_atom(<<"=">>) -> '=';
+comparator_bin_to_atom(<<"in">>) -> 'in'.
