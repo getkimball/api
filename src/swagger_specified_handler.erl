@@ -199,7 +199,8 @@ validate_property_spec(Value, _Spec=#{type := array,
                                       items := ItemSpec}) ->
     is_type_or_throw(Value, fun is_list/1, array),
     case maps:get(type, ItemSpec) of
-        object -> [match_schema(ItemSpec, V) || V <- Value]
+        object -> [match_schema(ItemSpec, V) || V <- Value];
+        integer -> [validate_property_spec(V, ItemSpec) || V <- Value]
     end.
 
 validate_enum(Value, #{enum := Enum} ) ->

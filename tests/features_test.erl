@@ -86,6 +86,25 @@ collapse_to_boolean_with_user_id_test() ->
 
     unload().
 
+collapse_to_boolean_with_user_id_membership_test() ->
+    load(),
+    Name = <<"example_name">>,
+    TrueSpec = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => false,
+          user => [[<<"user_id">>, 'in', [41, 42, 43]]]}),
+    FalseSpec = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => false,
+          user => [[<<"user_id">>, 'in', [0, 1, 2]]]}),
+
+    User = #{<<"user_id">> => 42},
+
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, User, 0, 0)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(TrueSpec, User, 0, 0)),
+
+    unload().
+
 collapse_features_to_map_test() ->
     load(),
     FalseSpec = test_utils:defaulted_feature_spec(

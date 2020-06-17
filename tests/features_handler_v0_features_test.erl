@@ -373,6 +373,28 @@ create_feature_user_value_not_in_enum_test() ->
     ?assert(lists:member(ExpectedError, Whys)),
     unload().
 
+create_feature_user_membership_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = <<"in">>,
+    Value = [40, 41, 42],
+
+    Doc = #{
+        name => Name,
+        user => [#{property => UserProp,
+                   comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    http_post(PostReq, 204, #{}),
+    ?assertEqual({user, [[UserProp, 'in', Value]]},
+                 meck:capture(first, features_store, set_feature, '_', 4)),
+
+    unload().
+
 %%%%
 %   Get user features tests
 %%%%
