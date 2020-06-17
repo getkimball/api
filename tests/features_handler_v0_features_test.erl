@@ -325,8 +325,8 @@ create_feature_user_integer_test() ->
 
     unload().
 
-create_feature_user_missing_required_property_test_() ->
-    {setup, fun load/0, fun unload/1, fun(_Args) ->
+create_feature_user_missing_required_property_test() ->
+    load(),
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -342,17 +342,16 @@ create_feature_user_missing_required_property_test_() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    Expected = #{<<"error">> => #{
-                        <<"value">> => Comparator,
-                        <<"choices">> => [<<"=">>],
-                        <<"what">> => <<"Value not in enum">>}},
-    http_post(PostReq, 400, Expected),
-    []
+     #{<<"error">> := #{<<"what">>:= _What,
+                        <<"object">>:= _Obj,
+                        <<"why">>:= Whys}} =
+        http_post(PostReq, 400),
+    ExpectedError = [<<"invalid_enum">>, Comparator, [<<"=">>]],
+    ?assert(lists:member(ExpectedError, Whys)),
+    unload().
 
-    end}.
-
-create_feature_user_value_not_in_enum_test_() ->
-    {setup, fun load/0, fun unload/1, fun(_Args) ->
+create_feature_user_value_not_in_enum_test() ->
+    load(),
     Name = <<"feature_name">>,
 
     Comparator = <<"=">>,
@@ -366,13 +365,13 @@ create_feature_user_value_not_in_enum_test_() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    Expected = #{<<"error">> => #{
-                        <<"key">> => <<"property">>,
-                        <<"what">> => <<"Missing required element">>}},
-    http_post(PostReq, 400, Expected),
-    []
-
-    end}.
+     #{<<"error">> := #{<<"what">>:= _What,
+                        <<"object">>:= _Obj,
+                        <<"why">>:= Whys}} =
+        http_post(PostReq, 400),
+    ExpectedError = [<<"missing_required_key">>, <<"property">>],
+    ?assert(lists:member(ExpectedError, Whys)),
+    unload().
 
 %%%%
 %   Get user features tests
@@ -462,6 +461,14 @@ http_get(Req, ExpectedCode) ->
     ?assertEqual(ExpectedCode, GetCode),
     Data = jsx:decode(GetBody, [return_maps]),
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
+    Data.
+
+http_post(Req, ExpectedCode) ->
+    CowPostResp = cowboy_test_helpers:init(?MUT, Req, []),
+    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+    Data = jsx:decode(PostBody, [return_maps]),
+
+    ?assertEqual(ExpectedCode, PostCode),
     Data.
 
 http_post(Req, ExpectedCode, ExpectedBody) ->
