@@ -22,6 +22,16 @@ trails() ->
                     format => byte
                   },
                   required => false
+                },
+                #{name => context_obj,
+                  description => <<"Context Object JSON serialized
+                                    then Base64 encoded">>,
+                  in => query,
+                  schema => #{
+                    type => string,
+                    format => byte
+                  },
+                  required => false
                 }
             ],
             responses => #{
@@ -199,13 +209,8 @@ handle_req(Req=#{method := <<"POST">>}, _Params, Body, Opts) ->
     end,
     {Req, Code, #{}, Opts};
 handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, Opts) ->
-    UserObjString = proplists:get_value(user_obj, Params),
-    UserObj = case UserObjString of
-        undefined -> #{};
-        JSON -> features_json:decode_or_throw(
-                  JSON,
-                  {invalid_json, user_obj})
-    end,
+    UserObj = decode_json_param(user_obj, Params),
+    _ContextObj = decode_json_param(context_obj, Params),
     Features = features_store:get_features(),
     CollapsedFeatures = features:collapse_features_to_map(Features, UserObj),
     ?LOG_DEBUG(#{what=> "collapse map",
@@ -229,3 +234,13 @@ process_user_spec_input([#{property := Property,
 
 comparator_bin_to_atom(<<"=">>) -> '=';
 comparator_bin_to_atom(<<"in">>) -> 'in'.
+
+
+decode_json_param(Name, Params) ->
+    ObjString = proplists:get_value(Name, Params),
+    case ObjString of
+        undefined -> #{};
+        JSON -> features_json:decode_or_throw(
+                  JSON,
+                  {invalid_json, Name})
+    end.

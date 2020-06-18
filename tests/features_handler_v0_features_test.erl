@@ -443,8 +443,7 @@ get_user_features_integer_test() ->
     ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
     unload().
 
-
-get_user_features_invalid_json_test() ->
+get_user_features_invalid_user_json_test() ->
     load(),
     UserQuery = base64:encode(<<"{ not valid json ]">>),
 
@@ -457,7 +456,7 @@ get_user_features_invalid_json_test() ->
     ?assertEqual(Expected, Data),
     unload().
 
-get_user_features_invalid_base64_test() ->
+get_user_features_invalid_user_base64_test() ->
     load(),
     UserQuery = <<"b'badb64">>,
 
@@ -467,6 +466,32 @@ get_user_features_invalid_base64_test() ->
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => UserQuery}},
+    ?assertEqual(Expected, Data),
+    unload().
+
+get_user_features_invalid_context_json_test() ->
+    load(),
+    ContextQuery = base64:encode(<<"{ not valid json ]">>),
+
+    Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery}]),
+    Data = http_get(Req, 400),
+
+    Msg = <<"The object is not valid JSON">>,
+    Expected = #{<<"error">> => #{<<"what">> => Msg,
+                                  <<"object">> => <<"context_obj">>}},
+    ?assertEqual(Expected, Data),
+    unload().
+
+get_user_features_invalid_context_base64_test() ->
+    load(),
+    ContextQuery = <<"b'badb64">>,
+
+    Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery}]),
+    Data = http_get(Req, 400),
+
+    Msg = <<"The object cannot be base64 decoded">>,
+    Expected = #{<<"error">> => #{<<"what">> => Msg,
+                                  <<"object">> => ContextQuery}},
     ?assertEqual(Expected, Data),
 
     unload().
