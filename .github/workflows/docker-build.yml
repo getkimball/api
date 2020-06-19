@@ -42,7 +42,7 @@ jobs:
         if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
           echo "##[set-output name=docker_tag;]$(echo pr-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball-pr"
-        elif [[ $GITHUB_REF = "ref/head/master" ]]; then
+        elif [[ $GITHUB_REF = "refs/heads/master" ]]; then
           echo "##[set-output name=docker_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball"
         else
