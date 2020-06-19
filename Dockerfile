@@ -1,10 +1,7 @@
-FROM node:10 as NODE_BUILDER
-WORKDIR /app/src/
-ADD . /app/src
-
 FROM erlang:22 AS builder
 WORKDIR /app/src
 ADD . /app/src
+
 RUN make deps app
 RUN make rel
 RUN mv /app/src/_rel/features_release/features_*.tar.gz /app.tar.gz
