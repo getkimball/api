@@ -31,3 +31,14 @@ make deps app shell
 * `FEATURES_MODE` - Which mode to start the application in
     * `api` (default) - Fully feature API server, storing state in configmaps
     * `sidecar` - Read only API meant to be deployed as a sidecar. Features features from `/features/data` volume in Kubernetes.
+
+
+## Releasing
+
+```
+git checkout master
+git pull
+TAG=$(date +"%Y.%m.%d")
+git tag ${TAG}
+git push origin ${TAG}
+```
