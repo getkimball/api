@@ -38,6 +38,7 @@ jobs:
       env:
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
       run: |
+        echo $GITHUB_REF
         if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
           echo "##[set-output name=docker_tag;]$(echo pr-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball-pr"
