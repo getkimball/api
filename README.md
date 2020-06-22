@@ -1,3 +1,7 @@
+# Get Kimball Features API
+
+[![codecov](https://codecov.io/gh/getkimball/features/branch/trunk/graph/badge.svg?token=gVDJrLnoUY)](https://codecov.io/gh/getkimball/features)
+
 # Running
 
 ## As a client
