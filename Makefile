@@ -2,13 +2,14 @@ PROJECT = features
 PROJECT_DESCRIPTION = New project
 
 DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven
-BUILD_DEPS = elvis_mk version.mk
+BUILD_DEPS = elvis_mk version.mk covertool
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
 DIALYZER_DIRS = --src src tests
 
 COVER = 1
+NO_AUTOPATCH = covertool
 
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.7.0
 dep_trails = hex 2.0.0

@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: erlang:21
+      image: erlang:22
 
     steps:
     - uses: actions/checkout@v1
@@ -23,3 +23,22 @@ jobs:
       run: make tests
     - name: Dialyze
       run: make dialyze
+
+    - name: DEBUG
+      run: |
+        deps/covertool/_build/default/bin/covertool -cover cover/ct.coverdata -output cover/cover.ct.xml
+        deps/covertool/_build/default/bin/covertool -cover cover/eunit.coverdata -output cover/cover.eunit.xml
+
+    - name: Upload CT test coverage data to CodeCov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: ct
+        file: "./cover/cover.ct.xml"
+
+    - name: Upload eunit test coverage data to CodeCov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: eunit
+        file: "./cover/cover.eunit.xml"
