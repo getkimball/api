@@ -20,14 +20,15 @@ jobs:
     - name: elvis
       run: make elvis
     - name: Run tests
-      run: make tests
-    - name: Dialyze
-      run: make dialyze
-
-    - name: DEBUG
       run: |
+        make tests
+
+        # Covert coverage data to XML
         deps/covertool/_build/default/bin/covertool -cover cover/ct.coverdata -output cover/cover.ct.xml
         deps/covertool/_build/default/bin/covertool -cover cover/eunit.coverdata -output cover/cover.eunit.xml
+
+    - name: Dialyze
+      run: make dialyze
 
     - name: Upload CT test coverage data to CodeCov
       uses: codecov/codecov-action@v1
