@@ -373,13 +373,35 @@ create_feature_user_value_not_in_enum_test() ->
     ?assert(lists:member(ExpectedError, Whys)),
     unload().
 
-create_feature_user_membership_test() ->
+create_feature_user_membership_integer_test() ->
     load(),
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
     Comparator = <<"in">>,
     Value = [40, 41, 42],
+
+    Doc = #{
+        name => Name,
+        user => [#{property => UserProp,
+                   comparator => Comparator,
+                   value => Value}]
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    http_post(PostReq, 204, #{}),
+    ?assertEqual({user, [[UserProp, 'in', Value]]},
+                 meck:capture(first, features_store, set_feature, '_', 4)),
+
+    unload().
+
+create_feature_user_membership_string_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = <<"in">>,
+    Value = [<<"40">>, <<"41">>, <<"42">>],
 
     Doc = #{
         name => Name,
@@ -432,6 +454,50 @@ get_user_features_integer_test() ->
     UserSpec = [[UserProp, Comparator, Value]],
 
     UserObj = #{UserProp => Value},
+
+    Features = [test_utils:defaulted_feature_spec(Name, #{user=>UserSpec})],
+    ok = meck:expect(features_store, get_features, fun() -> Features end),
+
+    UserQuery = base64:encode(jsx:encode(UserObj)),
+
+    Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
+    Data = http_get(Req, 200),
+    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+    unload().
+
+get_user_features_membership_integer_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = 'in',
+    Value = [40, 41, 42],
+
+    UserSpec = [[UserProp, Comparator, Value]],
+
+    UserObj = #{UserProp => 42},
+
+    Features = [test_utils:defaulted_feature_spec(Name, #{user=>UserSpec})],
+    ok = meck:expect(features_store, get_features, fun() -> Features end),
+
+    UserQuery = base64:encode(jsx:encode(UserObj)),
+
+    Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
+    Data = http_get(Req, 200),
+    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+    unload().
+
+get_user_features_membership_string_test() ->
+    load(),
+    Name = <<"feature_name">>,
+
+    UserProp = <<"user_id">>,
+    Comparator = 'in',
+    Value = [<<"40">>, <<"41">>, <<"42">>],
+
+    UserSpec = [[UserProp, Comparator, Value]],
+
+    UserObj = #{UserProp => <<"42">>},
 
     Features = [test_utils:defaulted_feature_spec(Name, #{user=>UserSpec})],
     ok = meck:expect(features_store, get_features, fun() -> Features end),

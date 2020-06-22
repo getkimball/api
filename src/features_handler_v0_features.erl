@@ -181,6 +181,24 @@ feature_input_schema() ->
                                 }
                               }
                           }
+                        },
+                        #{type => object,
+                          required => [property, comparator, value],
+                          properties => #{
+                              property => #{
+                                 type => string
+                              },
+                              comparator => #{
+                                 type => string,
+                                 enum => [<<"in">>]
+                              },
+                              value => #{
+                                 type => array,
+                                 items => #{
+                                     type => string
+                                }
+                              }
+                          }
                         }
                     ]
              }
