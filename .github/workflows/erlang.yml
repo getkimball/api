@@ -24,8 +24,8 @@ jobs:
         make tests
 
         # Covert coverage data to XML
-        deps/covertool/_build/default/bin/covertool -cover cover/ct.coverdata -output cover/cover.ct.xml
-        deps/covertool/_build/default/bin/covertool -cover cover/eunit.coverdata -output cover/cover.eunit.xml
+        ./bin/covertool -cover cover/ct.coverdata -output cover/cover.ct.xml
+        ./bin/covertool -cover cover/eunit.coverdata -output cover/cover.eunit.xml
 
     - name: Dialyze
       run: make dialyze
