@@ -37,13 +37,17 @@ start(_Type, _Args) ->
 stop(_State) ->
   ok.
 
-setup_trails() ->
+trails_handlers() ->
     Handlers = [
         features_handler_ok,
         features_handler_v0_features,
         features_handler_v0_feature_specs,
         cowboy_swagger_handler
     ],
+    Handlers.
+
+setup_trails() ->
+    Handlers = trails_handlers(),
     Trails = trails:trails(Handlers),
     trails:store(Trails),
     Trails.
