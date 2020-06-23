@@ -21,6 +21,7 @@ in stdenv.mkDerivation {
   name = "env";
   buildInputs = [ released_pkgs.gnumake
                   released_pkgs.erlang
+                  released_pkgs.nodejs
                   pinned_pkgs.aws-iam-authenticator
                   pinned_pkgs.awscli
                   pinned_pkgs.fluent-bit
@@ -29,4 +30,8 @@ in stdenv.mkDerivation {
                   pinned_pkgs.kubernetes-helm
                   pinned_pkgs.kustomize
                 ];
+  shellHook = ''
+            npm install
+  '';
+
 }

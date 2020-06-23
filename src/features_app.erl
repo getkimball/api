@@ -18,6 +18,7 @@ start(_Type, _Args) ->
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
     ],
     StaticRoute = [
+        {"/", cowboy_static, {priv_file, App, "public/index.html"}},
         {"/[...]", cowboy_static, {priv_dir, App, "public"}}
     ],
 

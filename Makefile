@@ -28,4 +28,8 @@ DEP_PLUGINS = elvis_mk version.mk
 
 SHELL_OPTS = -eval 'application:ensure_all_started(features), sync:go().' -config sys
 
+.PHONY: live-js
+live-js:
+	npm run dev
+
 include erlang.mk
