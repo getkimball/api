@@ -20,6 +20,8 @@ jobs:
     - name: elvis
       run: make elvis
     - name: Run tests
+      env:
+        COVER: "1"
       run: |
         make tests
 
