@@ -2,14 +2,11 @@ PROJECT = features
 PROJECT_DESCRIPTION = New project
 
 DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven
-BUILD_DEPS = elvis_mk version.mk covertool
+BUILD_DEPS = elvis_mk version.mk sync
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
 DIALYZER_DIRS = --src src tests
-
-COVER = 1
-NO_AUTOPATCH = covertool
 
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.7.0
 dep_trails = hex 2.0.0
@@ -25,9 +22,10 @@ dep_ranch = git https://github.com/ninenines/ranch.git 1.7.1
 dep_kuberlnetes = git https://github.com/philipcristiano/kuberlnetes.git v0.0.5
 dep_swaggerl = git https://github.com/philipcristiano/swaggerl.git v0.0.7
 dep_version.mk = git https://github.com/manifest/version.mk.git v0.2.0
+dep_sync = git https://github.com/rustyio/sync.git master
 
 DEP_PLUGINS = elvis_mk version.mk
 
-SHELL_OPTS = -eval 'application:ensure_all_started(features).' -config sys
+SHELL_OPTS = -eval 'application:ensure_all_started(features), sync:go().' -config sys
 
 include erlang.mk

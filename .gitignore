@@ -13,6 +13,8 @@ hellerl_world.d
 /elvis
 /_rel
 /logs
+/cover
+/tests/*.spec
 
 # Erlang.mk
 /.erlang.mk
