@@ -1,6 +1,7 @@
 -module(cowboy_test_helpers).
 -include_lib("eunit/include/eunit.hrl").
--export([read_reply/1,
+-export([http_get/4,
+         read_reply/1,
          req/0,
          req/2,
          req/3,
@@ -55,6 +56,16 @@ req(Method, Opts) when is_binary(Method) and erlang:is_map(Opts) ->
     MergedReq = maps:merge(Req, Opts),
     MergedReq.
 
+http_get(Mod, Req, ExpectedCode, ExpectedData) ->
+    CowGetResp = cowboy_test_helpers:init(Mod, Req, []),
+    {response, GetCode, GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
+
+    Data = jsx:decode(GetBody, [return_maps]),
+    ?assertEqual({ExpectedCode, ExpectedData}, {GetCode, Data}),
+
+    GetSpec = swagger_specified_handler:response_spec(Mod, <<"get">>, ExpectedCode),
+    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
+    ok.
 
 read_reply({ok, #{streamid:=StreamId}, _Opts}) ->
     receive

@@ -2,6 +2,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_handler_v0_features).
+-define(CTH, cowboy_test_helpers).
 
 load() ->
     ok = cowboy_test_helpers:setup(),
@@ -26,17 +27,11 @@ ok_test() ->
     load(),
 
     Req = cowboy_test_helpers:req(),
-    Opts = [],
+    ExpectedCode = 200,
+    ExpectedData = #{<<"features">> => #{}},
 
-    CowResp = cowboy_test_helpers:init(?MUT, Req, Opts),
-    {response, Code, Headers, Body} = cowboy_test_helpers:read_reply(CowResp),
-    Data = jsx:decode(Body, [return_maps]),
+    ?CTH:http_get(?MUT, Req, ExpectedCode, ExpectedData),
 
-    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, Code),
-    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, Headers, Data),
-
-    ?assertEqual(200, Code),
-    ?assertEqual(#{<<"features">> => #{}}, Data),
     unload().
 
 %%%%
@@ -50,9 +45,10 @@ get_boolean_features_test() ->
     Features = [test_utils:defaulted_feature_spec(FeatureName, #{boolean=>false})],
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
+    ExpectedData = #{<<"features">>=>#{FeatureName=>false}},
+
     Req = cowboy_test_helpers:req(),
-    Data = http_get(Req, 200),
-    ?assertEqual(#{<<"features">>=>#{FeatureName=>false}}, Data),
+    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
 
     unload().
 
@@ -65,15 +61,13 @@ get_feature_boolean_test() ->
             [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean})]
     end),
 
-
-    GetReq = cowboy_test_helpers:req(),
-    Data = http_get(GetReq, 200),
-
     ExpectedData = #{
         <<"features">> => #{
             Name => true
     }},
-    ?assertEqual(ExpectedData, Data),
+
+    GetReq = cowboy_test_helpers:req(),
+    ?CTH:http_get(?MUT, GetReq, 200, ExpectedData),
 
     unload().
 
@@ -94,12 +88,11 @@ get_feature_rollout_test() ->
     end),
 
     GetReq = cowboy_test_helpers:req(),
-    Data = http_get(GetReq, 200),
     ExpectedData = #{
         <<"features">> => #{
             Name => false
     }},
-    ?assertEqual(ExpectedData, Data),
+    ?CTH:http_get(?MUT, GetReq, 200, ExpectedData),
 
     unload().
 
@@ -124,10 +117,10 @@ get_user_features_string_test() ->
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     UserQuery = base64:encode(jsx:encode(UserObj)),
+    ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    Data = http_get(Req, 200),
-    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
     unload().
 
 get_user_features_integer_test() ->
@@ -146,10 +139,10 @@ get_user_features_integer_test() ->
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     UserQuery = base64:encode(jsx:encode(UserObj)),
+    ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    Data = http_get(Req, 200),
-    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
     unload().
 
 get_user_features_membership_integer_test() ->
@@ -168,10 +161,10 @@ get_user_features_membership_integer_test() ->
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     UserQuery = base64:encode(jsx:encode(UserObj)),
+    ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    Data = http_get(Req, 200),
-    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
     unload().
 
 get_user_features_membership_string_test() ->
@@ -190,10 +183,10 @@ get_user_features_membership_string_test() ->
     ok = meck:expect(features_store, get_features, fun() -> Features end),
 
     UserQuery = base64:encode(jsx:encode(UserObj)),
+    ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    Data = http_get(Req, 200),
-    ?assertEqual(#{<<"features">>=>#{Name=>true}}, Data),
+    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
     unload().
 
 get_user_features_invalid_user_json_test() ->
@@ -201,12 +194,11 @@ get_user_features_invalid_user_json_test() ->
     UserQuery = base64:encode(<<"{ not valid json ]">>),
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    Data = http_get(Req, 400),
 
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => <<"user_obj">>}},
-    ?assertEqual(Expected, Data),
+    ?CTH:http_get(?MUT, Req, 400, Expected),
     unload().
 
 get_user_features_invalid_user_base64_test() ->
@@ -214,12 +206,11 @@ get_user_features_invalid_user_base64_test() ->
     UserQuery = <<"b'badb64">>,
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    Data = http_get(Req, 400),
 
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => UserQuery}},
-    ?assertEqual(Expected, Data),
+    ?CTH:http_get(?MUT, Req, 400, Expected),
     unload().
 
 get_user_features_invalid_context_json_test() ->
@@ -227,12 +218,11 @@ get_user_features_invalid_context_json_test() ->
     ContextQuery = base64:encode(<<"{ not valid json ]">>),
 
     Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery}]),
-    Data = http_get(Req, 400),
 
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => <<"context_obj">>}},
-    ?assertEqual(Expected, Data),
+    ?CTH:http_get(?MUT, Req, 400, Expected),
     unload().
 
 get_user_features_invalid_context_base64_test() ->
@@ -240,26 +230,10 @@ get_user_features_invalid_context_base64_test() ->
     ContextQuery = <<"b'badb64">>,
 
     Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery}]),
-    Data = http_get(Req, 400),
 
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => ContextQuery}},
-    ?assertEqual(Expected, Data),
+    ?CTH:http_get(?MUT, Req, 400, Expected),
 
     unload().
-
-%%%%
-%   Test helpers
-%%%%
-
-http_get(Req, ExpectedCode) ->
-    CowGetResp = cowboy_test_helpers:init(?MUT, Req, []),
-    {response, GetCode, GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
-    GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, GetCode),
-
-    ?assertEqual(ExpectedCode, GetCode),
-    Data = jsx:decode(GetBody, [return_maps]),
-    ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
-    Data.
-
