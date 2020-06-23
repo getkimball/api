@@ -41,6 +41,7 @@ setup_trails() ->
     Handlers = [
         features_handler_ok,
         features_handler_v0_features,
+        features_handler_v0_feature_specs,
         cowboy_swagger_handler
     ],
     Trails = trails:trails(Handlers),
