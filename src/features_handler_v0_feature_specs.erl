@@ -7,6 +7,21 @@
 
 trails() ->
     Metadata =    #{
+        <<"get">> => #{
+            operationId => getFeatures,
+            tags => ["Features"],
+            description => "Gets features and their status",
+            responses => #{
+                200 => #{
+                    description => <<"Features">>,
+                    content => #{
+                        'application/json' => #{
+                            schema => features_return_schema()
+                    }}
+
+                }
+            }
+        },
         <<"post">> => #{
             operationId => setFeatureSpec,
             tags => ["Features"],
@@ -38,6 +53,20 @@ trails() ->
       }
     },
     [trails:trail("/v0/featureSpecs", ?MODULE, [], Metadata)].
+
+features_return_schema() ->
+    #{
+        type => object,
+        description => <<"Feature Object">>,
+        properties => #{
+           <<"featureSpecs">> => #{
+              description => <<"Collection of features">>,
+              type => array,
+              items => feature_input_schema()
+
+           }
+        }
+    }.
 
 feature_input_schema() ->
     #{
@@ -139,6 +168,11 @@ feature_input_schema() ->
 
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
+
+handle_req(Req=#{method := <<"GET">>}, _Params, _Body, Opts) ->
+    Features = features_store:get_features(),
+    Resp = #{<<"featureSpecs">> => Features},
+    {Req, 200, Resp, Opts};
 
 handle_req(Req=#{method := <<"POST">>}, _Params, Body, Opts) ->
     Name = maps:get(name, Body),

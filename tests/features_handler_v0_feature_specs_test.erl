@@ -2,6 +2,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_handler_v0_feature_specs).
+-define(CTH, cowboy_test_helpers).
 
 load() ->
     ok = cowboy_test_helpers:setup(),
@@ -95,6 +96,20 @@ create_feature_boolean_test() ->
 
     ?assertEqual(204, PostCode),
     ?assertEqual(<<"{}">>, PostBody),
+
+    unload().
+
+get_feature_boolean_test() ->
+    load(),
+    Name = <<"feature_name">>,
+    Boolean = true,
+    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean}),
+    ok = meck:expect(features_store, get_features, [], [FeatureSpec]),
+    Req = cowboy_test_helpers:req(),
+
+    Expected = ?CTH:json_roundtrip(#{<<"featureSpecs">> => [FeatureSpec]}),
+
+    ok = ?CTH:http_get(?MUT, Req, 200, Expected),
 
     unload().
 
@@ -371,16 +386,6 @@ create_feature_user_membership_string_test() ->
 %%%%
 %   Test helpers
 %%%%
-
-% http_get(Req, ExpectedCode) ->
-%     CowGetResp = cowboy_test_helpers:init(?MUT, Req, []),
-%     {response, GetCode, GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
-%     GetSpec = swagger_specified_handler:response_spec(?MUT, <<"get">>, GetCode),
-%
-%     ?assertEqual(ExpectedCode, GetCode),
-%     Data = jsx:decode(GetBody, [return_maps]),
-%     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
-%     Data.
 
 http_post(Req, ExpectedCode) ->
     CowPostResp = cowboy_test_helpers:init(?MUT, Req, []),

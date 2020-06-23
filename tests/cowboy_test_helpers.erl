@@ -6,6 +6,7 @@
          req/2,
          req/3,
          init/3,
+         json_roundtrip/1,
          validate_response_against_spec/3,
          setup/0,
          cleanup/0]).
@@ -24,6 +25,9 @@ cleanup() ->
 init(Module, Req, Opts) ->
     InitResp = Module:init(Req, Opts),
     handle_init_response(Module, InitResp).
+
+json_roundtrip(Obj) ->
+    jsx:decode(jsx:encode(Obj), [return_maps]).
 
 handle_init_response(_Module, {ok, Resp, State}) ->
     {ok, Resp, State};
