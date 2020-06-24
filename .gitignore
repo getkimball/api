@@ -15,6 +15,11 @@ hellerl_world.d
 /logs
 /cover
 /tests/*.spec
+*.coverdata
+
+# Svelte/JS
+/priv/public/build
+/node_modules
 
 # Erlang.mk
 /.erlang.mk

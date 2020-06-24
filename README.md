@@ -26,6 +26,9 @@ PR branch: http://features.getkimball.svc/api-docs/swagger.json
 make deps app shell
 ```
 
+```
+make live-js
+```
 
 ## Configuration
 

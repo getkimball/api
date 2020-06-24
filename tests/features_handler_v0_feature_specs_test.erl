@@ -103,7 +103,8 @@ get_feature_boolean_test() ->
     load(),
     Name = <<"feature_name">>,
     Boolean = true,
-    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean}),
+    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
+                                                            rollout_start=><<"undefined">>}),
     ok = meck:expect(features_store, get_features, [], [FeatureSpec]),
     Req = cowboy_test_helpers:req(),
 
@@ -176,6 +177,30 @@ create_feature_rollout_test() ->
     http_post(PostReq, 204, #{}),
     ?assertEqual({rollout, Now, Later},
                  meck:capture(first, features_store, set_feature, '_', 3)),
+
+    unload().
+
+get_feature_rollout_test() ->
+    load(),
+    Name = <<"feature_name">>,
+    Boolean = true,
+    Now = erlang:system_time(seconds),
+    Later = Now + 100,
+    RolloutStart = binary:list_to_bin(calendar:system_time_to_rfc3339(Now, [{offset, "z"}])),
+    RolloutEnd = binary:list_to_bin(calendar:system_time_to_rfc3339(Later, [{offset, "z"}])),
+
+    InternalFeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
+                                                                    rollout_start=>Now,
+                                                                    rollout_end=>Later}),
+    ExternalFeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
+                                                                    rollout_start=>RolloutStart,
+                                                                    rollout_end=>RolloutEnd}),
+    ok = meck:expect(features_store, get_features, [], [InternalFeatureSpec]),
+    Req = cowboy_test_helpers:req(),
+
+    Expected = ?CTH:json_roundtrip(#{<<"featureSpecs">> => [ExternalFeatureSpec]}),
+
+    ok = ?CTH:http_get(?MUT, Req, 200, Expected),
 
     unload().
 
