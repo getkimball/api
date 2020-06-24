@@ -3,12 +3,12 @@ name: Docker Build Upload Deploy
 on:
   push:
     branches:
-      - master
+      - trunk
     tags:
       - '*'
   pull_request:
     branches:
-      - master
+      - trunk
 
 jobs:
 
@@ -42,7 +42,7 @@ jobs:
         if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
           echo "##[set-output name=docker_tag;]$(echo pr-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball-pr"
-        elif [[ $GITHUB_REF = "refs/heads/master" ]]; then
+        elif [[ $GITHUB_REF = "refs/heads/trunk" ]]; then
           echo "##[set-output name=docker_tag;]$(echo ${GITHUB_REF##*/}-${GITHUB_SHA})"
           echo "##[set-output name=namespace;]getkimball"
         else
@@ -76,7 +76,7 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v1
 
     - name: Helm install
-      uses: getkimball/deploy-action@master
+      uses: getkimball/deploy-action@trunk
       env:
         DOCKER_TAG: ${{ needs.build_docker.outputs.docker_tag }}
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
