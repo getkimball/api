@@ -1,5 +1,8 @@
 <script>
     import { onMount } from "svelte";
+    import { Col, Container, Row } from "sveltestrap";
+
+    import FeatureSpec from './FeatureSpec.svelte';
 
     let featureSpecs = [];
     onMount(async () => {
@@ -11,13 +14,16 @@
 </script>
 
 <main>
-	<h1>Kimball Features</h1>
-    <ul>
-    {#each featureSpecs as featureSpec }
-        <li>{featureSpec.name} - {featureSpec.boolean}</li>
+    <Row>
+        <Col>
+	    <h1>Kimball Features</h1>
+        </Col>
+    </Row>
 
+    {#each featureSpecs as featureSpec }
+        <FeatureSpec spec={featureSpec} />
     {/each}
-    </ul>
+
 
 </main>
 
