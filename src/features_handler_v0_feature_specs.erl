@@ -170,7 +170,8 @@ init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 
 handle_req(Req=#{method := <<"GET">>}, _Params, _Body, Opts) ->
-    Features = features_store:get_features(),
+    InternalFeatures = features_store:get_features(),
+    Features = lists:map(fun outputitize_feature/1, InternalFeatures),
     Resp = #{<<"featureSpecs">> => Features},
     {Req, 200, Resp, Opts};
 
@@ -206,3 +207,23 @@ process_user_spec_input([#{property := Property,
 
 comparator_bin_to_atom(<<"=">>) -> '=';
 comparator_bin_to_atom(<<"in">>) -> 'in'.
+
+outputitize_feature(#{name := Name,
+                      boolean := Boolean,
+                      rollout_start := RolloutStart,
+                      rollout_end := RolloutEnd,
+                      user := User}) ->
+    #{<<"name">> => Name,
+      <<"boolean">> => Boolean,
+      <<"rollout_start">> => feature_datetime_to_rfc(RolloutStart),
+      <<"rollout_end">> => feature_datetime_to_rfc(RolloutEnd),
+      <<"user">> => User}.
+
+
+feature_datetime_to_rfc(<<"undefined">>) ->
+    undefined;
+feature_datetime_to_rfc(undefined) ->
+    undefined;
+feature_datetime_to_rfc(Int) when is_integer(Int) ->
+    DT = calendar:system_time_to_rfc3339(Int, [{offset, "z"}]),
+    binary:list_to_bin(DT).

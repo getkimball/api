@@ -35,7 +35,8 @@
                 type="datetime"
                 name="rollout_start"
                 id="exampleDatetime"
-                placeholder="{spec.rollout_start}" />
+                placeholder="{spec.rollout_start}"
+                value="{spec.rollout_start}" />
             </Row> {/if}
 
             {#if spec.rollout_start != 'undefined' }<Row>
@@ -43,7 +44,8 @@
                 type="datetime"
                 name="rollout_end"
                 id="exampleDatetime"
-                placeholder="{spec.rollout_end}" />
+                placeholder="{spec.rollout_end}"
+                value="{spec.rollout_end}" />
             </Row>{/if}
         </CardBody>
         </Collapse>
