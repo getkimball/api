@@ -7,7 +7,9 @@
              CardHeader,
              CardSubtitle,
              CardText,
-             CardTitle } from "sveltestrap";
+             CardTitle,
+             Input,
+             Row} from "sveltestrap";
 
     export let spec = {};
     let isOpen = false;
@@ -24,7 +26,25 @@
         </CardHeader>
         <Collapse {isOpen}>
         <CardBody>
+            <Row>
             Boolean Default: {spec.boolean}
+            </Row>
+
+            {#if spec.rollout_start != 'undefined' } <Row>
+            Rollout Start:<Input
+                type="datetime"
+                name="rollout_start"
+                id="exampleDatetime"
+                placeholder="{spec.rollout_start}" />
+            </Row> {/if}
+
+            {#if spec.rollout_start != 'undefined' }<Row>
+             Rollout End: <Input
+                type="datetime"
+                name="rollout_end"
+                id="exampleDatetime"
+                placeholder="{spec.rollout_end}" />
+            </Row>{/if}
         </CardBody>
         </Collapse>
 
