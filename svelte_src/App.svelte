@@ -1,10 +1,24 @@
 <script>
-	export let name;
+    import { onMount } from "svelte";
+
+    let featureSpecs = [];
+    onMount(async () => {
+        const res = await fetch(`v0/featureSpecs`);
+        const json = await res.json();
+        featureSpecs = json.featureSpecs;
+    });
+
 </script>
 
 <main>
-	<h1>Hello {name}!</h1>
-	<p>Visit the <a href="https://svelte.dev/tutorial">Svelte tutorial</a> to learn how to build Svelte apps.</p>
+	<h1>Kimball Features</h1>
+    <ul>
+    {#each featureSpecs as featureSpec }
+        <li>{featureSpec.name} - {featureSpec.boolean}</li>
+
+    {/each}
+    </ul>
+
 </main>
 
 <style>
