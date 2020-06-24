@@ -24,7 +24,6 @@
         <FeatureSpec spec={featureSpec} />
     {/each}
 
-
 </main>
 
 <style>
