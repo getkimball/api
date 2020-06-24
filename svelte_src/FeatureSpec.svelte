@@ -1,18 +1,35 @@
 <script>
-    import { Col, Row } from "sveltestrap";
+    import { Col,
+             Collapse,
+             Card,
+             CardBody,
+             CardFooter,
+             CardHeader,
+             CardSubtitle,
+             CardText,
+             CardTitle } from "sveltestrap";
 
     export let spec = {};
+    let isOpen = false;
+    function toggle() {
+        isOpen = !isOpen;
+    };
 </script>
 
 <main>
-    <Row>
-        <Col xs=4>
-        {spec.name}
-        </Col>
-        <Col xs=1>
-        {spec.boolean}
-        </Col>
-    </Row>
+    <Col xs="4" align="center">
+    <Card>
+        <CardHeader on:click={toggle} >
+            <CardTitle>{spec.name}</CardTitle>
+        </CardHeader>
+        <Collapse {isOpen}>
+        <CardBody>
+            Boolean Default: {spec.boolean}
+        </CardBody>
+        </Collapse>
+
+    </Card>
+    </Col>
 </main>
 
 <style>
