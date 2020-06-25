@@ -8,7 +8,7 @@ FROM erlang:22 AS builder
 WORKDIR /app/src
 ADD . /app/src
 
-COPY --from=NODE_BUILDER /app/src/priv/public/build /app/src/priv/public/build
+COPY --from=NODE_BUILDER /app/src/priv/public/ /app/src/priv/public/
 RUN make deps app
 RUN make rel
 RUN mv /app/src/_rel/features_release/features_*.tar.gz /app.tar.gz
