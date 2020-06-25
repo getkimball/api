@@ -35,3 +35,6 @@ deps
 .rebar3
 _build/
 _checkouts/
+
+# MacOS
+.DS_Store
