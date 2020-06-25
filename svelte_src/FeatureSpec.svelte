@@ -9,6 +9,8 @@
              CardText,
              CardTitle,
              Input,
+             ListGroup,
+             ListGroupItem,
              Row} from "sveltestrap";
 
     export let spec = {};
@@ -40,13 +42,22 @@
             </Row> {/if}
 
             {#if spec.rollout_start != 'undefined' }<Row>
-             Rollout End: <Input
+            Rollout End: <Input
                 type="datetime"
                 name="rollout_end"
                 id="exampleDatetime"
                 placeholder="{spec.rollout_end}"
                 value="{spec.rollout_end}" />
             </Row>{/if}
+
+            {#if spec.user != []}<Row>
+            <ListGroup>
+            {#each spec.user as userSpec }
+            <ListGroupItem>{userSpec[0]} {userSpec[1]} {userSpec[2]}</ListGroupItem>
+            {/each}
+            </ListGroup>
+            </Row>{/if}
+
         </CardBody>
         </Collapse>
 
