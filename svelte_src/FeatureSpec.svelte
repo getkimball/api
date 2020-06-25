@@ -1,5 +1,6 @@
 <script>
-    import { Col,
+    import { Button,
+             Col,
              Collapse,
              Card,
              CardBody,
@@ -11,6 +12,8 @@
              Input,
              ListGroup,
              ListGroupItem,
+             Form,
+             FormGroup,
              Row} from "sveltestrap";
 
     export let spec = {};
@@ -18,6 +21,18 @@
     function toggle() {
         isOpen = !isOpen;
     };
+    async function save() {
+        let response = await fetch('/v0/featureSpecs/', {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify(spec)
+        });
+        console.log(await response.json());
+        alert(await response.status);
+
+    }
 </script>
 
 <main>
@@ -28,11 +43,14 @@
         </CardHeader>
         <Collapse {isOpen}>
         <CardBody>
+            <form on:submit|preventDefault={save}><FormGroup>
             <Row>
-            Boolean Default: {spec.boolean}
+                <Col>Boolean Enabled</Col>
+                <Col><Input type="checkbox" bind:checked={spec.boolean} /></Col>
+                <Col>{spec.boolean}</Col>
             </Row>
 
-            {#if spec.rollout_start != 'undefined' } <Row>
+            {#if spec.rollout_start } <Row>
             Rollout Start:<Input
                 type="datetime"
                 name="rollout_start"
@@ -41,7 +59,7 @@
                 value="{spec.rollout_start}" />
             </Row> {/if}
 
-            {#if spec.rollout_start != 'undefined' }<Row>
+            {#if spec.rollout_start }<Row>
             Rollout End: <Input
                 type="datetime"
                 name="rollout_end"
@@ -51,13 +69,18 @@
             </Row>{/if}
 
             {#if spec.user != []}<Row>
-            <ListGroup>
-            {#each spec.user as userSpec }
-            <ListGroupItem>{userSpec[0]} {userSpec[1]} {userSpec[2]}</ListGroupItem>
-            {/each}
-            </ListGroup>
+                <ListGroup>
+                {#each spec.user as userSpec }
+                <ListGroupItem>{userSpec[0]} {userSpec[1]} {userSpec[2]}</ListGroupItem>
+                {/each}
+                </ListGroup>
             </Row>{/if}
 
+            <Row>
+                <Button type="submit" >Save</Button>
+            </Row>
+
+        </FormGroup></form>
         </CardBody>
         </Collapse>
 

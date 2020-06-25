@@ -91,7 +91,9 @@ ba_external_store_init(_Config) ->
     end),
     All = [
       test_utils:defaulted_feature_spec(NameA, #{boolean=>BooleanA}),
-      replace_keys_with_binary(test_utils:defaulted_feature_spec(NameB, #{boolean=>BooleanB}))
+      replace_keys_with_binary(test_utils:defaulted_feature_spec(NameB, #{boolean=>BooleanB,
+                                                                          rollout_start=><<"undefined">>,
+                                                                          rollout_end=>1}))
     ],
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
@@ -105,7 +107,8 @@ ba_external_store_init(_Config) ->
     Resp = features_store:get_features(),
 
     Expected = [test_utils:defaulted_feature_spec(NameA, #{boolean => BooleanA}),
-                test_utils:defaulted_feature_spec(NameB, #{boolean => BooleanB})],
+                test_utils:defaulted_feature_spec(NameB, #{boolean => BooleanB,
+                                                           rollout_end => 1})],
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),
