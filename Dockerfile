@@ -3,6 +3,7 @@ WORKDIR /app/src/
 ADD . /app/src
 RUN npm install
 RUN npm run build
+RUN find priv
 
 FROM erlang:22 AS builder
 WORKDIR /app/src
