@@ -17,8 +17,9 @@ hellerl_world.d
 /tests/*.spec
 *.coverdata
 
-# Svelte/JS
-/priv/public/build
+# Web/Svelte/JS
+/priv/public
+/priv/public
 /node_modules
 
 # Erlang.mk
