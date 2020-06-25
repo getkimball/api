@@ -31,6 +31,9 @@ export default {
             targets: [{
                 src: 'node_modules/bootstrap/dist/css/bootstrap.min.css*',
                 dest: 'priv/public/build/bootstrap',
+            },{
+                src: 'svelte_public/*',
+                dest: 'priv/public/',
             }]
         }),
         // If you have external dependencies installed from

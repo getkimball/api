@@ -17,8 +17,9 @@ hellerl_world.d
 /tests/*.spec
 *.coverdata
 
-# Svelte/JS
-/priv/public/build
+# Web/Svelte/JS
+/priv/public
+/priv/public
 /node_modules
 
 # Erlang.mk
@@ -34,3 +35,6 @@ deps
 .rebar3
 _build/
 _checkouts/
+
+# MacOS
+.DS_Store
