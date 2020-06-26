@@ -103,12 +103,14 @@ get_feature_boolean_test() ->
     load(),
     Name = <<"feature_name">>,
     Boolean = true,
-    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
-                                                            rollout_start=><<"undefined">>}),
+    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean}),
     ok = meck:expect(features_store, get_features, [], [FeatureSpec]),
     Req = cowboy_test_helpers:req(),
 
-    Expected = ?CTH:json_roundtrip(#{<<"featureSpecs">> => [FeatureSpec]}),
+    Expected = ?CTH:json_roundtrip(#{<<"featureSpecs">> => [
+        #{<<"name">> => Name,
+          <<"boolean">> => Boolean,
+          <<"user">> => []}]}),
 
     ok = ?CTH:http_get(?MUT, Req, 200, Expected),
 

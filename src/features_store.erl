@@ -234,8 +234,8 @@ store_features([]) ->
 store_features([FeatureMapIn | T]) when is_map(FeatureMapIn) ->
     FeatureMap = ensure_keys_are_atoms(FeatureMapIn),
     R = #rollout_spec{
-        start=maps:get(rollout_start, FeatureMap),
-        'end'=maps:get(rollout_end, FeatureMap)
+        start=sanitize_rollout_value(maps:get(rollout_start, FeatureMap)),
+        'end'=sanitize_rollout_value(maps:get(rollout_end, FeatureMap))
     },
     F = #feature{
         name=maps:get(name, FeatureMap),
@@ -347,3 +347,7 @@ userspecs_to_lists([#user_spec{prop=Prop,
                                value=Value} |T]) ->
     Spec = [Prop, CA, Value],
     [Spec|userspecs_to_lists(T)].
+
+sanitize_rollout_value(<<"undefined">>) -> undefined;
+sanitize_rollout_value(undefined) -> undefined;
+sanitize_rollout_value(Val) when is_integer(Val) -> Val.

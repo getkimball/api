@@ -208,22 +208,21 @@ process_user_spec_input([#{property := Property,
 comparator_bin_to_atom(<<"=">>) -> '=';
 comparator_bin_to_atom(<<"in">>) -> 'in'.
 
-outputitize_feature(#{name := Name,
-                      boolean := Boolean,
-                      rollout_start := RolloutStart,
-                      rollout_end := RolloutEnd,
-                      user := User}) ->
-    #{<<"name">> => Name,
-      <<"boolean">> => Boolean,
-      <<"rollout_start">> => feature_datetime_to_rfc(RolloutStart),
-      <<"rollout_end">> => feature_datetime_to_rfc(RolloutEnd),
-      <<"user">> => User}.
+outputitize_feature(Feature) ->
+    maps:fold(fun outputitize_feature_prop/3, #{}, Feature).
 
 
-feature_datetime_to_rfc(<<"undefined">>) ->
-    undefined;
-feature_datetime_to_rfc(undefined) ->
-    undefined;
+outputitize_feature_prop(rollout_start, undefined, Acc) ->
+    Acc;
+outputitize_feature_prop(rollout_end, undefined, Acc) ->
+    Acc;
+outputitize_feature_prop(rollout_start, Start, Acc) when is_integer(Start) ->
+    maps:put(rollout_start, feature_datetime_to_rfc(Start), Acc);
+outputitize_feature_prop(rollout_end, End, Acc) when is_integer(End) ->
+    maps:put(rollout_end, feature_datetime_to_rfc(End), Acc);
+outputitize_feature_prop(K, V, Acc) when is_atom(K) ->
+    maps:put(K, V, Acc).
+
 feature_datetime_to_rfc(Int) when is_integer(Int) ->
     DT = calendar:system_time_to_rfc3339(Int, [{offset, "z"}]),
     binary:list_to_bin(DT).
