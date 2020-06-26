@@ -36,10 +36,10 @@
             body: JSON.stringify(spec)
         });
         let fulfilledResponse = await response;
-        let responseObj = await fulfilledResponse.json()
         if ( fulfilledResponse.ok) {
             saveAlertVisibile = true;
         } else {
+            let responseObj = await fulfilledResponse.json()
             console.log(responseObj);
             failAlertVisibile = true;
             failAlertMessage = responseObj['error']['what'];
