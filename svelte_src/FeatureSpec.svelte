@@ -81,7 +81,7 @@
                 name="rollout_start"
                 id="exampleDatetime"
                 placeholder="{spec.rollout_start}"
-                value="{spec.rollout_start}" />
+                bind:value="{spec.rollout_start}" />
             </Row> {/if}
 
             {#if spec.rollout_start }<Row>
@@ -90,7 +90,7 @@
                 name="rollout_end"
                 id="exampleDatetime"
                 placeholder="{spec.rollout_end}"
-                value="{spec.rollout_end}" />
+                bind:value="{spec.rollout_end}" />
             </Row>{/if}
 
             {#if spec.user != []}<Row>
