@@ -1,5 +1,6 @@
 <script>
-    import { Button,
+    import { Alert,
+             Button,
              Col,
              Collapse,
              Card,
@@ -18,9 +19,14 @@
 
     export let spec = {};
     let isOpen = false;
+    let saveAlertVisibile = false;
+    let failAlertVisibile = false;
+    let failAlertMessage = "";
+
     function toggle() {
         isOpen = !isOpen;
     };
+
     async function save() {
         let response = await fetch('/v0/featureSpecs/', {
             method: 'POST',
@@ -29,10 +35,17 @@
             },
             body: JSON.stringify(spec)
         });
-        console.log(await response.json());
-        alert(await response.status);
-
+        let fulfilledResponse = await response;
+        let responseObj = await fulfilledResponse.json()
+        if ( fulfilledResponse.ok) {
+            saveAlertVisibile = true;
+        } else {
+            console.log(responseObj);
+            failAlertVisibile = true;
+            failAlertMessage = responseObj['error']['what'];
+        };
     }
+
 </script>
 
 <main>
@@ -44,6 +57,18 @@
         <Collapse {isOpen}>
         <CardBody>
             <form on:submit|preventDefault={save}><FormGroup>
+
+            <Row>
+                <Alert color="success" isOpen={saveAlertVisibile} toggle={() => (saveAlertVisibile = false)}>
+                    Feature Flag Saved!
+                </Alert>
+                <Alert color="danger" isOpen={failAlertVisibile} toggle={() => (failAlertVisibile = false)}>
+                    Feature Flag NOT Saved!
+                    {failAlertMessage}
+                </Alert>
+
+            </Row>
+
             <Row>
                 <Col>Boolean Enabled</Col>
                 <Col><Input type="checkbox" bind:checked={spec.boolean} /></Col>
