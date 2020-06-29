@@ -1,6 +1,10 @@
 <script>
     import { onMount } from "svelte";
-    import { Col, Container, Row } from "sveltestrap";
+    import { Col,
+             Container,
+             FormGroup,
+             Input,
+             Row } from "sveltestrap";
 
     import FeatureSpec from './FeatureSpec.svelte';
 
@@ -11,6 +15,35 @@
         featureSpecs = json.featureSpecs;
     });
 
+    let newFlagName = "";
+    async function createNewFlag() {
+        let newFlag = {
+            "name": newFlagName,
+            "boolean": false,
+            "user": [],
+
+        };
+        let response = await fetch('/v0/featureSpecs/', {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify(newFlag)
+        });
+        let fulfilledResponse = await response;
+        if ( fulfilledResponse.ok) {
+            // saveAlertVisibile = true;
+            featureSpecs = [...featureSpecs, newFlag];
+
+        } else {
+            let responseObj = await fulfilledResponse.json()
+            console.log(responseObj);
+            // failAlertVisibile = true;
+            // failAlertMessage = responseObj['error']['what'];
+        };
+
+    }
+
 </script>
 
 <main>
@@ -18,6 +51,14 @@
         <Col>
         <h1>Kimball Features</h1>
         </Col>
+    </Row>
+
+    <Row>
+    <form on:submit|preventDefault={createNewFlag}><FormGroup>
+        <Col><Input bind:value={newFlagName} /></Col>
+        <Col><Input type=submit value="Create Flag" /></Col>
+
+    </FormGroup></form>
     </Row>
 
     {#each featureSpecs as featureSpec }
