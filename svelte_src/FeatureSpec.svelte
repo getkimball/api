@@ -17,6 +17,8 @@
              FormGroup,
              Row} from "sveltestrap";
 
+    import FeatureSpecUserType from './FeatureSpecUserType.svelte';
+
     export let spec = {};
     let isOpen = false;
     let saveAlertVisibile = false;
@@ -93,13 +95,11 @@
                 bind:value="{spec.rollout_end}" />
             </Row>{/if}
 
-            {#if spec.user != []}<Row>
-                <ListGroup>
-                {#each spec.user as userSpec }
-                <ListGroupItem>{userSpec[0]} {userSpec[1]} {userSpec[2]}</ListGroupItem>
-                {/each}
-                </ListGroup>
-            </Row>{/if}
+            {#each spec.user as userSpec }
+            <Row>
+                <FeatureSpecUserType userSpec={userSpec} />
+            </Row>
+            {/each}
 
             <Row>
                 <Button type="submit" >Save</Button>
