@@ -15,9 +15,27 @@
 
     export let userSpec = [];
 
-    let comparatorType = typeof(userSpec.comparator);
+    let comparatorTypes = [
+      "string",
+      "integer"
+    ];
+
+    let comparatorType = typeof(userSpec.value);
+    if ( comparatorType == "number" ) {
+        comparatorType = "integer";
+    }
 
     let isOpen = false;
+
+    function castValue() {
+      if ( comparatorType == "string") {
+          userSpec.value = String(userSpec.value);
+      } else if ( comparatorType == "integer") {
+          userSpec.value = Number(userSpec.value);
+      } else {
+          alert("Type not recognized for casting");
+      };
+    }
 
 </script>
 
@@ -36,14 +54,14 @@
       </FormGroup>
 
       <FormGroup>
-        <Input type=select bind:value="{comparatorType}">
-          <option>string</option>
-        </Input>
+        <select bind:value={comparatorType} on:change="{castValue}">
+          {#each comparatorTypes as type }
+            <option>{type}</option>
+          {/each}
+        </select>
       </FormGroup>
 
-
-
-      <Input bind:value={userSpec.value} />
+      <Input bind:value={userSpec.value} on:change="{castValue}" />
   </ListGroupItem>
   </ListGroup>
 
