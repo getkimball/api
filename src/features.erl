@@ -1,7 +1,8 @@
 -module(features).
 -include_lib("kernel/include/logger.hrl").
 -export([collapse_to_boolean/4,
-         collapse_features_to_map/2]).
+         collapse_features_to_map/2,
+         comparator_bin_to_atom/1]).
 
 % Default case, only boolean defined
 collapse_to_boolean(#{name := Name,
@@ -60,6 +61,8 @@ collapse_features_to_map(Features, User) ->
     Map = maps:from_list(Collapsed),
     Map.
 
+comparator_bin_to_atom(<<"=">>) -> '=';
+comparator_bin_to_atom(<<"in">>) -> 'in'.
 
 %%%%
 %   Internal

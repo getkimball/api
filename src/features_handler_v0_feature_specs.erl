@@ -202,11 +202,8 @@ process_user_spec_input([]) ->
 process_user_spec_input([#{property := Property,
                            comparator := Comparator,
                            value := Value} | T]) ->
-    ComparatorAtom = comparator_bin_to_atom(Comparator),
+    ComparatorAtom = features:comparator_bin_to_atom(Comparator),
     [[Property, ComparatorAtom, Value]|process_user_spec_input(T)].
-
-comparator_bin_to_atom(<<"=">>) -> '=';
-comparator_bin_to_atom(<<"in">>) -> 'in'.
 
 outputitize_feature(Feature) ->
     maps:fold(fun outputitize_feature_prop/3, #{}, Feature).
