@@ -62,7 +62,6 @@
         </CardHeader>
         <Collapse {isOpen}>
         <CardBody>
-            <form on:submit|preventDefault={save}><FormGroup>
 
             <Row>
                 <Alert color="success" isOpen={saveAlertVisibile} toggle={() => (saveAlertVisibile = false)}>
@@ -106,10 +105,9 @@
             {/each}
 
             <Row>
-                <Button type="submit" >Save</Button>
+                <Button type="submit" on:click={save} >Save</Button>
             </Row>
 
-        </FormGroup></form>
         </CardBody>
         </Collapse>
 
