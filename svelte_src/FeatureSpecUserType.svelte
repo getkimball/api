@@ -4,24 +4,46 @@
              Col,
              Collapse,
              Dropdown,
-             DropdownToggle,
              DropdownItem,
+             DropdownMenu,
+             DropdownToggle,
              Input,
+             FormGroup,
              ListGroup,
              ListGroupItem,
              Row} from "sveltestrap";
 
     export let userSpec = [];
+
+    let comparatorType = typeof(userSpec.comparator);
+
     let isOpen = false;
 
 </script>
 
+
 <main>
+
   <ListGroup>
   <ListGroupItem>
-      {userSpec[0]}
-      {userSpec[1]}
-      {userSpec[2]}
+      <Input bind:value={userSpec.property} />
+
+      <FormGroup>
+        <Input type=select bind:value="{userSpec.comparator}">
+          <option>=</option>
+          <option>in</option>
+        </Input>
+      </FormGroup>
+
+      <FormGroup>
+        <Input type=select bind:value="{comparatorType}">
+          <option>string</option>
+        </Input>
+      </FormGroup>
+
+
+
+      <Input bind:value={userSpec.value} />
   </ListGroupItem>
   </ListGroup>
 
