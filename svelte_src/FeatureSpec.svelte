@@ -30,6 +30,10 @@
     };
 
     async function save() {
+        // Reset notifications
+        saveAlertVisibile = false;
+        failAlertVisibile = false;
+
         let response = await fetch('/v0/featureSpecs/', {
             method: 'POST',
             headers: {
