@@ -66,6 +66,10 @@ collapse_to_boolean_with_user_id_test() ->
         Name,
         #{boolean => false,
           user => [[<<"user_id">>, '=', 24]]}),
+    FalseSpecWithBoolean = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => true,
+          user => [[<<"user_id">>, '=', 24]]}),
     LongTrueSpec = test_utils:defaulted_feature_spec(
         Name,
         #{boolean => false,
@@ -80,6 +84,7 @@ collapse_to_boolean_with_user_id_test() ->
     User = #{<<"user_id">> => 42},
 
     ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, User, 0, 0)),
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpecWithBoolean, User, 0, 0)),
     ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(LongFalseSpec, User, 0, 0)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(TrueSpec, User, 0, 0)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(LongTrueSpec, User, 0, 0)),

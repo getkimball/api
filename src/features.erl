@@ -50,8 +50,11 @@ collapse_to_boolean(Spec = #{name := Name,
     case CollapsedUserVal of
         true -> {Name, true};
         false -> SpecWithoutUser = maps:put(user, [], Spec),
-                 collapse_to_boolean(SpecWithoutUser, User, Now, Rand)
-    end.
+                 SpecWithoutBoolean = maps:remove(boolean, SpecWithoutUser),
+                 collapse_to_boolean(SpecWithoutBoolean, User, Now, Rand)
+    end;
+collapse_to_boolean(#{name := Name}, _User, _Now, _Rand) ->
+    {Name, false}.
 
 collapse_features_to_map(Features, User) ->
     Now = erlang:system_time(seconds),
