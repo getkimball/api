@@ -115,7 +115,7 @@
             </Row>
 
             <Row>
-                <Col>Boolean Enabled</Col>
+                <Col>Always True</Col>
                 <Col><Input type="checkbox" bind:checked={spec.boolean} /></Col>
                 <Col>{spec.boolean}</Col>
             </Row>
