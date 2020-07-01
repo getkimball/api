@@ -50,7 +50,32 @@
             failAlertVisibile = true;
             failAlertMessage = responseObj['error']['what'];
         };
-    }
+    };
+
+    function ISODateString(d){
+        function pad(n){return n<10 ? '0'+n : n}
+        return d.getUTCFullYear()+'-'
+            + pad(d.getUTCMonth()+1)+'-'
+            + pad(d.getUTCDate())+'T'
+            + pad(d.getUTCHours())+':'
+            + pad(d.getUTCMinutes())+':'
+            + pad(d.getUTCSeconds())+'Z'
+    };
+
+    function addRolloutSpec() {
+        let now = new Date();
+        let defaultEnd = new Date(now.valueOf());
+        defaultEnd.setDate(defaultEnd.getDate() + 2);
+
+        spec.rollout_start = ISODateString(now);
+        spec.rollout_end = ISODateString(defaultEnd);
+    };
+
+    function removeRolloutSpec() {
+        delete spec.rollout_end;
+        delete spec.rollout_start;
+        spec = spec;
+    };
 
     function addNewUserSpec() {
         let newUserSpec = {
@@ -59,13 +84,13 @@
             "value": "user value"
         };
         spec.user = [...spec.user, newUserSpec];
-    }
+    };
 
     function removeUserSpecCallback(userSpec) {
         return function () {
             spec.user = spec.user.filter(i => i !== userSpec);
         };
-    }
+    };
 
 </script>
 
@@ -95,32 +120,39 @@
                 <Col>{spec.boolean}</Col>
             </Row>
 
-            {#if spec.rollout_start } <Row>
+            {#if spec.rollout_start }
+            <Row>
             Rollout Start:<Input
                 type="datetime"
                 name="rollout_start"
                 id="exampleDatetime"
                 placeholder="{spec.rollout_start}"
                 bind:value="{spec.rollout_start}" />
-            </Row> {/if}
-
-            {#if spec.rollout_start }<Row>
+            </Row>
+            <Row>
             Rollout End: <Input
                 type="datetime"
                 name="rollout_end"
                 id="exampleDatetime"
                 placeholder="{spec.rollout_end}"
                 bind:value="{spec.rollout_end}" />
-            </Row>{/if}
+            </Row>
+            <Row>
+                <Button on:click="{removeRolloutSpec}">Remove rollout spec</Button>
+            </Row>
+            {/if}
 
             {#each spec.user as userSpec }
             <Row>
                 <FeatureSpecUserType userSpec={userSpec} />
-                <Button on:click="{removeUserSpecCallback(userSpec)()}">Remove user spec</Button>
+                <Button on:click="{removeUserSpecCallback(userSpec)}">Remove user spec</Button>
             </Row>
             {/each}
 
             <Row>
+                {#if !spec.rollout_start }
+                <Button on:click="{addRolloutSpec}">Add rollout spec</Button>
+                {/if}
                 <Button on:click="{addNewUserSpec}">Add user spec</Button>
                 <Button type="submit" on:click={save} >Save</Button>
             </Row>
