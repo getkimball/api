@@ -5,21 +5,33 @@
          comparator_bin_to_atom/1]).
 
 % Default case, only boolean defined
-collapse_to_boolean(#{name := Name,
-                      boolean := Boolean,
-                      rollout_end := undefined,
-                      user := []},
+collapse_to_boolean(#{name := Name, boolean := true},
                     _User,
-                    Now,
+                    _Now,
                     _Rand) ->
-    ?LOG_DEBUG(#{what => "Collapse boolean",
-                 now => Now}),
-    {Name, Boolean};
+    {Name, true};
+% User spec
+collapse_to_boolean(Spec = #{name := Name,
+                             user := UserSpec},
+                    User,
+                    Now,
+                    Rand) ->
+    CollapsedUserVal = collapse_user_with_user_spec(User, UserSpec),
+    case CollapsedUserVal of
+        true -> {Name, true};
+        false -> SpecWithoutUser = maps:remove(user, Spec),
+                 collapse_to_boolean(SpecWithoutUser, User, Now, Rand)
+    end;
 % Rollout defined
+collapse_to_boolean(Spec=#{rollout_end := undefined},
+                    User,
+                    Now,
+                    Rand) ->
+    SpecWithOutEnd = maps:remove(rollout_end, Spec),
+    collapse_to_boolean(SpecWithOutEnd, User, Now, Rand);
 collapse_to_boolean(#{name := Name,
                       rollout_start := Start,
-                      rollout_end := End,
-                      user := []},
+                      rollout_end := End},
                     _User,
                     Now,
                     Rand) ->
@@ -39,20 +51,9 @@ collapse_to_boolean(#{name := Name,
                  'end' => End,
                  boolean => Boolean,
                  now => Now}),
+
+
     {Name, Boolean};
-% User spec
-collapse_to_boolean(Spec = #{name := Name,
-                             user := UserSpec},
-                    User,
-                    Now,
-                    Rand) ->
-    CollapsedUserVal = collapse_user_with_user_spec(User, UserSpec),
-    case CollapsedUserVal of
-        true -> {Name, true};
-        false -> SpecWithoutUser = maps:put(user, [], Spec),
-                 SpecWithoutBoolean = maps:remove(boolean, SpecWithoutUser),
-                 collapse_to_boolean(SpecWithoutBoolean, User, Now, Rand)
-    end;
 collapse_to_boolean(#{name := Name}, _User, _Now, _Rand) ->
     {Name, false}.
 

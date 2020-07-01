@@ -29,6 +29,11 @@ collapse_to_boolean_with_rollout_test() ->
         Name,
         #{rollout_start => Now + 10,
           rollout_end => Now + 60}),
+    BeforeSpecWithTrueBoolean = test_utils:defaulted_feature_spec(
+        Name,
+        #{boolean => true,
+          rollout_start => Now + 10,
+          rollout_end => Now + 60}),
 
     % Not yet passed 50% of the rollout
     NotReachedSpec = test_utils:defaulted_feature_spec(
@@ -49,6 +54,7 @@ collapse_to_boolean_with_rollout_test() ->
           rollout_end => Now - 10}),
 
     ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(BeforeSpec, #{}, Now, Rand)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(BeforeSpecWithTrueBoolean, #{}, Now, Rand)),
     ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(NotReachedSpec, #{}, Now, Rand)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(ReachedSpec, #{}, Now, Rand)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(AfterSpec, #{}, Now, Rand)),
@@ -66,7 +72,7 @@ collapse_to_boolean_with_user_id_test() ->
         Name,
         #{boolean => false,
           user => [[<<"user_id">>, '=', 24]]}),
-    FalseSpecWithBoolean = test_utils:defaulted_feature_spec(
+    FalseUserSpecWithTrueBoolean = test_utils:defaulted_feature_spec(
         Name,
         #{boolean => true,
           user => [[<<"user_id">>, '=', 24]]}),
@@ -83,11 +89,11 @@ collapse_to_boolean_with_user_id_test() ->
 
     User = #{<<"user_id">> => 42},
 
-    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, User, 0, 0)),
-    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpecWithBoolean, User, 0, 0)),
-    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(LongFalseSpec, User, 0, 0)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(TrueSpec, User, 0, 0)),
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, User, 0, 0)),
+    ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(FalseUserSpecWithTrueBoolean, User, 0, 0)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(LongTrueSpec, User, 0, 0)),
+    ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(LongFalseSpec, User, 0, 0)),
 
     unload().
 
