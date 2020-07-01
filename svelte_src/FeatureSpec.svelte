@@ -52,6 +52,21 @@
         };
     }
 
+    function addNewUserSpec() {
+        let newUserSpec = {
+            "property": "user property",
+            "comparator": "=",
+            "value": "user value"
+        };
+        spec.user = [...spec.user, newUserSpec];
+    }
+
+    function removeUserSpecCallback(userSpec) {
+        return function () {
+            spec.user = spec.user.filter(i => i !== userSpec);
+        };
+    }
+
 </script>
 
 <main>
@@ -101,10 +116,12 @@
             {#each spec.user as userSpec }
             <Row>
                 <FeatureSpecUserType userSpec={userSpec} />
+                <Button on:click="{removeUserSpecCallback(userSpec)()}">Remove user spec</Button>
             </Row>
             {/each}
 
             <Row>
+                <Button on:click="{addNewUserSpec}">Add user spec</Button>
                 <Button type="submit" on:click={save} >Save</Button>
             </Row>
 
