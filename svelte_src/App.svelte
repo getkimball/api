@@ -54,11 +54,10 @@
     </Row>
 
     <Row>
-    <form on:submit|preventDefault={createNewFlag}><FormGroup>
-        <Col><Input bind:value={newFlagName} /></Col>
-        <Col><Input type=submit value="Create Flag" /></Col>
-
-    </FormGroup></form>
+        <Col xs="4" align="center">
+            <Input bind:value={newFlagName} />
+            <Input on:click="{createNewFlag}" value="Create Flag" />
+        </Col>
     </Row>
 
     {#each featureSpecs as featureSpec }
