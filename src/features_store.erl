@@ -237,10 +237,12 @@ store_features([FeatureMapIn | T]) when is_map(FeatureMapIn) ->
         start=sanitize_rollout_value(maps:get(rollout_start, FeatureMap)),
         'end'=sanitize_rollout_value(maps:get(rollout_end, FeatureMap))
     },
+    US = build_user_specs(maps:get(user, FeatureMap)),
     F = #feature{
         name=maps:get(name, FeatureMap),
         boolean=maps:get(boolean, FeatureMap),
-        rollout=R
+        rollout=R,
+        user_specs=US
     },
     store_features([F|T]);
 store_features([Feature=#feature{} | T]) ->
@@ -251,7 +253,8 @@ store_features([Feature=#feature{} | T]) ->
                  feature=>Feature#feature.name,
                  boolean=>Feature#feature.boolean,
                  rollout_start=>Feature#feature.rollout#rollout_spec.start,
-                 rollout_end=>Feature#feature.rollout#rollout_spec.'end'
+                 rollout_end=>Feature#feature.rollout#rollout_spec.'end',
+                 user=>Feature#feature.user_specs
     }),
 
     store_features(T).
@@ -324,6 +327,10 @@ build_user_specs(undefined) ->
     [];
 build_user_specs([]) ->
     [];
+build_user_specs([[UserProp, ComparatorBin, Value]|T])
+                 when is_binary(ComparatorBin) ->
+    ComparatorAtom = features:comparator_bin_to_atom(ComparatorBin),
+    build_user_specs([[UserProp, ComparatorAtom, Value]|T]);
 build_user_specs([[UserProp, ComparatorAtom='=', Value]|T]) ->
     US = #user_spec{prop=UserProp,
                     comparator_atom=ComparatorAtom,

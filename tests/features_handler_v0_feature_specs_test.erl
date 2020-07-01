@@ -296,6 +296,34 @@ create_feature_user_string_test() ->
 
     unload().
 
+get_feature_user_string_test() ->
+    load(),
+    Name = <<"feature_name">>,
+    UserProp = <<"user_id">>,
+    Comparator = '=',
+    Value = <<"42">>,
+
+    UserSpec = [[UserProp, Comparator, Value]],
+
+    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{user=>UserSpec}),
+    ok = meck:expect(features_store, get_features, [], [FeatureSpec]),
+    Req = cowboy_test_helpers:req(),
+
+    ExpectedUserSpec = [#{
+        <<"property">> => UserProp,
+        <<"comparator">> => <<"=">>,
+        <<"value">> => Value
+    }],
+
+    Expected = ?CTH:json_roundtrip(#{<<"featureSpecs">> => [#{
+        <<"name">> => Name,
+        <<"boolean">> => false,
+        <<"user">> => ExpectedUserSpec}]}),
+
+    ok = ?CTH:http_get(?MUT, Req, 200, Expected),
+
+    unload().
+
 create_feature_user_integer_test() ->
     load(),
     Name = <<"feature_name">>,

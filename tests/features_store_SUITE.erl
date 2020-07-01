@@ -17,6 +17,7 @@ groups() -> [{test_ets, [
                 ab_invalid_feature_missing_rollout_end,
                 ac_invalid_feature_before_after_end,
                 ad_user_spec_write_read,
+                ae_user_spec_write_read_binary,
                 ba_external_store_init,
                 bb_external_store_store_data,
                 bc_external_store_not_supporting_store,
@@ -71,6 +72,26 @@ ad_user_spec_write_read(_Config) ->
     Expected = [test_utils:defaulted_feature_spec(Name,
       #{boolean => Boolean,
         user => UserSpec})],
+    ?assertEqual(Expected, Resp),
+
+    exit(Pid, normal),
+    ok.
+
+ae_user_spec_write_read_binary(_Config) ->
+    {ok, Pid} = ?MUT:start_link(),
+    Name = <<"feature">>,
+    Boolean = true,
+    UserSpec = [[<<"user_id">>, <<"=">>, 42]],
+    ExpectedUserSpec = [[<<"user_id">>, '=', 42]],
+
+    ok = features_store:set_feature(Name, {boolean, Boolean},
+                                          {rollout, undefined, undefined},
+                                          {user, UserSpec}),
+    Resp = features_store:get_features(),
+
+    Expected = [test_utils:defaulted_feature_spec(Name,
+      #{boolean => Boolean,
+        user => ExpectedUserSpec})],
     ?assertEqual(Expected, Resp),
 
     exit(Pid, normal),

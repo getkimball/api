@@ -202,11 +202,8 @@ process_user_spec_input([]) ->
 process_user_spec_input([#{property := Property,
                            comparator := Comparator,
                            value := Value} | T]) ->
-    ComparatorAtom = comparator_bin_to_atom(Comparator),
+    ComparatorAtom = features:comparator_bin_to_atom(Comparator),
     [[Property, ComparatorAtom, Value]|process_user_spec_input(T)].
-
-comparator_bin_to_atom(<<"=">>) -> '=';
-comparator_bin_to_atom(<<"in">>) -> 'in'.
 
 outputitize_feature(Feature) ->
     maps:fold(fun outputitize_feature_prop/3, #{}, Feature).
@@ -220,9 +217,19 @@ outputitize_feature_prop(rollout_start, Start, Acc) when is_integer(Start) ->
     maps:put(rollout_start, feature_datetime_to_rfc(Start), Acc);
 outputitize_feature_prop(rollout_end, End, Acc) when is_integer(End) ->
     maps:put(rollout_end, feature_datetime_to_rfc(End), Acc);
+outputitize_feature_prop(user, UserSpec, Acc) ->
+    UserSpec2 = lists:map(fun outputize_user_spec/1, UserSpec),
+    maps:put(user, UserSpec2, Acc);
 outputitize_feature_prop(K, V, Acc) when is_atom(K) ->
     maps:put(K, V, Acc).
 
 feature_datetime_to_rfc(Int) when is_integer(Int) ->
     DT = calendar:system_time_to_rfc3339(Int, [{offset, "z"}]),
     binary:list_to_bin(DT).
+
+outputize_user_spec([Prop, Comparator, Value]) ->
+    #{
+        <<"property">> => Prop,
+        <<"comparator">> => Comparator,
+        <<"value">> => Value
+    }.

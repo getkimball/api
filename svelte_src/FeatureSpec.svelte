@@ -17,6 +17,8 @@
              FormGroup,
              Row} from "sveltestrap";
 
+    import FeatureSpecUserType from './FeatureSpecUserType.svelte';
+
     export let spec = {};
     let isOpen = false;
     let saveAlertVisibile = false;
@@ -28,6 +30,10 @@
     };
 
     async function save() {
+        // Reset notifications
+        saveAlertVisibile = false;
+        failAlertVisibile = false;
+
         let response = await fetch('/v0/featureSpecs/', {
             method: 'POST',
             headers: {
@@ -56,7 +62,6 @@
         </CardHeader>
         <Collapse {isOpen}>
         <CardBody>
-            <form on:submit|preventDefault={save}><FormGroup>
 
             <Row>
                 <Alert color="success" isOpen={saveAlertVisibile} toggle={() => (saveAlertVisibile = false)}>
@@ -93,19 +98,16 @@
                 bind:value="{spec.rollout_end}" />
             </Row>{/if}
 
-            {#if spec.user != []}<Row>
-                <ListGroup>
-                {#each spec.user as userSpec }
-                <ListGroupItem>{userSpec[0]} {userSpec[1]} {userSpec[2]}</ListGroupItem>
-                {/each}
-                </ListGroup>
-            </Row>{/if}
+            {#each spec.user as userSpec }
+            <Row>
+                <FeatureSpecUserType userSpec={userSpec} />
+            </Row>
+            {/each}
 
             <Row>
-                <Button type="submit" >Save</Button>
+                <Button type="submit" on:click={save} >Save</Button>
             </Row>
 
-        </FormGroup></form>
         </CardBody>
         </Collapse>
 
