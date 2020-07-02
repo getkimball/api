@@ -1,6 +1,6 @@
 <script>
     import {
-
+             Button,
              Col,
              Collapse,
              Dropdown,
@@ -15,27 +15,63 @@
 
     export let userSpec = [];
 
-    let comparatorTypes = [
+    let castTypes = [
       "string",
-      "integer"
+      "number"
     ];
 
-    let comparatorType = typeof(userSpec.value);
-    if ( comparatorType == "number" ) {
-        comparatorType = "integer";
-    }
+    let castType;
+    let isMultiValue;
+
+    let typeCastFunMap = {};
+    typeCastFunMap["string"] = String;
+    typeCastFunMap["number"] = Number;
+
+    if (typeof(userSpec.value) == "object") {
+      isMultiValue = true;
+      if ( userSpec.length > 0 ) {
+        castType = typeof(userSpec.value[0]);
+      } else {
+        castType = "string";
+      }
+    } else {
+      isMultiValue = false;
+      castType = typeof(userSpec.value)
+    };
 
     let isOpen = false;
 
+
+
     function castValue() {
-      if ( comparatorType == "string") {
-          userSpec.value = String(userSpec.value);
-      } else if ( comparatorType == "integer") {
-          userSpec.value = Number(userSpec.value);
-      } else {
-          alert("Type not recognized for casting");
-      };
-    }
+      let typeCastFun = typeCastFunMap[castType];
+      if ( isMultiValue == true ) {
+        userSpec.value = userSpec.value.map(typeCastFun);
+      } else  {
+        userSpec.value = typeCastFun(userSpec.value);
+      }
+    };
+
+    function changeComparator() {
+     if (userSpec.comparator == "=" ) {
+        isMultiValue = false;
+        userSpec.value = userSpec.value[0];
+     } else if (userSpec.comparator == "in") {
+        isMultiValue = true;
+        userSpec.value = [userSpec.value];
+     } else {
+        alert("Unknown comparator type")
+     }
+    };
+    function addNewArrayValue() {
+      let typeCastFun = typeCastFunMap[castType];
+      userSpec.value = [...userSpec.value, typeCastFun("")]
+    };
+    function removeUserSpecArrayValue(arrayValue) {
+        return function () {
+            userSpec.value = userSpec.value.filter(i => i !== arrayValue);
+        };
+    };
 
 </script>
 
@@ -47,21 +83,31 @@
       <Input bind:value={userSpec.property} />
 
       <FormGroup>
-        <Input type=select bind:value="{userSpec.comparator}">
+        <select bind:value="{userSpec.comparator}" on:change="{changeComparator}" >
           <option>=</option>
           <option>in</option>
-        </Input>
+        </select>
       </FormGroup>
 
       <FormGroup>
-        <select bind:value={comparatorType} on:change="{castValue}">
-          {#each comparatorTypes as type }
+        <select bind:value={castType} on:change="{castValue}">
+          {#each castTypes as type }
             <option>{type}</option>
           {/each}
         </select>
       </FormGroup>
 
-      <Input bind:value={userSpec.value} on:change="{castValue}" />
+      {#if isMultiValue }
+        {#each userSpec.value as valueItem}
+          <Input bind:value={valueItem} on:change="{castValue}" />
+          <Button on:click="{removeUserSpecArrayValue(valueItem)}">Remove</Button>
+        {/each}
+        <Button on:click="{addNewArrayValue}">Add list member</Button>
+
+      {:else}
+        <Input bind:value={userSpec.value} on:change="{castValue}" />
+      {/if}
+
   </ListGroupItem>
   </ListGroup>
 
