@@ -120,11 +120,11 @@
             <Row>
                 <Col xs=2 >Always True</Col>
                 <Col xs=4 ><Input type="checkbox" bind:checked={spec.boolean} /></Col>
-                <Col xs=2>{spec.boolean}</Col>
+                <Col xs=2></Col>
             </Row>
             <hr />
 
-            {#if spec.rollout_start }
+            {#if !spec.boolean && spec.rollout_start }
             <Row no-gutters>
                 <Col>
                     <Row>
@@ -160,6 +160,7 @@
             <hr />
             {/if}
 
+            {#if !spec.boolean }
             {#each spec.user as userSpec }
             <Row>
                 <Col>
@@ -178,17 +179,21 @@
             </Row>
             <hr />
             {/each}
+            {/if}
+
 
             <Row>
                 <Col></Col>
                 <Col xs=3>
-                {#if !spec.rollout_start }
+                {#if !spec.boolean && !spec.rollout_start }
                     <Button on:click="{addRolloutSpec}">Add rollout spec</Button>
                 {/if}
                 </Col>
 
                 <Col xs=3>
+                    {#if !spec.boolean }
                     <Button on:click="{addNewUserSpec}">Add user spec</Button>
+                    {/if}
                 </Col>
 
                 <Col xs=2>
