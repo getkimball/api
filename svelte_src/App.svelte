@@ -1,6 +1,7 @@
 <script>
     import { onMount } from "svelte";
-    import { Col,
+    import { Button,
+             Col,
              Container,
              FormGroup,
              Input,
@@ -47,6 +48,7 @@
 </script>
 
 <main>
+<Container>
     <Row>
         <Col>
         <h1>Kimball Features</h1>
@@ -54,16 +56,25 @@
     </Row>
 
     <Row>
-        <Col xs="4" align="center">
+        <Col></Col>
+        <Col xs="6">
             <Input bind:value={newFlagName} />
-            <Input on:click="{createNewFlag}" value="Create Flag" />
+            <Button on:click="{createNewFlag}">Create Flag</Button>
         </Col>
+        <Col></Col>
     </Row>
 
+    <Row>
+        <Col></Col>
+        <Col xs=8>
     {#each featureSpecs as featureSpec }
         <FeatureSpec spec={featureSpec} />
     {/each}
+        </Col>
+        <Col></Col>
+    </Row>
 
+</Container>
 </main>
 
 <style>

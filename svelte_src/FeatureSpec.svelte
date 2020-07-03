@@ -10,6 +10,7 @@
              CardSubtitle,
              CardText,
              CardTitle,
+             Container,
              Input,
              ListGroup,
              ListGroupItem,
@@ -17,6 +18,7 @@
              FormGroup,
              Row} from "sveltestrap";
 
+    import CloseIcon from './CloseIcon.svelte';
     import FeatureSpecUserType from './FeatureSpecUserType.svelte';
 
     export let spec = {};
@@ -94,8 +96,7 @@
 
 </script>
 
-<main>
-    <Col xs="4" align="center">
+    <Col xs="auto" align="center">
     <Card>
         <CardHeader on:click={toggle} >
             <CardTitle>{spec.name}</CardTitle>
@@ -104,57 +105,95 @@
         <CardBody>
 
             <Row>
-                <Alert color="success" isOpen={saveAlertVisibile} toggle={() => (saveAlertVisibile = false)}>
-                    Feature Flag Saved!
-                </Alert>
-                <Alert color="danger" isOpen={failAlertVisibile} toggle={() => (failAlertVisibile = false)}>
-                    Feature Flag NOT Saved!
-                    {failAlertMessage}
-                </Alert>
+                <Col>
+                    <Alert color="success" isOpen={saveAlertVisibile} toggle={() => (saveAlertVisibile = false)}>
+                        Feature Flag Saved!
+                    </Alert>
+                    <Alert color="danger" isOpen={failAlertVisibile} toggle={() => (failAlertVisibile = false)}>
+                        Feature Flag NOT Saved!
+                        {failAlertMessage}
+                    </Alert>
+                </Col>
 
             </Row>
 
             <Row>
-                <Col>Always True</Col>
-                <Col><Input type="checkbox" bind:checked={spec.boolean} /></Col>
-                <Col>{spec.boolean}</Col>
+                <Col xs=2 >Always True</Col>
+                <Col xs=4 ><Input type="checkbox" bind:checked={spec.boolean} /></Col>
+                <Col xs=2>{spec.boolean}</Col>
             </Row>
+            <hr />
 
             {#if spec.rollout_start }
-            <Row>
-            Rollout Start:<Input
-                type="datetime"
-                name="rollout_start"
-                id="exampleDatetime"
-                placeholder="{spec.rollout_start}"
-                bind:value="{spec.rollout_start}" />
+            <Row no-gutters>
+                <Col>
+                    <Row>
+                        <Col xs=2>Rollout Start: </Col>
+                        <Col xs=6>
+                            <Input
+                             type="datetime"
+                             name="rollout_start"
+                             id="exampleDatetime"
+                             placeholder="{spec.rollout_start}"
+                             bind:value="{spec.rollout_start}" />
+                        </Col>
+                        <Col xs=2 />
+                    </Row>
+                    <Row>
+                        <Col xs=2>Rollout End:</Col>
+                        <Col xs=6>
+                            <Input
+                            type="datetime"
+                            name="rollout_end"
+                            id="exampleDatetime"
+                            placeholder="{spec.rollout_end}"
+                            bind:value="{spec.rollout_end}" />
+                        </Col>
+                        <Col xs=2 />
+                    </Row>
+                </Col>
+                <Col xs=2>
+                    <Button color=dark outline on:click="{removeRolloutSpec}"><CloseIcon /></Button>
+                </Col>
+
             </Row>
-            <Row>
-            Rollout End: <Input
-                type="datetime"
-                name="rollout_end"
-                id="exampleDatetime"
-                placeholder="{spec.rollout_end}"
-                bind:value="{spec.rollout_end}" />
-            </Row>
-            <Row>
-                <Button on:click="{removeRolloutSpec}">Remove rollout spec</Button>
-            </Row>
+            <hr />
             {/if}
 
             {#each spec.user as userSpec }
             <Row>
-                <FeatureSpecUserType userSpec={userSpec} />
-                <Button on:click="{removeUserSpecCallback(userSpec)}">Remove user spec</Button>
+                <Col>
+                    <Row>
+                        <Col xs=2>
+                            User
+                        </Col>
+                        <Col xs=8>
+                            <FeatureSpecUserType userSpec={userSpec} />
+                        </Col>
+                    </Row>
+                </Col>
+                <Col xs=2>
+                    <Button color=dark outline on:click="{removeUserSpecCallback(userSpec)}"><CloseIcon /></Button>
+                </Col>
             </Row>
+            <hr />
             {/each}
 
             <Row>
+                <Col></Col>
+                <Col xs=3>
                 {#if !spec.rollout_start }
-                <Button on:click="{addRolloutSpec}">Add rollout spec</Button>
+                    <Button on:click="{addRolloutSpec}">Add rollout spec</Button>
                 {/if}
-                <Button on:click="{addNewUserSpec}">Add user spec</Button>
-                <Button type="submit" on:click={save} >Save</Button>
+                </Col>
+
+                <Col xs=3>
+                    <Button on:click="{addNewUserSpec}">Add user spec</Button>
+                </Col>
+
+                <Col xs=2>
+                    <Button type="submit" on:click={save} >Save</Button>
+                </Col>
             </Row>
 
         </CardBody>
@@ -162,7 +201,6 @@
 
     </Card>
     </Col>
-</main>
 
 <style>
 </style>

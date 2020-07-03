@@ -13,11 +13,12 @@
              ListGroupItem,
              Row} from "sveltestrap";
 
+    import CloseIcon from './CloseIcon.svelte';
     export let userSpec = [];
 
     let castTypes = [
       "string",
-      "number"
+      "integer"
     ];
 
     let castType;
@@ -26,6 +27,7 @@
     let typeCastFunMap = {};
     typeCastFunMap["string"] = String;
     typeCastFunMap["number"] = Number;
+    typeCastFunMap["integer"] = Number;
 
     if (typeof(userSpec.value) == "object") {
       isMultiValue = true;
@@ -75,43 +77,50 @@
 
 </script>
 
-
-<main>
-
-  <ListGroup>
-  <ListGroupItem>
-      <Input bind:value={userSpec.property} />
-
-      <FormGroup>
-        <select bind:value="{userSpec.comparator}" on:change="{changeComparator}" >
-          <option>=</option>
-          <option>in</option>
-        </select>
-      </FormGroup>
-
-      <FormGroup>
-        <select bind:value={castType} on:change="{castValue}">
-          {#each castTypes as type }
-            <option>{type}</option>
-          {/each}
-        </select>
-      </FormGroup>
+      <Row no-gutter>
+        <Col xs=6><Input title="User property" bind:value={userSpec.property} /></Col>
+      </Row>
+      <Row>
+        <Col xs=3 >
+          <select title="Type of value" bind:value={castType} on:change="{castValue}">
+            {#each castTypes as type }
+              <option>{type}</option>
+            {/each}
+          </select>
+        </Col>
+        <Col xs=2 >
+          <select title="How to compare" bind:value="{userSpec.comparator}" on:change="{changeComparator}" >
+            <option>=</option>
+            <option>in</option>
+          </select>
+        </Col>
+        <Col></Col>
+      </Row>
 
       {#if isMultiValue }
         {#each userSpec.value as valueItem}
-          <Input bind:value={valueItem} on:change="{castValue}" />
-          <Button on:click="{removeUserSpecArrayValue(valueItem)}">Remove</Button>
+        <Row>
+          <Col xs=8>
+            <Input title="User value" bind:value={valueItem} on:change="{castValue}" />
+          </Col>
+          <Col xs=2><Button color=dark outline on:click="{removeUserSpecArrayValue(valueItem)}"><CloseIcon /></Button></Col>
+        </Row>
         {/each}
-        <Button on:click="{addNewArrayValue}">Add list member</Button>
+        <Row>
+          <Col xs=2 />
+          <Col xs=4><Button on:click="{addNewArrayValue}">Add item</Button></Col>
+          <Col xs=2 />
+        </Row>
 
       {:else}
-        <Input bind:value={userSpec.value} on:change="{castValue}" />
+      <Row>
+        <Col xs=8>
+          <Input bind:value={userSpec.value} on:change="{castValue}" />
+        </Col>
+        <Col />
+      </Row>
       {/if}
 
-  </ListGroupItem>
-  </ListGroup>
-
-</main>
 
 <style>
 </style>
