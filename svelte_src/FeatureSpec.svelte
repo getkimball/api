@@ -11,6 +11,7 @@
              CardText,
              CardTitle,
              Container,
+             CustomInput,
              Input,
              ListGroup,
              ListGroupItem,
@@ -119,7 +120,11 @@
 
             <Row>
                 <Col xs=2 >Always True</Col>
-                <Col xs=4 ><Input type="checkbox" bind:checked={spec.boolean} /></Col>
+                <Col xs=4 ><CustomInput id="{spec.name}-boolean"
+                                        name="boolean"
+                                        type="switch"
+                                        bind:checked={spec.boolean} />
+                </Col>
                 <Col xs=2></Col>
             </Row>
             <hr />
