@@ -49,3 +49,7 @@ TAG=$(date +"%Y.%m.%d")
 git tag ${TAG}
 git push origin ${TAG}
 ```
+
+# License
+
+All rights reserved. Copyright [Get Kimball Inc.](https://getkimball.com) 2020
