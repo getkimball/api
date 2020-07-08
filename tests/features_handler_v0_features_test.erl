@@ -9,11 +9,19 @@ load() ->
     ok = meck:new(features_store),
     ok = meck:expect(features_store, get_features, fun() -> [] end),
     ok = meck:expect(features_store, set_feature, fun(_, _, _, _) -> ok end),
+
+    ok = meck:new(features_count_router),
+    ok = meck:expect(features_count_router, add, ['_', '_'], ok),
+
     ok.
 
 unload() ->
     ?assert(meck:validate(features_store)),
     ok = meck:unload(features_store),
+
+    ?assert(meck:validate(features_count_router)),
+    ok = meck:unload(features_count_router),
+
     ok = cowboy_test_helpers:cleanup(),
     ok.
 

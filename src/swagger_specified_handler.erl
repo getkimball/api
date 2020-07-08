@@ -15,7 +15,7 @@
 
 upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
     Spec = method_metadata(Handler, Method),
-    try handle_req(Req, Spec, Handler, HandlerState) of
+    Response = try handle_req(Req, Spec, Handler, HandlerState) of
         {Req1, Code, Data, State} ->
             respond(Req1, Code, Data, State)
     catch
@@ -83,7 +83,12 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                                  object=>Object,
                                  why=>tuples_to_lists(Whys)}},
                     [])
-    end.
+    end,
+    {ok, Resp, NewHandlerState} = Response,
+
+    Handler:post_req(Resp, NewHandlerState),
+
+    Response.
 
 handle_req(Req, Spec, Handler, HandlerState) ->
     Params = params_from_request(Req, Spec),
