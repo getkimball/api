@@ -14,7 +14,8 @@ all() -> [{group, test_count}].
 groups() -> [{test_count, [
                 aa_test_single_user,
                 ab_test_single_user_multiple_times,
-                ac_test_multiple_users
+                ac_test_multiple_users,
+                ba_test_different_key_types
               ]}
             ].
 
@@ -65,3 +66,16 @@ ac_test_multiple_users(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(2, Num).
+
+ba_test_different_key_types(Config) ->
+    Pid = ?config(pid, Config),
+
+    KeyBin = <<"42">>,
+    KeyInt = 42,
+
+    ?MUT:add(KeyBin, Pid),
+    ?MUT:add(KeyInt, Pid),
+
+    Num = ?MUT:count(Pid),
+
+    ?assertEqual(1, Num).

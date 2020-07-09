@@ -30,7 +30,10 @@
 %%%===================================================================
 %%% API functions
 %%%===================================================================
-add(Key, Pid) when is_pid(Pid) ->
+add(Key, Pid) when is_integer(Key) ->
+    KeyBin = list_to_binary(integer_to_list(Key)),
+    add(KeyBin, Pid);
+add(Key, Pid) when is_binary(Key), is_pid(Pid) ->
     gen_server:cast(Pid, {add, Key}).
 
 count(Pid) when is_pid(Pid) ->
