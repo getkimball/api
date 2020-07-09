@@ -93,14 +93,20 @@ handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, _Opts) ->
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
     {Req, 200, Data, #{user=>UserObj, context=>ContextObj}};
-handle_req(Req, _Params, _Body, Opts) ->
-    {Req, 404, #{}, Opts}.
+handle_req(Req, _Params, _Body, _Opts) ->
+    {Req, 404, #{}, #{}}.
 
+post_req(_Response, _State=#{user:=User, context:=Context}) ->
+    store_feature(User, Context),
+    ok;
 post_req(_Response, _State) ->
-    FeatureName = <<"foo">>,
-    UserId = 44,
-    features_count_router:add(FeatureName, UserId),
     ok.
+
+store_feature(#{<<"user_id">> := UserId}, #{<<"feature">> := Feature}) ->
+    features_count_router:add(Feature, UserId);
+store_feature(_User, _Context) ->
+    ok.
+
 
 decode_json_param(Name, Params) ->
     ObjString = proplists:get_value(Name, Params),

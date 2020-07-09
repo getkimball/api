@@ -245,3 +245,27 @@ get_user_features_invalid_context_base64_test() ->
     ?CTH:http_get(?MUT, Req, 400, Expected),
 
     unload().
+
+%%%%
+%   Record context tests
+%%%%
+
+get_features_with_context_and_user_test() ->
+    load(),
+    UserIDProp = <<"user_id">>,
+    UserID = 42,
+    FeatureName = <<"feature_name">>,
+    UserObj = #{UserIDProp => UserID},
+    UserQuery = base64:encode(jsx:encode(UserObj)),
+
+    ContextQuery = base64:encode(jsx:encode(#{feature => FeatureName})),
+
+    Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery},
+                                        {<<"user_obj">>, UserQuery}]),
+
+    Expected = #{<<"features">>=>#{}},
+    ?CTH:http_get(?MUT, Req, 200, Expected),
+
+    ?assertEqual(FeatureName, meck:capture(first, features_count_router, add, '_', 1)),
+    ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)),
+    unload().
