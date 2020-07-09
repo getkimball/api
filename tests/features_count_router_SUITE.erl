@@ -14,7 +14,8 @@ all() -> [{group, test_count}].
 groups() -> [{test_count, [
                 aa_test_new_counter,
                 ab_test_existing_counter,
-                ac_test_counter_registration_race
+                ac_test_counter_registration_race,
+                ba_test_counter_counts
               ]}
             ].
 
@@ -79,3 +80,17 @@ ac_test_counter_registration_race(_Config) ->
 
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)).
+
+ba_test_counter_counts(_Config) ->
+    Feature = <<"feature_name">>,
+    Pid = self(),
+    Count = 1,
+
+    meck:expect(features_counter, count, [Pid], Count),
+
+    ?MUT:register_counter(Feature, Pid),
+
+
+    Counts = ?MUT:counts(),
+
+    ?assertEqual(#{Feature => Count}, Counts).

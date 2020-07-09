@@ -41,6 +41,7 @@ stop(_State) ->
 trails_handlers() ->
     Handlers = [
         features_handler_ok,
+        features_handler_v0_analytics,
         features_handler_v0_features,
         features_handler_v0_feature_specs,
         cowboy_swagger_handler

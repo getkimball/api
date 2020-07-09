@@ -23,6 +23,7 @@
 
 
 -export([add/2,
+         counts/0,
          register_counter/2]).
 
 -record(state, {}).
@@ -61,6 +62,13 @@ register_counter(CounterName, Pid) ->
     ets:insert(?COUNTER_REGISTRY, CR),
     ok.
 
+counts() ->
+    CountFun = fun(#counter_registration{name=CounterName, pid=Pid}, Acc0) ->
+        Count = features_counter:count(Pid),
+        Acc1 = maps:put(CounterName, Count, Acc0),
+        Acc1
+    end,
+    ets:foldl(CountFun, #{}, ?COUNTER_REGISTRY).
 
 
 %%%===================================================================

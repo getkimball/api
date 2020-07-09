@@ -89,7 +89,9 @@ handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, _Opts) ->
     ContextObj = decode_json_param(context_obj, Params),
     Features = features_store:get_features(),
     CollapsedFeatures = features:collapse_features_to_map(Features, UserObj),
-    ?LOG_DEBUG(#{what=> "collapse map",
+    ?LOG_DEBUG(#{what=> "get features",
+                 context => ContextObj,
+                 user => UserObj,
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
     {Req, 200, Data, #{user=>UserObj, context=>ContextObj}};
