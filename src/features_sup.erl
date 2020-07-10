@@ -18,9 +18,7 @@ init([Mode]) ->
                     [features_store_lib_configmap]}},
         #{id    => features_counter_sup,
           type  => supervisor,
-          start => {features_counter_sup, start_link, []}},
-        #{id    => features_count_router,
-          start => {features_count_router, start_link, []}}
+          start => {features_counter_sup, start_link, []}}
        ];
        sidecar -> [
         #{id    => features_store,

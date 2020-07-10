@@ -46,8 +46,8 @@ count(Pid) when is_pid(Pid) ->
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Args) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
+start_link(Name) ->
+    gen_server:start_link(?MODULE, Name, []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -105,7 +105,7 @@ handle_call(count, _From, State=#state{bloom=Bloom}) ->
 handle_cast({add, Key}, State=#state{name=Name,
                                      bloom=Bloom}) ->
     NewBloom = etbloom:add(Key, Bloom),
-    Size = etbloom:size(Bloom),
+    Size = etbloom:size(NewBloom),
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
                  name=>Name,
                  size=>Size,

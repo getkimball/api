@@ -11,8 +11,11 @@ start_link() ->
 init([]) ->
     ?LOG_INFO(#{what=><<"Counter Supervisor starting">>}),
     Procs = [
-        #{id => features_counter,
-          start => {features_counter, start_link, []}}
+        #{id    => features_count_router,
+          start => {features_count_router, start_link, []}}
     ],
+    Flags = #{strategy => rest_for_one,
+              intensity => 0,
+              period => 1},
 
-    {ok, {{simple_one_for_one, 1, 5}, Procs}}.
+    {ok, {Flags, Procs}}.

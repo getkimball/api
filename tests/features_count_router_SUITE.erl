@@ -43,7 +43,10 @@ aa_test_new_counter(_Config) ->
 
     ?MUT:add(Feature, User),
 
-    ?assertEqual([Feature], meck:capture(first, supervisor, start_child, '_', 2)),
+    Spec = #{id => {features_counter, Feature},
+             start => {features_counter, start_link, [Feature]}},
+
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, '_', 2)),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)).
 
@@ -58,7 +61,10 @@ ab_test_existing_counter(_Config) ->
     ?MUT:register_counter(Feature, Pid),
     ?MUT:add(Feature, User),
 
-    ?assertEqual([Feature], meck:capture(first, supervisor, start_child, '_', 2)),
+    Spec = #{id => {features_counter, Feature},
+             start => {features_counter, start_link, [Feature]}},
+
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, '_', 2)),
     ?assertError(not_found, meck:capture(2, supervisor, start_child, '_', 2)),
 
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
@@ -70,13 +76,17 @@ ab_test_existing_counter(_Config) ->
 ac_test_counter_registration_race(_Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
-    meck:expect(supervisor, start_child, [features_counter_sup, '_'], {already_started, Pid}),
+    SupResp = {error, {already_started, Pid}},
+    meck:expect(supervisor, start_child, [features_counter_sup, '_'], SupResp),
 
     User = <<"user_id">>,
 
     ?MUT:add(Feature, User),
 
-    ?assertEqual([Feature], meck:capture(first, supervisor, start_child, '_', 2)),
+    Spec = #{id => {features_counter, Feature},
+             start => {features_counter, start_link, [Feature]}},
+
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, '_', 2)),
 
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)).
@@ -93,4 +103,4 @@ ba_test_counter_counts(_Config) ->
 
     Counts = ?MUT:counts(),
 
-    ?assertEqual(#{Feature => Count}, Counts).
+    ?assertEqual([#{name => Feature, count => Count}], Counts).
