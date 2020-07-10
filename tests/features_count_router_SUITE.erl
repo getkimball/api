@@ -24,6 +24,7 @@ init_per_testcase(_, Config) ->
     meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
 
     meck:new(supervisor, [unstick]),
+    meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, self()}),
     {ok, Pid} = ?MUT:start_link(),
     [{pid, Pid}|Config].
 
@@ -46,7 +47,7 @@ aa_test_new_counter(_Config) ->
     Spec = #{id => {features_counter, Feature},
              start => {features_counter, start_link, [Feature]}},
 
-    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, '_', 2)),
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)).
 
@@ -64,8 +65,8 @@ ab_test_existing_counter(_Config) ->
     Spec = #{id => {features_counter, Feature},
              start => {features_counter, start_link, [Feature]}},
 
-    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, '_', 2)),
-    ?assertError(not_found, meck:capture(2, supervisor, start_child, '_', 2)),
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
+    ?assertError(not_found, meck:capture(2, supervisor, start_child, ['_', Spec], 2)),
 
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
@@ -86,7 +87,7 @@ ac_test_counter_registration_race(_Config) ->
     Spec = #{id => {features_counter, Feature},
              start => {features_counter, start_link, [Feature]}},
 
-    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, '_', 2)),
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
 
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)).

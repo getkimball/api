@@ -32,6 +32,7 @@
                                pid}).
 
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
+-define(GLOBAL_COUNTER, global_counter).
 %%%===================================================================
 %%% API functions
 %%%===================================================================
@@ -47,40 +48,24 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 add(CounterName, Key) ->
-    CounterRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
-    Tab = ets:tab2list(?COUNTER_REGISTRY),
-    ?LOG_DEBUG(#{what=>"Router add 1",
-                 name=>CounterName,
-                 registration=>CounterRegistration,
-                 tab => Tab,
-                 key=>Key}),
-    Pid = case CounterRegistration of
-        [] -> ?LOG_DEBUG(#{what=>"Router add 1.1",
-                 name=>CounterName,
-                 registration=>CounterRegistration,
-                 key=>Key}),
-              P = ensure_child_started(CounterName),
-              ?LOG_DEBUG(#{what=>"Router add 1.2",
-                 name=>CounterName,
-                 registration=>CounterRegistration,
-                 key=>Key}),
-              P;
-        [CounterRegistrationItem] ->
-            CounterRegistrationItem#counter_registration.pid
-    end,
+    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
+    ensure_started_and_add(CounterName, FeatureRegistration, Key),
+    GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
+    ensure_started_and_add(?GLOBAL_COUNTER, GlobalRegistration, Key),
     ?LOG_DEBUG(#{what=>"Router add 2",
                  name=>CounterName,
-                 registration=>CounterRegistration,
-                 pid=>Pid,
-                 key=>Key}),
-    ok = features_counter:add(Key, Pid),
-    ?LOG_DEBUG(#{what=>"Router add 3",
-                 name=>CounterName,
-                 registration=>CounterRegistration,
-                 pid=>Pid,
+                 feature_registration=>FeatureRegistration,
+                 glocal_registration=>GlobalRegistration,
                  key=>Key}),
 
     ok.
+
+ensure_started_and_add(Name, [], Key) ->
+    Pid = ensure_child_started(Name),
+    ok = features_counter:add(Key, Pid);
+ensure_started_and_add(_Name, [Registration], Key) ->
+    Pid = Registration#counter_registration.pid,
+    ok = features_counter:add(Key, Pid).
 
 register_counter(CounterName, Pid) ->
     CR = #counter_registration{name=CounterName, pid=Pid},
@@ -115,12 +100,14 @@ counts() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
+    ?LOG_INFO(#{what=><<"features_count_router starting">>}),
     ?COUNTER_REGISTRY = ets:new(?COUNTER_REGISTRY,
                                 [set,
                                  named_table,
                                  public,
                                  {read_concurrency, true},
                                  {keypos, #counter_registration.name}]),
+    self() ! start_global_counter,
     {ok, #state{}}.
 
 %%--------------------------------------------------------------------
@@ -164,7 +151,8 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+handle_info(start_global_counter, State) ->
+    ensure_child_started(?GLOBAL_COUNTER),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -196,12 +184,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 ensure_child_started(FeatureName) ->
-    ?LOG_DEBUG(#{what=>"Starting child",
+    ?LOG_DEBUG(#{what=>"Ensuring child started",
                  feature => FeatureName}),
     Spec = #{id => {features_counter, FeatureName},
              start => {features_counter, start_link, [FeatureName]}},
     StartInfo =  supervisor:start_child(features_counter_sup, Spec),
-    ?LOG_DEBUG(#{what=>"Starting info",
+    ?LOG_DEBUG(#{what=>"Ensure Starting info",
                  feature => FeatureName,
                  info => StartInfo}),
     Pid = pid_from_child_start(StartInfo),

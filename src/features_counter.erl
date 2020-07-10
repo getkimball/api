@@ -67,11 +67,16 @@ start_link(Name) ->
 init(Name) ->
     ?LOG_DEBUG(#{what=><<"features_counter starting">>,
                  name=>Name}),
-    features_count_router:register_counter(Name, self()),
+    register_name(Name),
     InitialSize = 1000000,
     Bloom = etbloom:sbf(InitialSize),
     {ok, #state{name=Name,
                 bloom=Bloom}}.
+
+register_name([]) ->
+    ok;
+register_name(Name) ->
+    features_count_router:register_counter(Name, self()).
 
 %%--------------------------------------------------------------------
 %% @private
