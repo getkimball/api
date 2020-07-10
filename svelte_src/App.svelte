@@ -8,6 +8,7 @@
              Row } from "sveltestrap";
 
     import FeatureSpec from './FeatureSpec.svelte';
+    import AnalyticsCounts from './AnalyticsCounts.svelte';
 
     let featureSpecs = [];
     onMount(async () => {
@@ -65,13 +66,15 @@
     </Row>
 
     <Row>
-        <Col></Col>
         <Col xs=8>
     {#each featureSpecs as featureSpec }
         <FeatureSpec spec={featureSpec} />
     {/each}
         </Col>
-        <Col></Col>
+
+        <Col xs=4>
+            <AnalyticsCounts />
+        </Col>
     </Row>
 
 </Container>
