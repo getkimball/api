@@ -28,11 +28,13 @@ start(_Type, _Args) ->
 
     Dispatch = trails:single_host_compile(AllRoutes),
 
-    {ok, _} = cowboy:start_clear(http, [{port, 8080}], #{
+    HTTPOpts = #{
       env => #{dispatch => Dispatch},
       metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
       stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
-    }),
+    },
+
+    {ok, _} = cowboy:start_clear(http, [{port, 8080}], HTTPOpts),
     features_sup:start_link(Mode).
 
 stop(_State) ->

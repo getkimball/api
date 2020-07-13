@@ -95,7 +95,7 @@ create_feature_boolean_test() ->
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
 
     ?assertEqual(204, PostCode),
-    ?assertEqual(<<"{}">>, PostBody),
+    ?assertEqual(<<"">>, PostBody),
 
     unload().
 
@@ -176,7 +176,7 @@ create_feature_rollout_test() ->
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    http_post(PostReq, 204, #{}),
+    ok = http_post(PostReq, 204),
     ?assertEqual({rollout, Now, Later},
                  meck:capture(first, features_store, set_feature, '_', 3)),
 
@@ -267,7 +267,7 @@ create_feature_user_multiple_conditions_test() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    http_post(PostReq, 204, #{}),
+    ok = http_post(PostReq, 204),
     ?assertEqual({user, [[UserProp, '=', Value1],
                          [UserProp, '=', Value2]]},
                  meck:capture(first, features_store, set_feature, '_', 4)),
@@ -290,7 +290,7 @@ create_feature_user_string_test() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    http_post(PostReq, 204, #{}),
+    ok = http_post(PostReq, 204),
     ?assertEqual({user, [[UserProp, '=', Value]]},
                  meck:capture(first, features_store, set_feature, '_', 4)),
 
@@ -340,7 +340,7 @@ create_feature_user_integer_test() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    http_post(PostReq, 204, #{}),
+    ok = http_post(PostReq, 204),
     ?assertEqual({user, [[UserProp, '=', Value]]},
                  meck:capture(first, features_store, set_feature, '_', 4)),
 
@@ -363,10 +363,10 @@ create_feature_user_missing_required_property_test() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-     #{<<"error">> := #{<<"what">>:= _What,
-                        <<"object">>:= _Obj,
-                        <<"why">>:= Whys}} =
-        http_post(PostReq, 400),
+    #{<<"error">> := #{<<"what">>:= _What,
+                       <<"object">>:= _Obj,
+                       <<"why">>:= Whys}} = http_post(PostReq, 400),
+
     ExpectedError = [<<"invalid_enum">>, Comparator, [<<"=">>]],
     ?assert(lists:member(ExpectedError, Whys)),
     unload().
@@ -410,7 +410,7 @@ create_feature_user_membership_integer_test() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    http_post(PostReq, 204, #{}),
+    ok = http_post(PostReq, 204),
     ?assertEqual({user, [[UserProp, 'in', Value]]},
                  meck:capture(first, features_store, set_feature, '_', 4)),
 
@@ -432,7 +432,7 @@ create_feature_user_membership_string_test() ->
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
-    http_post(PostReq, 204, #{}),
+    ok = http_post(PostReq, 204),
     ?assertEqual({user, [[UserProp, 'in', Value]]},
                  meck:capture(first, features_store, set_feature, '_', 4)),
 
@@ -442,6 +442,8 @@ create_feature_user_membership_string_test() ->
 %   Test helpers
 %%%%
 
+http_post(Req, 204) ->
+    http_post(Req, 204, no_body);
 http_post(Req, ExpectedCode) ->
     CowPostResp = cowboy_test_helpers:init(?MUT, Req, []),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
@@ -453,7 +455,10 @@ http_post(Req, ExpectedCode) ->
 http_post(Req, ExpectedCode, ExpectedBody) ->
     CowPostResp = cowboy_test_helpers:init(?MUT, Req, []),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
-    Data = jsx:decode(PostBody, [return_maps]),
+    Data = case PostBody of
+        <<"">> -> no_body;
+        Content -> jsx:decode(Content, [return_maps])
+    end,
 
     ?assertEqual({ExpectedCode, ExpectedBody}, {PostCode, Data}),
     ok.
