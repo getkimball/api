@@ -3,7 +3,8 @@
 -export([trails/0]).
 -export([init/2]).
 
--export([handle_req/4]).
+-export([handle_req/4,
+         post_req/2]).
 
 
 trails() ->
@@ -83,17 +84,31 @@ error_schema() ->
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 
-handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, Opts) ->
+handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, _Opts) ->
     UserObj = decode_json_param(user_obj, Params),
-    _ContextObj = decode_json_param(context_obj, Params),
+    ContextObj = decode_json_param(context_obj, Params),
     Features = features_store:get_features(),
     CollapsedFeatures = features:collapse_features_to_map(Features, UserObj),
-    ?LOG_DEBUG(#{what=> "collapse map",
+    ?LOG_DEBUG(#{what=> "get features",
+                 context => ContextObj,
+                 user => UserObj,
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
-    {Req, 200, Data, Opts};
-handle_req(Req, _Params, _Body, Opts) ->
-    {Req, 404, #{}, Opts}.
+    {Req, 200, Data, #{user=>UserObj, context=>ContextObj}};
+handle_req(Req, _Params, _Body, _Opts) ->
+    {Req, 404, #{}, #{}}.
+
+post_req(_Response, _State=#{user:=User, context:=Context}) ->
+    store_feature(User, Context),
+    ok;
+post_req(_Response, _State) ->
+    ok.
+
+store_feature(#{<<"user_id">> := UserId}, #{<<"feature">> := Feature}) ->
+    features_count_router:add(Feature, UserId);
+store_feature(_User, _Context) ->
+    ok.
+
 
 decode_json_param(Name, Params) ->
     ObjString = proplists:get_value(Name, Params),

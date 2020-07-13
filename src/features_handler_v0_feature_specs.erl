@@ -3,7 +3,8 @@
 -export([trails/0]).
 -export([init/2]).
 
--export([handle_req/4]).
+-export([handle_req/4,
+         post_req/2]).
 
 trails() ->
     Metadata =    #{
@@ -194,6 +195,10 @@ handle_req(Req=#{method := <<"POST">>}, _Params, Body, Opts) ->
     {Req, Code, #{}, Opts};
 handle_req(Req, _Params, _Body, Opts) ->
     {Req, 404, #{}, Opts}.
+
+
+post_req(_Response, _State) ->
+    ok.
 
 process_user_spec_input(undefined) ->
     [];

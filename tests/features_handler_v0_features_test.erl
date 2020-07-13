@@ -9,11 +9,19 @@ load() ->
     ok = meck:new(features_store),
     ok = meck:expect(features_store, get_features, fun() -> [] end),
     ok = meck:expect(features_store, set_feature, fun(_, _, _, _) -> ok end),
+
+    ok = meck:new(features_count_router),
+    ok = meck:expect(features_count_router, add, ['_', '_'], ok),
+
     ok.
 
 unload() ->
     ?assert(meck:validate(features_store)),
     ok = meck:unload(features_store),
+
+    ?assert(meck:validate(features_count_router)),
+    ok = meck:unload(features_count_router),
+
     ok = cowboy_test_helpers:cleanup(),
     ok.
 
@@ -236,4 +244,28 @@ get_user_features_invalid_context_base64_test() ->
                                   <<"object">> => ContextQuery}},
     ?CTH:http_get(?MUT, Req, 400, Expected),
 
+    unload().
+
+%%%%
+%   Record context tests
+%%%%
+
+get_features_with_context_and_user_test() ->
+    load(),
+    UserIDProp = <<"user_id">>,
+    UserID = 42,
+    FeatureName = <<"feature_name">>,
+    UserObj = #{UserIDProp => UserID},
+    UserQuery = base64:encode(jsx:encode(UserObj)),
+
+    ContextQuery = base64:encode(jsx:encode(#{feature => FeatureName})),
+
+    Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery},
+                                        {<<"user_obj">>, UserQuery}]),
+
+    Expected = #{<<"features">>=>#{}},
+    ?CTH:http_get(?MUT, Req, 200, Expected),
+
+    ?assertEqual(FeatureName, meck:capture(first, features_count_router, add, '_', 1)),
+    ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)),
     unload().
