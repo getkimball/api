@@ -1,4 +1,7 @@
 -name features@127.0.0.1
 -setcookie features
+-start_epmd false
+-epmd_module kube_epmd
+-proto_dist kube_tcp
 -heart
 +S 2

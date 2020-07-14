@@ -4,5 +4,6 @@
   {logger, [
     %% Console logger
     {handler, default, logger_std_h, #{}}
-  ]}
+  ],
+  {start_distribution, false}
 ]}].
