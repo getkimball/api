@@ -125,6 +125,10 @@ ba_external_store_init(_Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     meck:wait(?STORE_LIB, get_all, '_', 1000),
+
+    % There isn't a synchronization point as getting features reads from ets,
+    % some sync point should be added instead of sleeping
+    timer:sleep(100),
     Resp = features_store:get_features(),
 
     Expected = [test_utils:defaulted_feature_spec(NameA, #{boolean => BooleanA}),
