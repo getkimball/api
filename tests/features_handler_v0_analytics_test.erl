@@ -8,6 +8,7 @@ load() ->
     ok = ?CTH:setup(),
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
+    ok = meck:expect(features_count_router, add, ['_', '_'], ok),
 
     ok.
 
@@ -28,7 +29,6 @@ setup_test() ->
 %   Get analytics from router
 %%%%
 
-
 get_boolean_features_test() ->
     load(),
     Feature = <<"feature">>,
@@ -37,7 +37,31 @@ get_boolean_features_test() ->
 
     ExpectedData = #{<<"counts">>=>#{Feature=>Count}},
 
-    Req = cowboy_test_helpers:req(),
+    Req = ?CTH:req(),
     ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+
+    unload().
+
+%%%%
+%   Save analytic event
+%%%%
+
+save_analytic_event_test() ->
+    load(),
+    FeatureName = <<"feature_name">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        feature_name => FeatureName,
+        user_id => UserID
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, PostReq, 204),
+
+    % features_count_router:add(Feature, UserId);
+
+    ?assertEqual(FeatureName, meck:capture(first, features_count_router, add, '_', 1)),
+    ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)),
 
     unload().
