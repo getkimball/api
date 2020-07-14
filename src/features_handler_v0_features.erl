@@ -54,7 +54,8 @@ trails() ->
             }
         }
     },
-    [trails:trail("/v0/features", ?MODULE, [], Metadata)].
+    Mode = application:get_env(features, mode),
+    [trails:trail("/v0/features", ?MODULE, #{mode=>Mode}, Metadata)].
 
 features_return_schema() ->
     #{
@@ -81,10 +82,10 @@ error_schema() ->
         }
     }.
 
-init(Req, Opts) ->
-    {swagger_specified_handler, Req, Opts}.
+init(Req, InitialState) ->
+    {swagger_specified_handler, Req, InitialState}.
 
-handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, _Opts) ->
+handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, State) ->
     UserObj = decode_json_param(user_obj, Params),
     ContextObj = decode_json_param(context_obj, Params),
     Features = features_store:get_features(),
@@ -94,11 +95,11 @@ handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, _Opts) ->
                  user => UserObj,
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
-    {Req, 200, Data, #{user=>UserObj, context=>ContextObj}};
+    {Req, 200, Data, State#{user=>UserObj, context=>ContextObj}};
 handle_req(Req, _Params, _Body, _Opts) ->
     {Req, 404, #{}, #{}}.
 
-post_req(_Response, _State=#{user:=User, context:=Context}) ->
+post_req(_Response, _State=#{mode:=api_server, user:=User, context:=Context}) ->
     store_feature(User, Context),
     ok;
 post_req(_Response, _State) ->

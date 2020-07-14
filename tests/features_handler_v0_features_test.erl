@@ -38,7 +38,7 @@ ok_test() ->
     ExpectedCode = 200,
     ExpectedData = #{<<"features">> => #{}},
 
-    ?CTH:http_get(?MUT, Req, ExpectedCode, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, ExpectedCode, ExpectedData),
 
     unload().
 
@@ -56,7 +56,7 @@ get_boolean_features_test() ->
     ExpectedData = #{<<"features">>=>#{FeatureName=>false}},
 
     Req = cowboy_test_helpers:req(),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 200, ExpectedData),
 
     unload().
 
@@ -75,7 +75,7 @@ get_feature_boolean_test() ->
     }},
 
     GetReq = cowboy_test_helpers:req(),
-    ?CTH:http_get(?MUT, GetReq, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, GetReq, 200, ExpectedData),
 
     unload().
 
@@ -100,7 +100,7 @@ get_feature_rollout_test() ->
         <<"features">> => #{
             Name => false
     }},
-    ?CTH:http_get(?MUT, GetReq, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, GetReq, 200, ExpectedData),
 
     unload().
 
@@ -128,7 +128,7 @@ get_user_features_string_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 200, ExpectedData),
     unload().
 
 get_user_features_integer_test() ->
@@ -150,7 +150,7 @@ get_user_features_integer_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 200, ExpectedData),
     unload().
 
 get_user_features_membership_integer_test() ->
@@ -172,7 +172,7 @@ get_user_features_membership_integer_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 200, ExpectedData),
     unload().
 
 get_user_features_membership_string_test() ->
@@ -194,7 +194,7 @@ get_user_features_membership_string_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 200, ExpectedData),
     unload().
 
 get_user_features_invalid_user_json_test() ->
@@ -206,7 +206,7 @@ get_user_features_invalid_user_json_test() ->
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => <<"user_obj">>}},
-    ?CTH:http_get(?MUT, Req, 400, Expected),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 400, Expected),
     unload().
 
 get_user_features_invalid_user_base64_test() ->
@@ -218,7 +218,7 @@ get_user_features_invalid_user_base64_test() ->
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => UserQuery}},
-    ?CTH:http_get(?MUT, Req, 400, Expected),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 400, Expected),
     unload().
 
 get_user_features_invalid_context_json_test() ->
@@ -230,7 +230,7 @@ get_user_features_invalid_context_json_test() ->
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => <<"context_obj">>}},
-    ?CTH:http_get(?MUT, Req, 400, Expected),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 400, Expected),
     unload().
 
 get_user_features_invalid_context_base64_test() ->
@@ -242,7 +242,7 @@ get_user_features_invalid_context_base64_test() ->
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => ContextQuery}},
-    ?CTH:http_get(?MUT, Req, 400, Expected),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 400, Expected),
 
     unload().
 
@@ -264,7 +264,7 @@ get_features_with_context_and_user_test() ->
                                         {<<"user_obj">>, UserQuery}]),
 
     Expected = #{<<"features">>=>#{}},
-    ?CTH:http_get(?MUT, Req, 200, Expected),
+    ?CTH:http_get(?MUT, #{mode=>api_server}, Req, 200, Expected),
 
     ?assertEqual(FeatureName, meck:capture(first, features_count_router, add, '_', 1)),
     ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)),

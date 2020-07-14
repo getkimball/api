@@ -1,6 +1,7 @@
 -module(cowboy_test_helpers).
 -include_lib("eunit/include/eunit.hrl").
 -export([http_get/4,
+         http_get/5,
          http_post/3,
          http_post/4,
          read_reply/1,
@@ -63,7 +64,9 @@ req(Method, Opts) when is_binary(Method) and erlang:is_map(Opts) ->
     MergedReq.
 
 http_get(Mod, Req, ExpectedCode, ExpectedData) ->
-    CowGetResp = cowboy_test_helpers:init(Mod, Req, []),
+    http_get(Mod, #{}, Req, ExpectedCode, ExpectedData).
+http_get(Mod, State, Req, ExpectedCode, ExpectedData) ->
+    CowGetResp = cowboy_test_helpers:init(Mod, Req, State),
     {response, GetCode, GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
 
     Data = jsx:decode(GetBody, [return_maps]),

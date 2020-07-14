@@ -56,12 +56,13 @@ setup_trails() ->
     trails:store(Trails),
     Trails.
 
-set_config(_Mode) ->
+set_config(Mode) ->
     setup_sentry(),
     setup_namespace(),
     setup_additional_namespace_config(),
     setup_file_store_path(),
     ok = application:set_env(trails, api_root, "/"),
+    ok = application:set_env(features, mode, Mode),
     ok = application:set_env(cowboy_swagger, global_spec,
         #{
           openapi => "3.0.0",
