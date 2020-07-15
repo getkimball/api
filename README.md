@@ -35,6 +35,7 @@ make live-js
 ### Environment variables
 
 * `ADDITIONAL_NAMESPACES` - A comma separated list of namespaces to sync feature config to. This should include any namespaces where you intend to run sidecars
+* `API_PORT` - (default `8080`) Port where the HTTP API will be available.
 * `FEATURES_MODE` - Which mode to start the application in
     * `api` (default) - Fully feature API server, storing state in configmaps
     * `sidecar` - Read only API meant to be deployed as a sidecar. Features features from `/features/data` volume in Kubernetes.

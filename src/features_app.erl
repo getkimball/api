@@ -34,7 +34,9 @@ start(_Type, _Args) ->
       stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
     },
 
-    {ok, _} = cowboy:start_clear(http, [{port, 8080}], HTTPOpts),
+    Port = list_to_integer(os:getenv("API_PORT", "8080")),
+
+    {ok, _} = cowboy:start_clear(http, [{port, Port}], HTTPOpts),
     features_sup:start_link(Mode).
 
 stop(_State) ->
