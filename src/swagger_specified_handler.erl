@@ -84,9 +84,17 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                                  why=>tuples_to_lists(Whys)}},
                     [])
     end,
-    {ok, Resp, NewHandlerState} = Response,
+    {ok, RespReq, NewHandlerState} = Response,
 
-    Handler:post_req(Resp, NewHandlerState),
+
+    try Handler:post_req(RespReq, NewHandlerState) of
+        _ -> ok
+    catch ErrorType:Any:Stacktrace ->
+        ?LOG_ERROR(#{what => post_req_error,
+                     type => ErrorType,
+                     stack => Stacktrace,
+                     error => Any})
+    end,
 
     Response.
 
@@ -103,14 +111,14 @@ handle_req(Req, Spec, Handler, HandlerState) ->
 
 respond(Req, Code=204, _Value, Opts) ->
     % 204 can't have a body, do this to avoid trying to jsx encode
-    Resp = cowboy_req:reply(Code, #{}, <<"">>, Req),
-    {ok, Resp, Opts};
+    Req1 = cowboy_req:reply(Code, #{}, <<"">>, Req),
+    {ok, Req1, Opts};
 respond(Req, Code, Value, Opts) ->
     Data = jsx:encode(Value),
-    Resp = cowboy_req:reply(Code, #{
+    Req1 = cowboy_req:reply(Code, #{
         <<"content-type">> => <<"application/json">>
     }, Data, Req),
-    {ok, Resp, Opts}.
+    {ok, Req1, Opts}.
 
 %%%%
 %   Internal

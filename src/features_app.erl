@@ -34,7 +34,9 @@ start(_Type, _Args) ->
       stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
     },
 
-    {ok, _} = cowboy:start_clear(http, [{port, 8080}], HTTPOpts),
+    Port = list_to_integer(os:getenv("API_PORT", "8080")),
+
+    {ok, _} = cowboy:start_clear(http, [{port, Port}], HTTPOpts),
     features_sup:start_link(Mode).
 
 stop(_State) ->
@@ -56,12 +58,16 @@ setup_trails() ->
     trails:store(Trails),
     Trails.
 
-set_config(_Mode) ->
+set_config(Mode) ->
     setup_sentry(),
     setup_namespace(),
     setup_additional_namespace_config(),
     setup_file_store_path(),
+    setup_analytics_url(),
+    setup_analytics_event_mod(Mode),
+
     ok = application:set_env(trails, api_root, "/"),
+    ok = application:set_env(features, mode, Mode),
     ok = application:set_env(cowboy_swagger, global_spec,
         #{
           openapi => "3.0.0",
@@ -76,6 +82,22 @@ setup_namespace() ->
     NamespaceString = os:getenv("NAMESPACE", "getkimball"),
     NamespaceBin = binary:list_to_bin(NamespaceString),
     application:set_env(features, namespace, NamespaceBin).
+
+setup_analytics_url() ->
+    EnvVarValue = os:getenv("ANALYTICS_HOST", "undefined"),
+    URL = case EnvVarValue of
+        "undefined" -> undefined;
+        Host -> "http://" ++ Host ++ "/v0/analytics"
+    end,
+
+    persistent_term:put({features, analytics_url}, URL),
+    ok.
+setup_analytics_event_mod(api_server) ->
+    Mod = features_count_router,
+    application:set_env(features, analytics_event_mod, Mod);
+setup_analytics_event_mod(sidecar) ->
+    Mod = features_count_relay,
+    application:set_env(features, analytics_event_mod, Mod).
 
 setup_additional_namespace_config() ->
     NamespacesString = os:getenv("ADDITIONAL_NAMESPACES", ""),

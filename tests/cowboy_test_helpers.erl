@@ -1,6 +1,10 @@
 -module(cowboy_test_helpers).
 -include_lib("eunit/include/eunit.hrl").
 -export([http_get/4,
+         http_get/5,
+         http_post/3,
+         http_post/4,
+         http_post/5,
          read_reply/1,
          req/0,
          req/2,
@@ -61,7 +65,9 @@ req(Method, Opts) when is_binary(Method) and erlang:is_map(Opts) ->
     MergedReq.
 
 http_get(Mod, Req, ExpectedCode, ExpectedData) ->
-    CowGetResp = cowboy_test_helpers:init(Mod, Req, []),
+    http_get(Mod, #{}, Req, ExpectedCode, ExpectedData).
+http_get(Mod, State, Req, ExpectedCode, ExpectedData) ->
+    CowGetResp = cowboy_test_helpers:init(Mod, Req, State),
     {response, GetCode, GetHeaders, GetBody} = cowboy_test_helpers:read_reply(CowGetResp),
 
     Data = jsx:decode(GetBody, [return_maps]),
@@ -69,6 +75,23 @@ http_get(Mod, Req, ExpectedCode, ExpectedData) ->
 
     GetSpec = swagger_specified_handler:response_spec(Mod, <<"get">>, ExpectedCode),
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
+    ok.
+
+http_post(Mod, Req, 204) ->
+    http_post(Mod, Req, 204, no_body).
+
+http_post(Mod, Req, ExpectedCode, ExpectedBody) ->
+    http_post(Mod, [], Req, ExpectedCode, ExpectedBody).
+
+http_post(Mod, State, Req, ExpectedCode, ExpectedBody) ->
+    CowPostResp = cowboy_test_helpers:init(Mod, Req, State),
+    {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
+    Data = case PostBody of
+        <<"">> -> no_body;
+        Content -> jsx:decode(Content, [return_maps])
+    end,
+
+    ?assertEqual({ExpectedCode, ExpectedBody}, {PostCode, Data}),
     ok.
 
 read_reply({ok, #{streamid:=StreamId}, _Opts}) ->

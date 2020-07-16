@@ -6,6 +6,7 @@
 -export([handle_req/4,
          post_req/2]).
 
+-callback add(binary(), binary()) -> ok.
 
 trails() ->
     Metadata =    #{
@@ -30,9 +31,30 @@ trails() ->
                     }}
                 }
             }
+        },
+        <<"post">> => #{
+            operationId => addAnalyticEvent,
+            tags => ["Analytics"],
+            description => "Add an analytic event with user and feature",
+            requestBody => #{
+                content => #{
+                    'application/json' => #{
+                        schema => analytic_event_input_schema()
+                    }
+                }
+            },
+            responses => #{
+                204 => #{
+                    description => <<"Analytic event added">>,
+                    content => #{
+                        'application/json' => #{}
+                }}
+            }
         }
     },
-    [trails:trail("/v0/analytics", ?MODULE, [], Metadata)].
+    {ok, Mod} = application:get_env(features, analytics_event_mod),
+    State = #{analytics_event_mod => Mod},
+    [trails:trail("/v0/analytics", ?MODULE, State, Metadata)].
 
 analytics_return_schema() ->
     #{
@@ -44,6 +66,21 @@ analytics_return_schema() ->
               additionalProperties => true,
               properties => #{},
               description => <<"Collection of feature usage counts">>
+           }
+        }
+    }.
+
+analytic_event_input_schema() ->
+    #{
+        required => [feature_name, user_id],
+        properties => #{
+           feature_name => #{
+               type => string,
+               description => <<"Name of feature">>
+           },
+           user_id => #{
+               type => string,
+               description => <<"ID of the user">>
            }
         }
     }.
@@ -68,7 +105,26 @@ handle_req(Req=#{method := <<"GET">>}, _Params, _Body=undefined, _Opts) ->
     ?LOG_DEBUG(#{what=> "Analytic counts",
                  counts => Counts}),
     {Req, 200, Data, #{}};
-handle_req(Req, _Params, _Body, _Opts) ->
+handle_req(Req=#{method := <<"POST">>},
+           _Params,
+           _Body=#{feature_name:= FeatureName,
+                   user_id:= UserID},
+           State=#{analytics_event_mod:=AnalyticsEventMod}) ->
+
+    ?LOG_DEBUG(#{what=> "Analytic event",
+                 user_id => UserID,
+                 mode => AnalyticsEventMod,
+                 feature_name => FeatureName}),
+    AnalyticsEventMod:add(FeatureName, UserID),
+
+    {Req, 204, <<"">>, State};
+handle_req(Req, Params, Body, State) ->
+    ?LOG_DEBUG(#{what => "Analytics request 404",
+                 req => Req,
+                 params => Params,
+                 body => Body,
+                 state => State}),
+
     {Req, 404, #{}, #{}}.
 
 post_req(_Response, _State) ->
