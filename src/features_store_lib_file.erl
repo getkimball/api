@@ -16,11 +16,16 @@ init() ->
     #state{path=Path}.
 
 get_all(State=#state{path=Path}) ->
-    {ok, DataBin} = file:read_file(Path),
-    % TODO: Add pretty error handling for UX of reading file
+    ReadFile = file:read_file(Path),
+    DataBin = handle_file(ReadFile, Path),
     Data = jsx:decode(DataBin, [return_maps]),
 
     {Data, State}.
+
+handle_file({ok, DataBin}, _Path) ->
+    DataBin;
+handle_file({error, enoent}, Path) ->
+    throw({enoent, Path}).
 
 store(_Data, State=#state{}) ->
     {not_suported, State}.

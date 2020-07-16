@@ -8,7 +8,6 @@
 
 -callback add(binary(), binary()) -> ok.
 
-
 trails() ->
     Metadata =    #{
         <<"get">> => #{

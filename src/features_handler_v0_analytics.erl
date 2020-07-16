@@ -6,6 +6,7 @@
 -export([handle_req/4,
          post_req/2]).
 
+-callback add(binary(), binary()) -> ok.
 
 trails() ->
     Metadata =    #{
