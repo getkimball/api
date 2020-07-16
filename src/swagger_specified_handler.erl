@@ -84,9 +84,17 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                                  why=>tuples_to_lists(Whys)}},
                     [])
     end,
-    {ok, Resp, NewHandlerState} = Response,
+    {ok, RespReq, NewHandlerState} = Response,
 
-    Handler:post_req(Resp, NewHandlerState),
+
+    try Handler:post_req(RespReq, NewHandlerState) of
+        _ -> ok
+    catch ErrorType:Any:Stacktrace ->
+        ?LOG_ERROR(#{what => post_req_error,
+                     type => ErrorType,
+                     stack => Stacktrace,
+                     error => Any})
+    end,
 
     Response.
 
