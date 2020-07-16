@@ -1,6 +1,5 @@
 %%%-------------------------------------------------------------------
-%%% @author $AUTHOR
-%%% @copyright 2020 $OWNER
+%%% @copyright 2020 Get Kimball Inc.
 %%% @doc
 %%%
 %%% @end
@@ -11,17 +10,6 @@
 
 -export([add/2]).
 
-%%%===================================================================
-%%% API functions
-%%%===================================================================
-
-%%--------------------------------------------------------------------
-%% @doc
-%% Starts the server
-%%
-%% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
-%% @end
-%%--------------------------------------------------------------------
 add(FeatureName, Key) when is_binary(FeatureName), is_integer(Key) ->
     KeyB = list_to_binary(integer_to_list(Key)),
     add(FeatureName, KeyB);
