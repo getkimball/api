@@ -111,14 +111,14 @@ handle_req(Req, Spec, Handler, HandlerState) ->
 
 respond(Req, Code=204, _Value, Opts) ->
     % 204 can't have a body, do this to avoid trying to jsx encode
-    Resp = cowboy_req:reply(Code, #{}, <<"">>, Req),
-    {ok, Resp, Opts};
+    Req1 = cowboy_req:reply(Code, #{}, <<"">>, Req),
+    {ok, Req1, Opts};
 respond(Req, Code, Value, Opts) ->
     Data = jsx:encode(Value),
-    Resp = cowboy_req:reply(Code, #{
+    Req1 = cowboy_req:reply(Code, #{
         <<"content-type">> => <<"application/json">>
     }, Data, Req),
-    {ok, Resp, Opts}.
+    {ok, Req1, Opts}.
 
 %%%%
 %   Internal
