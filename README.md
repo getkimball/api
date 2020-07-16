@@ -35,6 +35,7 @@ make live-js
 ### Environment variables
 
 * `ADDITIONAL_NAMESPACES` - A comma separated list of namespaces to sync feature config to. This should include any namespaces where you intend to run sidecars
+* `ANALYTICS_HOST` - Where to forward analytic events to if this process isn't storing them directly. This is used by the sidecar mode to know where to forward to an api-mode process.
 * `API_PORT` - (default `8080`) Port where the HTTP API will be available.
 * `FEATURES_MODE` - Which mode to start the application in
     * `api` (default) - Fully feature API server, storing state in configmaps

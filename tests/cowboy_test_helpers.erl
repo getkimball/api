@@ -4,6 +4,7 @@
          http_get/5,
          http_post/3,
          http_post/4,
+         http_post/5,
          read_reply/1,
          req/0,
          req/2,
@@ -80,7 +81,10 @@ http_post(Mod, Req, 204) ->
     http_post(Mod, Req, 204, no_body).
 
 http_post(Mod, Req, ExpectedCode, ExpectedBody) ->
-    CowPostResp = cowboy_test_helpers:init(Mod, Req, []),
+    http_post(Mod, [], Req, ExpectedCode, ExpectedBody).
+
+http_post(Mod, State, Req, ExpectedCode, ExpectedBody) ->
+    CowPostResp = cowboy_test_helpers:init(Mod, Req, State),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
     Data = case PostBody of
         <<"">> -> no_body;

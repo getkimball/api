@@ -6,6 +6,12 @@
 
 load() ->
     ok = ?CTH:setup(),
+
+    ok = meck:new(application, [unstick]),
+    ok = meck:expect(application, get_env,
+                     [features, analytics_event_mod],
+                     {ok, features_count_router}),
+
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
     ok = meck:expect(features_count_router, add, ['_', '_'], ok),
@@ -16,14 +22,18 @@ unload() ->
     ?assert(meck:validate(features_count_router)),
     ok = meck:unload(features_count_router),
 
+    ?assert(meck:validate(application)),
+    ok = meck:unload(application),
+
     ok = ?CTH:cleanup(),
     ok.
 
 setup_test() ->
+    load(),
     [Trail] = ?MUT:trails(),
     Path = trails:path_match(Trail),
     ?assertEqual("/v0/analytics", Path),
-    ok.
+    unload().
 
 %%%%
 %   Get analytics from router
@@ -57,7 +67,7 @@ save_analytic_event_test() ->
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, PostReq, 204),
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
 
     % features_count_router:add(Feature, UserId);
 

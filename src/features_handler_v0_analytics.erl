@@ -51,7 +51,9 @@ trails() ->
             }
         }
     },
-    [trails:trail("/v0/analytics", ?MODULE, [], Metadata)].
+    {ok, Mod} = application:get_env(features, analytics_event_mod),
+    State = #{analytics_event_mod => Mod},
+    [trails:trail("/v0/analytics", ?MODULE, State, Metadata)].
 
 analytics_return_schema() ->
     #{
@@ -106,15 +108,22 @@ handle_req(Req=#{method := <<"POST">>},
            _Params,
            _Body=#{feature_name:= FeatureName,
                    user_id:= UserID},
-           _Opts) ->
+           State=#{analytics_event_mod:=AnalyticsEventMod}) ->
 
     ?LOG_DEBUG(#{what=> "Analytic event",
                  user_id => UserID,
+                 mode => AnalyticsEventMod,
                  feature_name => FeatureName}),
-    features_count_router:add(FeatureName, UserID),
+    AnalyticsEventMod:add(FeatureName, UserID),
 
-    {Req, 204, <<"">>, #{}};
-handle_req(Req, _Params, _Body, _Opts) ->
+    {Req, 204, <<"">>, State};
+handle_req(Req, Params, Body, State) ->
+    ?LOG_DEBUG(#{what => "Analytics request 404",
+                 req => Req,
+                 params => Params,
+                 body => Body,
+                 state => State}),
+
     {Req, 404, #{}, #{}}.
 
 post_req(_Response, _State) ->

@@ -6,6 +6,8 @@
 -export([handle_req/4,
          post_req/2]).
 
+-callback add(binary(), binary()) -> ok.
+
 
 trails() ->
     Metadata =    #{
@@ -54,8 +56,9 @@ trails() ->
             }
         }
     },
-    Mode = application:get_env(features, mode),
-    [trails:trail("/v0/features", ?MODULE, #{mode=>Mode}, Metadata)].
+    {ok, Mod} = application:get_env(features, analytics_event_mod),
+    State = #{analytics_event_mod => Mod},
+    [trails:trail("/v0/features", ?MODULE, State, Metadata)].
 
 features_return_schema() ->
     #{
@@ -83,6 +86,11 @@ error_schema() ->
     }.
 
 init(Req, InitialState) ->
+    % Trap exits for this process. Work will be done after the request is sent
+    % and Cowboy wants to shut down the process. We don't want that though.
+    % Cowboy will eventually come around and try to kill the process afterwards
+    % aafter a timeout
+    process_flag(trap_exit, true),
     {swagger_specified_handler, Req, InitialState}.
 
 handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, State) ->
@@ -99,15 +107,33 @@ handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, State) ->
 handle_req(Req, _Params, _Body, _Opts) ->
     {Req, 404, #{}, #{}}.
 
-post_req(_Response, _State=#{mode:=api_server, user:=User, context:=Context}) ->
-    store_feature(User, Context),
+post_req(_Response, _State=#{analytics_event_mod:=AnalyticsEventMod,
+                             user:=User,
+                             context:=Context}) ->
+
+    ?LOG_DEBUG(#{
+        what => <<"post req">>,
+        mod => AnalyticsEventMod,
+        user => User,
+        ctx => Context}),
+    store_feature(AnalyticsEventMod, User, Context),
     ok;
 post_req(_Response, _State) ->
+    ?LOG_DEBUG(#{what => <<"post_req but unhandled">>,
+                 state => _State}),
     ok.
 
-store_feature(#{<<"user_id">> := UserId}, #{<<"feature">> := Feature}) ->
-    features_count_router:add(Feature, UserId);
-store_feature(_User, _Context) ->
+store_feature(Mod, #{<<"user_id">> := UserId}, #{<<"feature">> := Feature}) ->
+    ?LOG_DEBUG(#{what => <<"Storing feature">>,
+                 user => UserId,
+                 mod => Mod,
+                 feature => Feature}),
+    Mod:add(Feature, UserId);
+store_feature(Mode, User, Context) ->
+    ?LOG_DEBUG(#{what => <<"store features doesn't have enough data">>,
+                 user => User,
+                 mode => Mode,
+                 ctx => Context}),
     ok.
 
 
