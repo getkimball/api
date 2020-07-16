@@ -129,7 +129,7 @@ store_feature(Mod, #{<<"user_id">> := UserId}, #{<<"feature">> := Feature}) ->
                  feature => Feature}),
     Mod:add(Feature, UserId);
 store_feature(Mode, User, Context) ->
-    ?LOG_DEBUG(#{what => <<"store features doesn't have enough data">>,
+    ?LOG_INFO(#{what => <<"store features doesn't have enough data">>,
                  user => User,
                  mode => Mode,
                  ctx => Context}),
