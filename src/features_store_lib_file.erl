@@ -30,7 +30,3 @@ handle_file({error, enoent}, Path) ->
 
 store(_Data, State=#state{}) ->
     {not_suported, State}.
-
-%%%%
-%   Internal
-%%%%
