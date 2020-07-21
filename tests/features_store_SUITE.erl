@@ -107,7 +107,7 @@ ba_external_store_init(_Config) ->
 
     StoreLibState = make_ref(),
 
-    ok = meck:expect(?STORE_LIB, init, fun() ->
+    ok = meck:expect(?STORE_LIB, init, fun("features_store") ->
         StoreLibState
     end),
     All = [
@@ -150,9 +150,7 @@ bb_external_store_store_data(_Config) ->
 
     StoreLibState = make_ref(),
 
-    ok = meck:expect(?STORE_LIB, init, fun() ->
-        StoreLibState
-    end),
+    ok = meck:expect(?STORE_LIB, init, ["features_store"], StoreLibState),
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
         {[], Ref}
@@ -185,9 +183,7 @@ bc_external_store_not_supporting_store(_Config) ->
 
     StoreLibState = make_ref(),
 
-    ok = meck:expect(?STORE_LIB, init, fun() ->
-        StoreLibState
-    end),
+    ok = meck:expect(?STORE_LIB, init, ["features_store"], StoreLibState),
     ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
         {[], Ref}

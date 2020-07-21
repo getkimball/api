@@ -6,8 +6,9 @@
 %% Library behavior
 -type callback_state() :: any().
 -type lib_data() :: list(map()).
+-type name() :: string().
 
--callback init() -> callback_state().
+-callback init(name()) -> callback_state().
 -callback get_all(callback_state()) -> {lib_data(), callback_state()}.
 -callback store(lib_data(), callback_state()) ->
             {ok, callback_state()} |
@@ -122,7 +123,7 @@ init([StoreLib, Opts]) ->
 init_store_lib(undefined) ->
     undefined;
 init_store_lib(StoreLib) ->
-    StoreLib:init().
+    StoreLib:init("features_store").
 
 %%--------------------------------------------------------------------
 %% @private

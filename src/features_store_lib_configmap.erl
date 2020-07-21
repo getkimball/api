@@ -1,7 +1,7 @@
 -module(features_store_lib_configmap).
 -include_lib("kernel/include/logger.hrl").
 -behaviour(features_store).
--export([init/0,
+-export([init/1,
          get_all/1,
          store/2]).
 
@@ -13,7 +13,8 @@
 %   features_store api
 %%%%
 
-init() ->
+init(_Name) ->
+    % TODO: actually use this name
     {ok, Namespace} = application:get_env(features, namespace),
     ConfigmapRef = #{namespace=>Namespace,
                      name=><<"features-state-store">>},
