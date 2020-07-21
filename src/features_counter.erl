@@ -4,7 +4,6 @@
 %%%
 %%% @end
 %%%-------------------------------------------------------------------
-
 -module(features_counter).
 -include_lib("kernel/include/logger.hrl").
 

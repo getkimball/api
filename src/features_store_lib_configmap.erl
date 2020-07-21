@@ -1,6 +1,6 @@
 -module(features_store_lib_configmap).
 -include_lib("kernel/include/logger.hrl").
--behaviour(features_store).
+-behaviour(features_store_lib).
 -export([init/1,
          get_all/1,
          store/2]).
