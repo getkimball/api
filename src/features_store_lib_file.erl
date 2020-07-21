@@ -11,6 +11,9 @@
 %   features_store api
 %%%%
 
+init("features_store") ->
+    {ok, Path} = application:get_env(features, file_store_path),
+    #state{path=Path};
 init(Name) ->
     {ok, RootPath} = application:get_env(features, file_store_path),
     Path = filename:join([RootPath, Name]),

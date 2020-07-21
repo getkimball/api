@@ -7,9 +7,14 @@
 init_test() ->
     load(),
     ok = meck:expect(application, get_env, [features, file_store_path], {ok, []}),
-
     _State = ?MUT:init("test"),
+    unload(),
+    ok.
 
+init_features_test() ->
+    load(),
+    ok = meck:expect(application, get_env, [features, file_store_path], {ok, []}),
+    _State = ?MUT:init("features_store"),
     unload(),
     ok.
 
