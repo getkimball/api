@@ -187,7 +187,7 @@ ensure_child_started(FeatureName) ->
     ?LOG_DEBUG(#{what=>"Ensuring child started",
                  feature => FeatureName}),
     Spec = #{id => {features_counter, FeatureName},
-             start => {features_counter, start_link, [FeatureName]}},
+             start => {features_counter, start_link, [undefined, FeatureName]}},
     StartInfo =  supervisor:start_child(features_counter_sup, Spec),
     ?LOG_DEBUG(#{what=>"Ensure Starting info",
                  feature => FeatureName,

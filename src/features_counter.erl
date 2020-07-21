@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API functions
--export([start_link/1]).
+-export([start_link/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -25,6 +25,7 @@
          count/1]).
 
 -record(state, {name=undefined,
+                store_lib=undefined,
                 bloom=undefined}).
 
 %%%===================================================================
@@ -46,8 +47,8 @@ count(Pid) when is_pid(Pid) ->
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Name) ->
-    gen_server:start_link(?MODULE, Name, []).
+start_link(StoreLib, Name) ->
+    gen_server:start_link(?MODULE, [StoreLib, Name], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -64,13 +65,14 @@ start_link(Name) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init(Name) ->
+init([StoreLib, Name]) ->
     ?LOG_DEBUG(#{what=><<"features_counter starting">>,
                  name=>Name}),
     register_name(Name),
     InitialSize = 1000000,
     Bloom = etbloom:sbf(InitialSize),
     {ok, #state{name=Name,
+                store_lib=StoreLib,
                 bloom=Bloom}}.
 
 register_name([]) ->

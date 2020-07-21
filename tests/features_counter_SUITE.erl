@@ -7,6 +7,7 @@
 
 
 -define(MUT, features_counter).
+-define(STORE_LIB, fake_store_lib).
 
 
 all() -> [{group, test_count}].
@@ -22,12 +23,18 @@ groups() -> [{test_count, [
 init_per_testcase(_, Config) ->
     meck:new(features_count_router),
     meck:expect(features_count_router, register_counter, ['_', '_'], ok),
-    {ok, Pid} = ?MUT:start_link(<<"test">>),
+
+    ok = meck:new(?STORE_LIB, [non_strict]),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB, <<"test">>),
     [{pid, Pid}|Config].
 
 end_per_testcase(_, Config) ->
     Pid = ?config(pid, Config),
     ok = gen_server:stop(Pid),
+
+    ?assert(meck:validate(?STORE_LIB)),
+    meck:unload(?STORE_LIB),
+
     ?assert(meck:validate(features_count_router)),
     meck:unload(features_count_router).
 
