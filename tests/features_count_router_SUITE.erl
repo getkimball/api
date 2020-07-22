@@ -39,13 +39,14 @@ end_per_testcase(_, _Config) ->
 aa_test_new_counter(_Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
+    StoreMod = undefined,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
     User = <<"user_id">>,
 
     ?MUT:add(Feature, User),
 
     Spec = #{id => {features_counter, Feature},
-             start => {features_counter, start_link, [Feature]}},
+             start => {features_counter, start_link, [StoreMod, Feature]}},
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
@@ -54,6 +55,7 @@ aa_test_new_counter(_Config) ->
 ab_test_existing_counter(_Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
+    StoreMod = undefined,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
 
     User = <<"user_id">>,
@@ -63,7 +65,7 @@ ab_test_existing_counter(_Config) ->
     ?MUT:add(Feature, User),
 
     Spec = #{id => {features_counter, Feature},
-             start => {features_counter, start_link, [Feature]}},
+             start => {features_counter, start_link, [StoreMod, Feature]}},
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertError(not_found, meck:capture(2, supervisor, start_child, ['_', Spec], 2)),
@@ -78,6 +80,7 @@ ac_test_counter_registration_race(_Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
     SupResp = {error, {already_started, Pid}},
+    StoreMod = undefined,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], SupResp),
 
     User = <<"user_id">>,
@@ -85,7 +88,7 @@ ac_test_counter_registration_race(_Config) ->
     ?MUT:add(Feature, User),
 
     Spec = #{id => {features_counter, Feature},
-             start => {features_counter, start_link, [Feature]}},
+             start => {features_counter, start_link, [StoreMod, Feature]}},
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
 

@@ -2,22 +2,8 @@
 -include_lib("kernel/include/logger.hrl").
 -behaviour(gen_server).
 
-
-%% Library behavior
--type callback_state() :: any().
--type lib_data() :: list(map()).
-
--callback init() -> callback_state().
--callback get_all(callback_state()) -> {lib_data(), callback_state()}.
--callback store(lib_data(), callback_state()) ->
-            {ok, callback_state()} |
-            {not_suported, callback_state()}.
-
-%%
-
 %% API functions
--export([start_link/0,
-         start_link/1,
+-export([start_link/1,
          start_link/2]).
 
 %% gen_server callbacks
@@ -33,7 +19,6 @@
          refresh_from_store/0]).
 
 -record(state, {refresh_interval=undefined,
-                store_lib=undefined,
                 store_lib_state=undefined}).
 
 -record(rollout_spec, {start=undefined,
@@ -81,9 +66,6 @@ refresh_from_store() ->
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    start_link(undefined, []).
-
 start_link(StoreLib) ->
     start_link(StoreLib, []).
 
@@ -115,14 +97,11 @@ init([StoreLib, Opts]) ->
     StoreLibState = init_store_lib(StoreLib),
     RefreshInterval = proplists:get_value(refresh_interval, Opts, undefined),
 
-    {ok, #state{store_lib=StoreLib,
-                store_lib_state=StoreLibState,
+    {ok, #state{store_lib_state=StoreLibState,
                 refresh_interval=RefreshInterval}}.
 
-init_store_lib(undefined) ->
-    undefined;
 init_store_lib(StoreLib) ->
-    StoreLib:init().
+    features_store_lib:init(StoreLib, "features_store").
 
 %%--------------------------------------------------------------------
 %% @private
@@ -173,12 +152,10 @@ boolean_to_atom(<<"disabled">>) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(load_from_store, State=#state{store_lib=undefined}) ->
-    {noreply, State};
 handle_cast(load_from_store, State=#state{refresh_interval=RefreshInterval,
-                                          store_lib=StoreLib,
                                           store_lib_state=StoreLibState}) ->
-    {AllFeatures, NewStoreLibState} = StoreLib:get_all(StoreLibState),
+
+    {AllFeatures, NewStoreLibState} = features_store_lib:get(StoreLibState),
     store_features(AllFeatures),
 
     trigger_refresh_get(RefreshInterval),
@@ -259,14 +236,12 @@ store_features([Feature=#feature{} | T]) ->
 
     store_features(T).
 
-store_in_storelib(State=#state{store_lib=undefined}) ->
-    {ok, State};
-store_in_storelib(State=#state{store_lib=StoreLib,
-                               store_lib_state=StoreLibState}) ->
+store_in_storelib(State=#state{store_lib_state=StoreLibState}) ->
     AllFeatures = get_boolean_features_pl(),
     FeatureMaps = feature_tuples_to_maps(AllFeatures),
-    {Resp, NewStoreLibState} = StoreLib:store(FeatureMaps, StoreLibState),
-    {Resp, State#state{store_lib_state=NewStoreLibState}}.
+    {Resp, StoreLibState1} = features_store_lib:store(FeatureMaps,
+                                                      StoreLibState),
+    {Resp, State#state{store_lib_state=StoreLibState1}}.
 
 
 trigger_refresh_get(undefined) ->

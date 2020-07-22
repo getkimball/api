@@ -25,8 +25,54 @@ groups() -> [{test_ets, [
               ]}
             ].
 
-aa_write_read(_Config) ->
-    {ok, Pid} = ?MUT:start_link(),
+init_per_testcase(ba_external_store_init, Config) ->
+    StoreLibState = make_ref(),
+
+    meck:new(features_store_lib),
+    meck:expect(features_store_lib, init, ['_', "features_store"], StoreLibState),
+
+    meck:expect(features_store_lib, get, fun(Ref) ->
+        ?assertEqual(StoreLibState, Ref),
+        {[], Ref}
+    end),
+
+    meck:expect(features_store_lib, store, fun(_, Ref) ->
+        ?assertEqual(StoreLibState, Ref),
+        {ok, Ref}
+    end),
+
+    [{store_lib_state, StoreLibState}|Config];
+
+init_per_testcase(_, Config) ->
+    StoreLibState = make_ref(),
+
+    meck:new(features_store_lib),
+    meck:expect(features_store_lib, init, ['_', "features_store"], StoreLibState),
+
+    meck:expect(features_store_lib, get, fun(Ref) ->
+        ?assertEqual(StoreLibState, Ref),
+        {[], Ref}
+    end),
+
+    meck:expect(features_store_lib, store, fun(_, Ref) ->
+        ?assertEqual(StoreLibState, Ref),
+        {ok, Ref}
+    end),
+
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
+
+    [{store_lib_state, StoreLibState},
+     {pid, Pid} |Config].
+
+end_per_testcase(_, Config) ->
+    ?assert(meck:validate(features_store_lib)),
+    meck:unload(features_store_lib),
+
+    Pid = ?config(pid, Config),
+    gen_server:stop(Pid).
+
+
+aa_write_read(Config) ->
     Name = <<"feature">>,
     Boolean = true,
 
@@ -39,27 +85,29 @@ aa_write_read(_Config) ->
       #{boolean => Boolean})],
     ?assertEqual(Expected, Resp),
 
-    exit(Pid, normal),
-    ok.
+    Config.
 
-ab_invalid_feature_missing_rollout_end(_Config) ->
+ab_invalid_feature_missing_rollout_end(Config) ->
     Throw = {invalid_feature, "Rollout start must have an end"},
     Name = <<"name">>,
     Boolean = {boolean, undefined},
     Rollout = {rollout, 1, undefined},
     User = {user, []},
-    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout, User)).
+    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout, User)),
 
-ac_invalid_feature_before_after_end(_Config) ->
+    Config.
+
+ac_invalid_feature_before_after_end(Config) ->
     Throw = {invalid_feature, "Rollout start cannot be after the end"},
     Name = <<"name">>,
     Boolean = {boolean, undefined},
     Rollout = {rollout, 2, 1},
     User = {user, []},
-    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout, User)).
+    ?assertThrow(Throw, ?MUT:set_feature(Name, Boolean, Rollout, User)),
 
-ad_user_spec_write_read(_Config) ->
-    {ok, Pid} = ?MUT:start_link(),
+    Config.
+
+ad_user_spec_write_read(Config) ->
     Name = <<"feature">>,
     Boolean = true,
     UserSpec = [[<<"user_id">>, '=', 42]],
@@ -74,11 +122,9 @@ ad_user_spec_write_read(_Config) ->
         user => UserSpec})],
     ?assertEqual(Expected, Resp),
 
-    exit(Pid, normal),
-    ok.
+    Config.
 
-ae_user_spec_write_read_binary(_Config) ->
-    {ok, Pid} = ?MUT:start_link(),
+ae_user_spec_write_read_binary(Config) ->
     Name = <<"feature">>,
     Boolean = true,
     UserSpec = [[<<"user_id">>, <<"=">>, 42]],
@@ -94,29 +140,23 @@ ae_user_spec_write_read_binary(_Config) ->
         user => ExpectedUserSpec})],
     ?assertEqual(Expected, Resp),
 
-    exit(Pid, normal),
-    ok.
+    Config.
 
-ba_external_store_init(_Config) ->
-    ok = meck:new(?STORE_LIB, [non_strict]),
-
+ba_external_store_init(Config) ->
     NameA = <<"featureA">>,
     BooleanA = true,
     NameB = <<"featureB">>,
     BooleanB = false,
 
-    StoreLibState = make_ref(),
+    StoreLibState = ?config(store_lib_state, Config),
 
-    ok = meck:expect(?STORE_LIB, init, fun() ->
-        StoreLibState
-    end),
     All = [
       test_utils:defaulted_feature_spec(NameA, #{boolean=>BooleanA}),
       replace_keys_with_binary(test_utils:defaulted_feature_spec(NameB, #{boolean=>BooleanB,
                                                                           rollout_start=><<"undefined">>,
                                                                           rollout_end=>1}))
     ],
-    ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
+    ok = meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
         {All, Ref}
     end),
@@ -124,7 +164,7 @@ ba_external_store_init(_Config) ->
     %% TODO: ^ test with binary keys
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
-    meck:wait(?STORE_LIB, get_all, '_', 1000),
+    meck:wait(features_store_lib, get, '_', 1000),
 
     % There isn't a synchronization point as getting features reads from ets,
     % some sync point should be added instead of sleeping
@@ -134,35 +174,23 @@ ba_external_store_init(_Config) ->
     Expected = [test_utils:defaulted_feature_spec(NameA, #{boolean => BooleanA}),
                 test_utils:defaulted_feature_spec(NameB, #{boolean => BooleanB,
                                                            rollout_end => 1})],
+
+    ?assertEqual(?STORE_LIB, meck:capture(first, features_store_lib, init, '_', 1)),
     ?assertEqual(Expected, Resp),
 
-    exit(Pid, normal),
-    true = meck:validate(?STORE_LIB),
-    ok = meck:unload(?STORE_LIB),
-    ok.
+    [{pid, Pid}|Config].
 
-bb_external_store_store_data(_Config) ->
-    ok = meck:new(?STORE_LIB, [non_strict]),
-
+bb_external_store_store_data(Config) ->
     Name = <<"feature">>,
     Boolean = true,
     UserSpecs = [[<<"user_id">>, '=', <<"42">>]],
 
-    StoreLibState = make_ref(),
+    StoreLibState = ?config(store_lib_state, Config),
 
-    ok = meck:expect(?STORE_LIB, init, fun() ->
-        StoreLibState
-    end),
-    ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
-        ?assertEqual(StoreLibState, Ref),
-        {[], Ref}
-    end),
-    ok = meck:expect(?STORE_LIB, store, fun(_Data, Ref) ->
+    ok = meck:expect(features_store_lib, store, fun(_Data, Ref) ->
         ?assertEqual(StoreLibState, Ref),
         {ok, Ref}
     end),
-
-    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
     ok = features_store:set_feature(Name, {boolean, Boolean},
                                           {rollout, undefined, undefined},
@@ -170,46 +198,28 @@ bb_external_store_store_data(_Config) ->
 
     Expected = [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
                                                           user=>UserSpecs})],
-    ?assertEqual(Expected, meck:capture(first, ?STORE_LIB, store, '_', 1)),
+    ?assertEqual(Expected, meck:capture(first, features_store_lib, store, '_', 1)),
 
-    exit(Pid, normal),
-    true = meck:validate(?STORE_LIB),
-    ok = meck:unload(?STORE_LIB),
-    ok.
+    Config.
 
-bc_external_store_not_supporting_store(_Config) ->
-    ok = meck:new(?STORE_LIB, [non_strict]),
-
+bc_external_store_not_supporting_store(Config) ->
     Name = <<"feature">>,
     Status = <<"enabled">>,
 
     StoreLibState = make_ref(),
 
-    ok = meck:expect(?STORE_LIB, init, fun() ->
-        StoreLibState
-    end),
-    ok = meck:expect(?STORE_LIB, get_all, fun(Ref) ->
-        ?assertEqual(StoreLibState, Ref),
-        {[], Ref}
-    end),
-    ok = meck:expect(?STORE_LIB, store, ['_', '_'],
-                                        {not_suported, StoreLibState}),
+    ok = meck:expect(features_store_lib, store, ['_', '_'], {not_suported, StoreLibState}),
 
-    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
     Resp = features_store:set_feature(Name, {boolean, Status},
                                             {rollout, undefined, undefined},
                                             {user, []}),
     ?assertEqual(not_suported, Resp),
 
-    exit(Pid, normal),
-    true = meck:validate(?STORE_LIB),
-    ok = meck:unload(?STORE_LIB),
-    ok.
+    Config.
 
 
-ca_write_read_rollout(_Config) ->
-    {ok, Pid} = ?MUT:start_link(),
+ca_write_read_rollout(Config) ->
     Name = <<"feature">>,
     Start = erlang:system_time(seconds),
     End = erlang:system_time(seconds) + 100,
@@ -223,9 +233,7 @@ ca_write_read_rollout(_Config) ->
       #{rollout_start=>Start, rollout_end=>End})],
     ?assertEqual(Expected, Resp),
 
-    exit(Pid, normal),
-    ok.
-
+    Config.
 
 replace_keys_with_binary(Map) ->
     Fun = fun(K,V, AccIn) ->

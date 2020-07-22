@@ -8,11 +8,12 @@ init_test() ->
     load(),
 
     API = make_ref(),
+    Name = "test",
 
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
 
-    _State = ?MUT:init(),
+    _State = ?MUT:init(Name),
     ok = assert_kubernerlnetes_loaded(),
 
     unload(),
@@ -22,12 +23,13 @@ write_read_test() ->
     load(),
 
     API = make_ref(),
+    Name = "test",
 
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
     ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
 
-    State = ?MUT:init(),
+    State = ?MUT:init(Name),
     ok = assert_kubernerlnetes_loaded(),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
@@ -50,6 +52,7 @@ write_read_test() ->
 first_write_test() ->
     load(),
     API = make_ref(),
+    Name = "test",
 
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
@@ -57,7 +60,7 @@ first_write_test() ->
                                     {[API, "createCoreV1NamespacedConfigMap",  '_'], #{<<"code">>=>200}}
                                     ]),
 
-    State = ?MUT:init(),
+    State = ?MUT:init(Name),
     ok = assert_kubernerlnetes_loaded(),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
@@ -81,6 +84,7 @@ push_to_namespaces_test() ->
     load(),
 
     API = make_ref(),
+    Name = "test",
     Namespace = <<"test_namespace">>,
 
     ok = meck:expect(application, get_env, [{[features, namespaces], {ok, [Namespace]}},
@@ -89,7 +93,7 @@ push_to_namespaces_test() ->
     ok = meck:expect(swaggerl, operations, ['_'], []),
     ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
 
-    State = ?MUT:init(),
+    State = ?MUT:init(Name),
 
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],

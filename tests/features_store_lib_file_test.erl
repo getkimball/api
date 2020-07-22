@@ -7,28 +7,35 @@
 init_test() ->
     load(),
     ok = meck:expect(application, get_env, [features, file_store_path], {ok, []}),
+    _State = ?MUT:init("test"),
+    unload(),
+    ok.
 
-    _State = ?MUT:init(),
-
+init_features_test() ->
+    load(),
+    ok = meck:expect(application, get_env, [features, file_store_path], {ok, []}),
+    _State = ?MUT:init("features_store"),
     unload(),
     ok.
 
 read_test() ->
     load(),
-    Path = <<"/test_path">>,
-    ok = meck:expect(application, get_env, [features, file_store_path], {ok, Path}),
+    RootPath = "/test_path",
+    Name = "test",
+    ok = meck:expect(application, get_env, [features, file_store_path], {ok, RootPath}),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     DataBin = jsx:encode(Data),
     ok = meck:expect(file, read_file, ['_'], {ok, DataBin}),
 
     % API = make_ref(),
-    State = ?MUT:init(),
+    State = ?MUT:init(Name),
     {Features, State} = ?MUT:get_all(State),
 
     ReadFilePath = meck:capture(first, file, read_file, ['_'], 1),
 
-    ?assertEqual(Path, ReadFilePath),
+    ExpectedPath = RootPath ++ "/" ++ Name,
+    ?assertEqual(ExpectedPath, ReadFilePath),
     ?assertEqual(Data, Features),
 
     unload(),
@@ -43,7 +50,7 @@ store_test() ->
     ok = meck:expect(file, read_file, ['_'], {ok, DataBin}),
 
     % API = make_ref(),
-    State = ?MUT:init(),
+    State = ?MUT:init("test"),
 
     Resp = ?MUT:store(Data, State),
 
