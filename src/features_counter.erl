@@ -24,7 +24,7 @@
          count/1]).
 
 -record(state, {name=undefined,
-                store_lib=undefined,
+                store_lib_state=undefined,
                 bloom=undefined}).
 
 %%%===================================================================
@@ -68,11 +68,11 @@ init([StoreLib, Name]) ->
     ?LOG_DEBUG(#{what=><<"features_counter starting">>,
                  name=>Name}),
     register_name(Name),
-    InitialSize = 1000000,
-    Bloom = etbloom:sbf(InitialSize),
+    StoreLibState = features_store_lib:init(StoreLib, Name),
+    gen_server:cast(self(), load_or_init),
     {ok, #state{name=Name,
-                store_lib=StoreLib,
-                bloom=Bloom}}.
+                store_lib_state=StoreLibState,
+                bloom=undefined}}.
 
 register_name([]) ->
     ok;
@@ -109,15 +109,34 @@ handle_call(count, _From, State=#state{bloom=Bloom}) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({add, Key}, State=#state{name=Name,
+                                     store_lib_state=StoreLibState,
                                      bloom=Bloom}) ->
     NewBloom = etbloom:add(Key, Bloom),
     Size = etbloom:size(NewBloom),
+
+    {_, StoreLibState1} = store(NewBloom, StoreLibState),
+
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
                  name=>Name,
                  size=>Size,
                  key=>Key}),
-    {noreply, State#state{bloom=NewBloom}}.
+    {noreply, State#state{bloom=NewBloom, store_lib_state=StoreLibState1}};
+handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
+    {Data, StoreLibState1} = features_store_lib:get(StoreLibState),
+    Bloom = bloom_filter_from_data(Data),
+    {noreply, State#state{bloom=Bloom,
+                          store_lib_state=StoreLibState1}}.
 
+bloom_filter_from_data(#{bloom:=Bloom}) ->
+    Bloom;
+bloom_filter_from_data(_Else) ->
+    InitialSize = 1000000,
+    Bloom = etbloom:sbf(InitialSize),
+    Bloom.
+
+store(Bloom, State) ->
+    Data = #{bloom => Bloom},
+    features_store_lib:store(Data, State).
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
