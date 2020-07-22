@@ -17,6 +17,14 @@ init_test() ->
 
     unload().
 
+init_undefined_test() ->
+    load(),
+    Mod = undefined,
+
+    _State = ?MUT:init(Mod, "test"),
+
+    unload().
+
 get_test() ->
     load(),
     Name = "test",
@@ -29,6 +37,16 @@ get_test() ->
     {Data, State} = ?MUT:get(State),
 
     ?assertEqual(LibState, meck:capture(first, ?LIB_MOD, get_all, ['_'], 1)),
+
+    unload().
+
+get_undefined_test() ->
+    load(),
+    Name = "test",
+    Mod = undefined,
+
+    State = ?MUT:init(Mod, Name),
+    {not_suported, State} = ?MUT:get(State),
 
     unload().
 
@@ -45,6 +63,17 @@ store_test() ->
 
     ?assertEqual(Data, meck:capture(first, ?LIB_MOD, store, ['_', '_'], 1)),
     ?assertEqual(LibState, meck:capture(first, ?LIB_MOD, store, ['_', '_'], 2)),
+
+    unload().
+
+store_undefined_test() ->
+    load(),
+    Name = "test",
+    Mod = undefined,
+    Data = {"data", make_ref()},
+
+    State = ?MUT:init(Mod, Name),
+    {not_suported, State} = ?MUT:store(Data, State),
 
     unload().
 
