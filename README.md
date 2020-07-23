@@ -37,9 +37,14 @@ make live-js
 * `ADDITIONAL_NAMESPACES` - A comma separated list of namespaces to sync feature config to. This should include any namespaces where you intend to run sidecars
 * `ANALYTICS_HOST` - Where to forward analytic events to if this process isn't storing them directly. This is used by the sidecar mode to know where to forward to an api-mode process.
 * `API_PORT` - (default `8080`) Port where the HTTP API will be available.
+* `AWS_ACCESS_KEY_ID` - Credentials for interacting with AWS
+* `AWS_SECRET_ACCESS_KEY` - Credentials for interacting with AWS
 * `FEATURES_MODE` - Which mode to start the application in
     * `api` (default) - Fully feature API server, storing state in configmaps
     * `sidecar` - Read only API meant to be deployed as a sidecar. Features features from `/features/data` volume in Kubernetes.
+* `NAMESPACE` - Namespace to use for reading/writing in Kubernetes
+
+* `S3_BUCKET` - Bucket to use for storage
 
 
 ## Releasing

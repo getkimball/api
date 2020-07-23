@@ -60,11 +60,12 @@ setup_trails() ->
 
 set_config(Mode) ->
     setup_sentry(),
-    setup_namespace(),
+    Namespace = setup_namespace(),
     setup_additional_namespace_config(),
     setup_file_store_path(),
     setup_analytics_url(),
     setup_analytics_event_mod(Mode),
+    setup_s3(Namespace),
 
     ok = application:set_env(trails, api_root, "/"),
     ok = application:set_env(features, mode, Mode),
@@ -81,7 +82,8 @@ set_config(Mode) ->
 setup_namespace() ->
     NamespaceString = os:getenv("NAMESPACE", "getkimball"),
     NamespaceBin = binary:list_to_bin(NamespaceString),
-    application:set_env(features, namespace, NamespaceBin).
+    application:set_env(features, namespace, NamespaceBin),
+    NamespaceString.
 
 setup_analytics_url() ->
     EnvVarValue = os:getenv("ANALYTICS_HOST", "undefined"),
@@ -98,6 +100,11 @@ setup_analytics_event_mod(api_server) ->
 setup_analytics_event_mod(sidecar) ->
     Mod = features_count_relay,
     application:set_env(features, analytics_event_mod, Mod).
+
+setup_s3(Namespace) ->
+    EnvVarValue = os:getenv("S3_BUCKET", "undefined_bucket"),
+    application:set_env(features, s3_bucket, EnvVarValue),
+    application:set_env(features, s3_base_path, Namespace).
 
 setup_additional_namespace_config() ->
     NamespacesString = os:getenv("ADDITIONAL_NAMESPACES", ""),

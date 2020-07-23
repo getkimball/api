@@ -39,7 +39,7 @@ end_per_testcase(_, _Config) ->
 aa_test_new_counter(_Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
-    StoreMod = undefined,
+    StoreMod = features_store_lib_s3,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
     User = <<"user_id">>,
 
@@ -55,7 +55,7 @@ aa_test_new_counter(_Config) ->
 ab_test_existing_counter(_Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
-    StoreMod = undefined,
+    StoreMod = features_store_lib_s3,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
 
     User = <<"user_id">>,
@@ -80,7 +80,7 @@ ac_test_counter_registration_race(_Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
     SupResp = {error, {already_started, Pid}},
-    StoreMod = undefined,
+    StoreMod = features_store_lib_s3,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], SupResp),
 
     User = <<"user_id">>,

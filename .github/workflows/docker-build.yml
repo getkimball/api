@@ -85,6 +85,8 @@ jobs:
 
         KUBERNETES_NAMESPACE: ${{ needs.build_docker.outputs.namespace }}
         KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
+
+        S3_BUCKET: getkimball-features-app
       with:
         command: |
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
@@ -105,7 +107,8 @@ jobs:
             --set image.tag=${DOCKER_TAG} \
             --set service.type=${SERVICE_TYPE} \
             --set kimball.sentry_dsn=${SENTRY_DSN} \
-            --set kimball.daemonsetPort=${DAEMONSET_PORT}
+            --set kimball.daemonsetPort=${DAEMONSET_PORT} \
+            --set kimball.s3_bucket=${S3_BUCKET}
 
   upload_to_quay:
     runs-on: ubuntu-latest
