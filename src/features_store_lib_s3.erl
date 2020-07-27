@@ -7,6 +7,7 @@
          store/2]).
 
 -record(state, {bucket=undefined,
+                aws_config=undefined,
                 path=undefined}).
 
 %%%%
@@ -16,8 +17,10 @@
 init(Name) ->
     {ok, Bucket} = application:get_env(features, s3_bucket),
     {ok, BasePath} = application:get_env(features, s3_base_path),
+    {ok, AWSConfig} = erlcloud_aws: auto_config(),
     Path = ensure_list(filename:join(BasePath, Name)),
     #state{bucket=Bucket,
+           aws_config=AWSConfig,
            path=Path}.
 
 ensure_list(I) when is_binary(I) ->
@@ -25,8 +28,8 @@ ensure_list(I) when is_binary(I) ->
 ensure_list(I) when is_list(I) ->
     I.
 
-get_all(State=#state{bucket=Bucket, path=Path}) ->
-    Obj = try erlcloud_s3:get_object(Bucket, Path) of
+get_all(State=#state{bucket=Bucket, path=Path, aws_config=AWSConfig}) ->
+    Obj = try erlcloud_s3:get_object(Bucket, Path, AWSConfig) of
         Returned -> Content = proplists:get_value(content, Returned),
                     erlang:binary_to_term(Content)
     catch
@@ -35,7 +38,7 @@ get_all(State=#state{bucket=Bucket, path=Path}) ->
     Data = Obj,
     {Data, State}.
 
-store(Data, State=#state{bucket=Bucket, path=Path}) ->
+store(Data, State=#state{bucket=Bucket, path=Path, aws_config=AWSConfig}) ->
     Encoded = erlang:term_to_binary(Data),
-    _Resp = erlcloud_s3:put_object(Bucket, Path, Encoded),
+    _Resp = erlcloud_s3:put_object(Bucket, Path, Encoded, AWSConfig),
     {ok, State}.
