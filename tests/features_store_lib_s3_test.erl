@@ -32,6 +32,28 @@ read_test() ->
 
     unload().
 
+read_with_type_test() ->
+    load(),
+    Name = "test",
+    Type = "type",
+    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/" ++ Name,
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    DataBin = erlang:term_to_binary(Data),
+    Obj = [{content, DataBin}],
+    ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], Obj),
+
+    State = ?MUT:init({Type, Name}),
+    {ReturnedData, State} = ?MUT:get_all(State),
+
+    ?assertEqual(?BUCKET, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 1)),
+    ?assertEqual(ExpectedPath, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 2)),
+
+    ?assertEqual(Data, ReturnedData),
+
+    unload().
+
+
 read_404_test() ->
     load(),
     Name = "test",

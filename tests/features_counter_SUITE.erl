@@ -136,7 +136,7 @@ ca_test_storage_lib_loading_data(Config) ->
     Name = ?config(name, Config),
 
     ?assertEqual(?STORE_LIB, meck:capture(first, features_store_lib, init, '_', 1)),
-    ?assertEqual(Name, meck:capture(first, features_store_lib, init, '_', 2)),
+    ?assertEqual({"counter", Name}, meck:capture(first, features_store_lib, init, '_', 2)),
 
     ?assertEqual(StoreLibState, meck:capture(first, features_store_lib, get, '_', 1)),
 

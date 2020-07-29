@@ -14,6 +14,9 @@
 %   features_store api
 %%%%
 
+init({Type, Name}) ->
+    FullName = filename:join(Type, Name),
+    init(FullName);
 init(Name) ->
     {ok, Bucket} = application:get_env(features, s3_bucket),
     {ok, BasePath} = application:get_env(features, s3_base_path),
