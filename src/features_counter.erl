@@ -21,10 +21,12 @@
          code_change/3]).
 
 -export([add/2,
-         count/1]).
+         count/1,
+         persist/1]).
 
 -record(state, {name=undefined,
                 store_lib_state=undefined,
+                unpersisted_write=false,
                 bloom=undefined}).
 
 %%%===================================================================
@@ -38,6 +40,9 @@ add(Key, Pid) when is_binary(Key), is_pid(Pid) ->
 
 count(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, count).
+
+persist(Pid) when is_pid(Pid) ->
+    gen_server:call(Pid, persist).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -70,6 +75,7 @@ init([StoreLib, Name]) ->
     register_name(Name),
     StoreLibState = features_store_lib:init(StoreLib, Name),
     gen_server:cast(self(), load_or_init),
+    {ok, _TRef} = timer:apply_interval(15000, ?MODULE, persist, [self()]),
     {ok, #state{name=Name,
                 store_lib_state=StoreLibState,
                 bloom=undefined}}.
@@ -96,7 +102,22 @@ register_name(Name) ->
 handle_call(count, _From, State=#state{bloom=Bloom}) ->
     Size = etbloom:size(Bloom),
     Reply = Size,
-    {reply, Reply, State}.
+    {reply, Reply, State};
+handle_call(persist, _From, State=#state{name=Name, unpersisted_write=false}) ->
+    ?LOG_DEBUG(#{what=><<"features_counter persist">>,
+                 needs_to_persist=>false,
+                 name=>Name}),
+    {reply, ok, State};
+handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
+                                         name=Name,
+                                         bloom=Bloom}) ->
+    ?LOG_DEBUG(#{what=><<"features_counter persist">>,
+                 needs_to_persist=>true,
+                 name=>Name}),
+    {Status, StoreLibState1} = store(Bloom, StoreLibState),
+    Reply = Status,
+    {reply, Reply, State#state{store_lib_state=StoreLibState1,
+                               unpersisted_write=false}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -109,18 +130,16 @@ handle_call(count, _From, State=#state{bloom=Bloom}) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({add, Key}, State=#state{name=Name,
-                                     store_lib_state=StoreLibState,
                                      bloom=Bloom}) ->
     NewBloom = etbloom:add(Key, Bloom),
     Size = etbloom:size(NewBloom),
-
-    {_, StoreLibState1} = store(NewBloom, StoreLibState),
 
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
                  name=>Name,
                  size=>Size,
                  key=>Key}),
-    {noreply, State#state{bloom=NewBloom, store_lib_state=StoreLibState1}};
+    {noreply, State#state{bloom=NewBloom,
+                          unpersisted_write=true}};
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
     {Data, StoreLibState1} = features_store_lib:get(StoreLibState),
     Bloom = bloom_filter_from_data(Data),
