@@ -186,8 +186,11 @@ code_change(_OldVsn, State, _Extra) ->
 ensure_child_started(FeatureName) ->
     ?LOG_DEBUG(#{what=>"Ensuring child started",
                  feature => FeatureName}),
+    StoreLibMod = features_store_lib_s3,
     Spec = #{id => {features_counter, FeatureName},
-             start => {features_counter, start_link, [undefined, FeatureName]}},
+             start => {features_counter,
+                       start_link,
+                       [StoreLibMod, FeatureName]}},
     StartInfo =  supervisor:start_child(features_counter_sup, Spec),
     ?LOG_DEBUG(#{what=>"Ensure Starting info",
                  feature => FeatureName,

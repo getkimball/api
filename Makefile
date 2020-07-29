@@ -1,7 +1,7 @@
 PROJECT = features
 PROJECT_DESCRIPTION = New project
 
-DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven etbloom
+DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven etbloom erlcloud
 BUILD_DEPS = elvis_mk version.mk sync
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
@@ -12,6 +12,7 @@ dep_cowboy = git https://github.com/ninenines/cowboy.git 2.8.0
 dep_cowboy_swagger = hex 2.2.0
 dep_elvis_mk = git https://github.com/inaka/elvis.mk.git 1.0.0
 dep_eraven = git https://github.com/getkimball/eraven.git 2020-05-20
+dep_erlcloud = git https://github.com/erlcloud/erlcloud.git 3.3.3
 dep_etbloom = git https://github.com/getkimball/etbloom.git 1.0.1
 dep_hackney = hex 1.15.2
 dep_jesse = git https://github.com/for-GET/jesse.git 1.5.5
