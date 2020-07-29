@@ -23,7 +23,7 @@ groups() -> [{test_count, [
               ]}
             ].
 
-init_per_testcase(ca_test_storage_lib_loading_data, Config) ->
+init_meck(Config) ->
     meck:new(features_count_router),
     meck:expect(features_count_router, register_counter, ['_', '_'], ok),
 
@@ -38,26 +38,20 @@ init_per_testcase(ca_test_storage_lib_loading_data, Config) ->
     Name = <<"test">>,
 
     [{store_lib_state, StoreLibState},
-     {name, Name}|Config];
+     {name, Name}|Config].
+
+init_per_testcase(ca_test_storage_lib_loading_data, Config) ->
+    init_meck(Config);
+
 init_per_testcase(_, Config) ->
-    meck:new(features_count_router),
-    meck:expect(features_count_router, register_counter, ['_', '_'], ok),
+    NewConfig = init_meck(Config),
+    StoreLibState = ?config(store_lib_state, NewConfig),
 
-    meck:new(timer, [unstick]),
-    meck:expect(timer, apply_interval, ['_', '_', '_', '_'], {ok, tref}),
-
-    StoreLibState = {store_lib_state, make_ref()},
-    meck:new(features_store_lib),
-    meck:expect(features_store_lib, init, ['_', '_'], StoreLibState),
     meck:expect(features_store_lib, get, ['_'], {#{}, StoreLibState}),
-    meck:expect(features_store_lib, store, ['_', '_'], {#{}, {ok, StoreLibState}}),
-
-    Name = <<"test">>,
+    Name = ?config(name, NewConfig),
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
-    [{pid, Pid},
-     {store_lib_state, StoreLibState},
-     {name, Name}|Config].
+    [{pid, Pid}|NewConfig].
 
 end_per_testcase(_, Config) ->
     ?assert(meck:validate(features_store_lib)),
@@ -133,6 +127,7 @@ ca_test_storage_lib_loading_data(Config) ->
     Stored = #{bloom=>BF},
     meck:expect(features_store_lib, get, ['_'], {Stored, StoreLibState}),
     {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
+    meck:wait(features_store_lib, get, '_', 1000),
 
     Key = <<"42">>,
 
