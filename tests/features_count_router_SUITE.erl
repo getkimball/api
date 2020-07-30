@@ -43,7 +43,7 @@ init_per_testcase(_, Config) ->
     {ok, Pid} = ?MUT:start_link(),
     [{pid, Pid}|Config1].
 
-end_per_testcase(_, _Config) ->
+end_per_testcase(_, Config) ->
     ?assert(meck:validate(?COUNTER_MOD)),
     meck:unload(?COUNTER_MOD),
 
@@ -52,9 +52,13 @@ end_per_testcase(_, _Config) ->
 
     ?assert(meck:validate(supervisor)),
     meck:unload(supervisor),
-    ok.
 
-aa_test_new_counter(_Config) ->
+    Pid = ?config(pid, Config),
+    ok = gen_server:stop(Pid),
+
+    Config.
+
+aa_test_new_counter(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
     StoreMod = features_store_lib_s3,
@@ -68,9 +72,11 @@ aa_test_new_counter(_Config) ->
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)).
+    ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
 
-ab_test_existing_counter(_Config) ->
+    Config.
+
+ab_test_existing_counter(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
     StoreMod = features_store_lib_s3,
@@ -92,9 +98,11 @@ ab_test_existing_counter(_Config) ->
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
 
     ?assertEqual(User, meck:capture(2, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(Pid, meck:capture(2, ?COUNTER_MOD, add, '_', 2)).
+    ?assertEqual(Pid, meck:capture(2, ?COUNTER_MOD, add, '_', 2)),
 
-ac_test_counter_registration_race(_Config) ->
+    Config.
+
+ac_test_counter_registration_race(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
     SupResp = {error, {already_started, Pid}},
@@ -109,9 +117,10 @@ ac_test_counter_registration_race(_Config) ->
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
 
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)).
+    ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
+    Config.
 
-ba_test_counter_counts(_Config) ->
+ba_test_counter_counts(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
     Count = 1,
@@ -123,7 +132,8 @@ ba_test_counter_counts(_Config) ->
 
     Counts = ?MUT:counts(),
 
-    ?assertEqual([#{name => Feature, count => Count}], Counts).
+    ?assertEqual([#{name => Feature, count => Count}], Counts),
+    Config.
 
 
 ca_test_start_with_existing_counters(Config) ->
