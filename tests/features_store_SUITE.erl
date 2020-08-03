@@ -64,13 +64,10 @@ init_per_testcase(_, Config) ->
     [{store_lib_state, StoreLibState},
      {pid, Pid} |Config].
 
-end_per_testcase(_, Config) ->
+end_per_testcase(_, _Config) ->
     ?assert(meck:validate(features_store_lib)),
     meck:unload(features_store_lib),
-
-    Pid = ?config(pid, Config),
-    gen_server:stop(Pid).
-
+    ok.
 
 aa_write_read(Config) ->
     Name = <<"feature">>,

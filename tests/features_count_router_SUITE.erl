@@ -57,9 +57,6 @@ end_per_testcase(_, Config) ->
     ?assert(meck:validate(supervisor)),
     meck:unload(supervisor),
 
-    Pid = ?config(pid, Config),
-    ok = gen_server:stop(Pid),
-
     Config.
 
 aa_test_new_counter(Config) ->
