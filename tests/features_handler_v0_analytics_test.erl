@@ -58,10 +58,10 @@ get_boolean_features_test() ->
 
 save_analytic_event_test() ->
     load(),
-    FeatureName = <<"feature_name">>,
+    EventName = <<"event_name">>,
     UserID = <<"user_id">>,
     Doc = #{
-        feature_name => FeatureName,
+        event_name => EventName,
         user_id => UserID
     },
 
@@ -71,7 +71,7 @@ save_analytic_event_test() ->
 
     % features_count_router:add(Feature, UserId);
 
-    ?assertEqual(FeatureName, meck:capture(first, features_count_router, add, '_', 1)),
+    ?assertEqual(EventName, meck:capture(first, features_count_router, add, '_', 1)),
     ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)),
 
     unload().

@@ -16,7 +16,7 @@ basic_case_test() ->
     load(),
 
     URL = <<"test_url">>,
-    FeatureName = <<"testFeatureName">>,
+    EventName = <<"testEventName">>,
     UserId = <<"testUserId">>,
 
     ClientRef = make_ref(),
@@ -25,10 +25,10 @@ basic_case_test() ->
     meck:expect(hackney, request, ['_', '_', '_', '_', '_'], {ok, 204, [], ClientRef}),
     meck:expect(hackney, body, [ClientRef], {ok, <<"body">>}),
 
-    ok = ?MUT:add(FeatureName, UserId),
+    ok = ?MUT:add(EventName, UserId),
 
     ExpectedHeaders = [{<<"content-type">>, <<"application/json">>}],
-    ExpectedBody = jsx:encode(#{feature_name => FeatureName,
+    ExpectedBody = jsx:encode(#{event_name => EventName,
                                 user_id => UserId}),
     ExpectedOpts = [{timeout, 1000}],
 
@@ -44,7 +44,7 @@ int_user_test() ->
     load(),
 
     URL = <<"test_url">>,
-    FeatureName = <<"testFeatureName">>,
+    EventName = <<"testEventName">>,
     UserId = 42,
 
     ClientRef = make_ref(),
@@ -53,10 +53,10 @@ int_user_test() ->
     meck:expect(hackney, request, ['_', '_', '_', '_', '_'], {ok, 204, [], ClientRef}),
     meck:expect(hackney, body, [ClientRef], {ok, <<"body">>}),
 
-    ok = ?MUT:add(FeatureName, UserId),
+    ok = ?MUT:add(EventName, UserId),
 
     ExpectedHeaders = [{<<"content-type">>, <<"application/json">>}],
-    ExpectedBody = jsx:encode(#{feature_name => FeatureName,
+    ExpectedBody = jsx:encode(#{event_name => EventName,
                                 user_id => <<"42">>}),
     ExpectedOpts = [{timeout, 1000}],
 
@@ -71,11 +71,11 @@ int_user_test() ->
 no_analytics_url_test() ->
     load(),
 
-    FeatureName = <<"testFeatureName">>,
+    EventName = <<"testEventName">>,
     UserId = 42,
 
     persistent_term:put({features, analytics_url}, undefined),
 
-    ok = ?MUT:add(FeatureName, UserId),
+    ok = ?MUT:add(EventName, UserId),
 
     unload().
