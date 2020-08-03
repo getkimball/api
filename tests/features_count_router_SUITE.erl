@@ -18,7 +18,9 @@ groups() -> [{test_count, [
                 ac_test_counter_registration_race,
                 ba_test_counter_counts,
                 ca_test_start_with_existing_counters,
-                cb_test_counter_registration_persists
+                cb_test_counter_registration_persists,
+                da_test_new_goal,
+                db_test_existing_goal
               ]}
             ].
 
@@ -37,6 +39,8 @@ init_meck(Config) ->
     [{store_lib_state, StoreLibState}|Config].
 
 init_per_testcase(ca_test_start_with_existing_counters, Config) ->
+    init_meck(Config);
+init_per_testcase(db_test_existing_goal, Config) ->
     init_meck(Config);
 init_per_testcase(_, Config) ->
     Config1 = init_meck(Config),
@@ -166,7 +170,8 @@ cb_test_counter_registration_persists(Config) ->
     ?MUT:register_counter(Feature, Pid),
     meck:wait(features_store_lib, store, '_', 1000),
 
-    ExpectedData = #{counters=>[Feature]},
+
+    ExpectedData = expected_stored_data(#{counters=>[Feature]}),
     ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Counts = ?MUT:counts(),
@@ -175,7 +180,52 @@ cb_test_counter_registration_persists(Config) ->
 
     Config.
 
-
 spec_for_feature(Feature) ->
     #{id => {features_counter, Feature},
       start => {features_counter, start_link, [features_store_lib_s3, Feature]}}.
+
+
+da_test_new_goal(Config) ->
+    Goal = <<"goal_name">>,
+
+    ?MUT:add_goal(Goal),
+    Goals = ?MUT:goals(),
+
+    ExpectedGoals = [Goal],
+
+    ExpectedData = expected_stored_data(#{goals=>ExpectedGoals}),
+    ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
+
+    ?assertEqual(ExpectedGoals, Goals),
+
+    Config.
+
+db_test_existing_goal(Config) ->
+    StoreLibState = ?config(store_lib_state, Config),
+    Goal = <<"feature_name">>,
+    StoredData = #{goals => [Goal]},
+
+    meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
+
+    {ok, Pid} = ?MUT:start_link(),
+    Config1 = [{pid, Pid}|Config],
+
+    meck:wait(features_store_lib, get, '_', 1000),
+    Goals = ?MUT:goals(),
+
+    ExpectedGoals = [Goal],
+
+    ?assertEqual(ExpectedGoals, Goals),
+
+    % Ensure that this doesn't write to the store again when adding the goal again
+    ?MUT:add_goal(Goal),
+    ?assertError(not_found, meck:capture(first, features_store_lib, store, '_', 1)),
+
+    Config1.
+
+
+expected_stored_data(Data) ->
+    #{
+        counters => maps:get(counters, Data, []),
+        goals => maps:get(goals, Data, [])
+    }.
