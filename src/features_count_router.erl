@@ -79,12 +79,7 @@ ensure_started_and_add(_Name, [Registration], Key) ->
     ok = features_counter:add(Key, Pid).
 
 register_counter(CounterName, Pid) ->
-    CR = #counter_registration{name=CounterName, pid=Pid},
-    ets:insert(?COUNTER_REGISTRY, CR),
-    ?LOG_DEBUG(#{what=>"Counter registration",
-                 name=>CounterName,
-                 pid=>Pid }),
-    gen_server:cast(?MODULE, {counter_registered, CounterName}),
+    gen_server:call(?MODULE, {counter_registered, CounterName, Pid}),
     ok.
 
 counts() ->
@@ -150,6 +145,17 @@ handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
 handle_call(goals, _From, State=#state{goals=Goals}) ->
     Reply = Goals,
     {reply, Reply, State};
+handle_call({counter_registered, CounterName, Pid},
+            _From,
+            State=#state{counters=Counters}) ->
+    CR = #counter_registration{name=CounterName, pid=Pid},
+    ets:insert(?COUNTER_REGISTRY, CR),
+    State1 = case lists:member(CounterName, Counters) of
+        true -> State;
+        false -> NewCounters = [CounterName|Counters],
+                 persist_state(State#state{counters=NewCounters})
+    end,
+    {reply, ok, State1};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -172,14 +178,6 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
     {noreply, State#state{counters=Counters,
                           goals=Goals,
                           store_lib_state=StoreLibState1}};
-handle_cast({counter_registered, CounterName},
-            State=#state{counters=Counters}) ->
-    State1 = case lists:member(CounterName, Counters) of
-        true -> State;
-        false -> NewCounters = [CounterName|Counters],
-                 persist_state(State#state{counters=NewCounters})
-    end,
-    {noreply, State1};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 %%--------------------------------------------------------------------
