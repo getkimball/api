@@ -72,11 +72,11 @@ analytics_return_schema() ->
 
 analytic_event_input_schema() ->
     #{
-        required => [feature_name, user_id],
+        required => [event_name, user_id],
         properties => #{
-           feature_name => #{
+           event_name => #{
                type => string,
-               description => <<"Name of feature">>
+               description => <<"Name of event">>
            },
            user_id => #{
                type => string,
@@ -107,15 +107,15 @@ handle_req(Req=#{method := <<"GET">>}, _Params, _Body=undefined, _Opts) ->
     {Req, 200, Data, #{}};
 handle_req(Req=#{method := <<"POST">>},
            _Params,
-           _Body=#{feature_name:= FeatureName,
+           _Body=#{event_name:= EventName,
                    user_id:= UserID},
            State=#{analytics_event_mod:=AnalyticsEventMod}) ->
 
     ?LOG_DEBUG(#{what=> "Analytic event",
                  user_id => UserID,
                  mode => AnalyticsEventMod,
-                 feature_name => FeatureName}),
-    AnalyticsEventMod:add(FeatureName, UserID),
+                 event_name => EventName}),
+    AnalyticsEventMod:add(EventName, UserID),
 
     {Req, 204, <<"">>, State};
 handle_req(Req, Params, Body, State) ->

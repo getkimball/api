@@ -10,23 +10,23 @@
 
 -export([add/2]).
 
-add(FeatureName, Key) when is_binary(FeatureName), is_integer(Key) ->
+add(EventName, Key) when is_binary(EventName), is_integer(Key) ->
     KeyB = list_to_binary(integer_to_list(Key)),
-    add(FeatureName, KeyB);
-add(FeatureName, Key) when is_binary(FeatureName), is_binary(Key) ->
+    add(EventName, KeyB);
+add(EventName, Key) when is_binary(EventName), is_binary(Key) ->
     AnalyticsURL = persistent_term:get({features, analytics_url}),
-    send(AnalyticsURL, FeatureName, Key).
+    send(AnalyticsURL, EventName, Key).
 
-send(undefined, FeatureName, Key) ->
+send(undefined, EventName, Key) ->
     ?LOG_INFO(#{
         what => <<"ANALYTICS_HOST not set">>,
-        feature_name => FeatureName,
+        feature_name => EventName,
         user_id => Key
     }),
     ok;
-send(URL, FeatureName, Key) ->
+send(URL, EventName, Key) ->
     Data = #{
-      <<"feature_name">> => FeatureName,
+      <<"event_name">> => EventName,
       <<"user_id">> => Key
     },
     ReqBody = jsx:encode(Data),
