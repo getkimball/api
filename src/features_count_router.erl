@@ -157,7 +157,7 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
     {Data, StoreLibState1} = case features_store_lib:get(StoreLibState) of
-        {not_suported, NewState} -> {#{}, NewState};
+        {not_supported, NewState} -> {#{}, NewState};
         Else -> Else
     end,
     Counters = maps:get(counters, Data, []),
@@ -260,5 +260,7 @@ persist_state(State=#state{counters=Counters,
     },
     % At the moment the only options are ok and not_supported, not much we
     % can/should do here if things are supported
-    {_Status, StoreLibState1} = features_store_lib:store(PersistData, StoreLibState),
+    {_Status, StoreLibState1} = features_store_lib:store(
+                                        PersistData,
+                                        StoreLibState),
     State#state{store_lib_state=StoreLibState1}.

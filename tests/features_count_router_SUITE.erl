@@ -229,7 +229,7 @@ ea_test_event_no_persistence(Config) ->
 
     StoreLibState = ?config(store_lib_state, Config),
 
-    meck:expect(features_store_lib, get, [StoreLibState], {not_suported, StoreLibState}),
+    meck:expect(features_store_lib, get, [StoreLibState], {not_supported, StoreLibState}),
 
     {ok, Pid} = ?MUT:start_link(undefined),
     Config1 = [{pid, Pid}|Config],
