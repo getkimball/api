@@ -27,6 +27,7 @@ groups() -> [{test_count, [
 init_meck(Config) ->
     meck:new(?COUNTER_MOD),
     meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
+    meck:expect(?COUNTER_MOD, count, ['_'], -1),
 
     StoreLibState = {store_lib_state, make_ref()},
     meck:new(features_store_lib),
@@ -87,6 +88,9 @@ ab_test_existing_counter(Config) ->
 
     ?MUT:add(Feature, User),
     ?MUT:register_counter(Feature, Pid),
+
+    ?MUT:goals(), % Used for syncronization / processing messages
+
     ?MUT:add(Feature, User),
 
     Spec = #{id => {features_counter, Feature},
@@ -130,6 +134,7 @@ ba_test_counter_counts(Config) ->
 
     ?MUT:register_counter(Feature, Pid),
 
+    ?MUT:goals(), % Run to synchronize/handle all messages
 
     Counts = ?MUT:counts(),
 

@@ -71,16 +71,8 @@ add_goal(Goal) ->
 goals() ->
     gen_server:call(?MODULE, goals).
 
-ensure_started_and_add(Name, [], Key) ->
-    Pid = ensure_child_started(Name),
-    ok = features_counter:add(Key, Pid);
-ensure_started_and_add(_Name, [Registration], Key) ->
-    Pid = Registration#counter_registration.pid,
-    ok = features_counter:add(Key, Pid).
-
 register_counter(CounterName, Pid) ->
-    gen_server:call(?MODULE, {counter_registered, CounterName, Pid}),
-    ok.
+    gen_server:cast(?MODULE, {register_counter, CounterName, Pid}).
 
 counts() ->
     CountFun = fun(#counter_registration{name=CounterName, pid=Pid}, Acc0) ->
@@ -145,17 +137,6 @@ handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
 handle_call(goals, _From, State=#state{goals=Goals}) ->
     Reply = Goals,
     {reply, Reply, State};
-handle_call({counter_registered, CounterName, Pid},
-            _From,
-            State=#state{counters=Counters}) ->
-    CR = #counter_registration{name=CounterName, pid=Pid},
-    ets:insert(?COUNTER_REGISTRY, CR),
-    State1 = case lists:member(CounterName, Counters) of
-        true -> State;
-        false -> NewCounters = [CounterName|Counters],
-                 persist_state(State#state{counters=NewCounters})
-    end,
-    {reply, ok, State1};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -178,6 +159,16 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
     {noreply, State#state{counters=Counters,
                           goals=Goals,
                           store_lib_state=StoreLibState1}};
+handle_cast({register_counter, CounterName, Pid},
+            State=#state{counters=Counters}) ->
+    CR = #counter_registration{name=CounterName, pid=Pid},
+    ets:insert(?COUNTER_REGISTRY, CR),
+    State1 = case lists:member(CounterName, Counters) of
+        true -> State;
+        false -> NewCounters = [CounterName|Counters],
+                 persist_state(State#state{counters=NewCounters})
+    end,
+    {noreply, State1};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 %%--------------------------------------------------------------------
@@ -237,6 +228,13 @@ ensure_child_started(FeatureName) ->
     ?LOG_DEBUG(#{what=>"got pid",
                  pid => Pid}),
     Pid.
+
+ensure_started_and_add(Name, [], Key) ->
+    Pid = ensure_child_started(Name),
+    ok = features_counter:add(Key, Pid);
+ensure_started_and_add(_Name, [Registration], Key) ->
+    Pid = Registration#counter_registration.pid,
+    ok = features_counter:add(Key, Pid).
 
 pid_from_child_start({_, Pid}) when is_pid(Pid) ->
     Pid;
