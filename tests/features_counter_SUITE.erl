@@ -53,7 +53,7 @@ init_per_testcase(_, Config) ->
     {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
     [{pid, Pid}|NewConfig].
 
-end_per_testcase(_, Config) ->
+end_per_testcase(_, _Config) ->
     ?assert(meck:validate(features_store_lib)),
     meck:unload(features_store_lib),
 
@@ -62,9 +62,7 @@ end_per_testcase(_, Config) ->
 
     ?assert(meck:validate(features_count_router)),
     meck:unload(features_count_router),
-
-    Pid = ?config(pid, Config),
-    ok = gen_server:stop(Pid).
+    ok.
 
 aa_test_single_user(Config) ->
     Pid = ?config(pid, Config),
