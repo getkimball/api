@@ -2,14 +2,16 @@
 -behaviour(supervisor).
 -include_lib("kernel/include/logger.hrl").
 
--export([start_link/1]).
+-export([start_link/2]).
 -export([init/1]).
 
-start_link(Mode) ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, [Mode]).
+start_link(Mode, StoreLib) ->
+    supervisor:start_link({local, ?MODULE}, ?MODULE, [Mode, StoreLib]).
 
-init([Mode]) ->
-    ?LOG_INFO(#{what=><<"Supervisor starting">>}),
+init([Mode, StoreLib]) ->
+    ?LOG_INFO(#{what=><<"Supervisor starting">>,
+                mode=>Mode,
+                store_lib=>StoreLib}),
     Procs = case Mode of
        api_server -> [
         #{id    => features_store,
@@ -18,7 +20,7 @@ init([Mode]) ->
                     [features_store_lib_configmap]}},
         #{id    => features_counter_sup,
           type  => supervisor,
-          start => {features_counter_sup, start_link, []}}
+          start => {features_counter_sup, start_link, [StoreLib]}}
        ];
        sidecar -> [
         #{id    => features_store,

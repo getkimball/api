@@ -20,7 +20,8 @@ groups() -> [{test_count, [
                 ca_test_start_with_existing_counters,
                 cb_test_counter_registration_persists,
                 da_test_new_goal,
-                db_test_existing_goal
+                db_test_existing_goal,
+                ea_test_event_no_persistence
               ]}
             ].
 
@@ -31,7 +32,7 @@ init_meck(Config) ->
 
     StoreLibState = {store_lib_state, make_ref()},
     meck:new(features_store_lib),
-    meck:expect(features_store_lib, init, [features_store_lib_s3, "count_router"], StoreLibState),
+    meck:expect(features_store_lib, init, ['_', "count_router"], StoreLibState),
     meck:expect(features_store_lib, get, ['_'], {#{}, StoreLibState}),
     meck:expect(features_store_lib, store, ['_', '_'], {ok, StoreLibState}),
 
@@ -43,9 +44,11 @@ init_per_testcase(ca_test_start_with_existing_counters, Config) ->
     init_meck(Config);
 init_per_testcase(db_test_existing_goal, Config) ->
     init_meck(Config);
+init_per_testcase(ea_test_event_no_persistence, Config) ->
+    init_meck(Config);
 init_per_testcase(_, Config) ->
     Config1 = init_meck(Config),
-    {ok, Pid} = ?MUT:start_link(),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     [{pid, Pid}|Config1].
 
 end_per_testcase(_, Config) ->
@@ -63,14 +66,12 @@ end_per_testcase(_, Config) ->
 aa_test_new_counter(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
-    StoreMod = features_store_lib_s3,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
     User = <<"user_id">>,
 
     ?MUT:add(Feature, User),
 
-    Spec = #{id => {features_counter, Feature},
-             start => {features_counter, start_link, [StoreMod, Feature]}},
+    Spec = spec_for_feature(Feature),
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
@@ -81,7 +82,6 @@ aa_test_new_counter(Config) ->
 ab_test_existing_counter(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
-    StoreMod = features_store_lib_s3,
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
 
     User = <<"user_id">>,
@@ -94,7 +94,7 @@ ab_test_existing_counter(Config) ->
     ?MUT:add(Feature, User),
 
     Spec = #{id => {features_counter, Feature},
-             start => {features_counter, start_link, [StoreMod, Feature]}},
+             start => {features_counter, start_link, [?STORE_LIB, Feature]}},
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertError(not_found, meck:capture(2, supervisor, start_child, ['_', Spec], 2)),
@@ -152,7 +152,7 @@ ca_test_start_with_existing_counters(Config) ->
     meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
     meck:expect(features_counter, count, ['_'], Count),
 
-    {ok, Pid} = ?MUT:start_link(),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     Config1 = [{pid, Pid}|Config],
 
     meck:wait(features_store_lib, get, '_', 1000),
@@ -182,10 +182,6 @@ cb_test_counter_registration_persists(Config) ->
 
     Config.
 
-spec_for_feature(Feature) ->
-    #{id => {features_counter, Feature},
-      start => {features_counter, start_link, [features_store_lib_s3, Feature]}}.
-
 
 da_test_new_goal(Config) ->
     Goal = <<"goal_name">>,
@@ -209,7 +205,7 @@ db_test_existing_goal(Config) ->
 
     meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
 
-    {ok, Pid} = ?MUT:start_link(),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     Config1 = [{pid, Pid}|Config],
 
     meck:wait(features_store_lib, get, '_', 1000),
@@ -225,9 +221,40 @@ db_test_existing_goal(Config) ->
 
     Config1.
 
+ea_test_event_no_persistence(Config) ->
+    Feature = <<"feature_name">>,
+    CounterPid = self(),
+    meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, CounterPid}),
+    User = <<"user_id">>,
+
+    StoreLibState = ?config(store_lib_state, Config),
+
+    meck:expect(features_store_lib, get, [StoreLibState], {not_suported, StoreLibState}),
+
+    {ok, Pid} = ?MUT:start_link(undefined),
+    Config1 = [{pid, Pid}|Config],
+
+    meck:wait(features_store_lib, get, '_', 1000),
+
+    ?MUT:add(Feature, User),
+
+    Spec = spec_for_feature(Feature, undefined),
+
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
+    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
+    ?assertEqual(CounterPid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
+
+    Config1.
 
 expected_stored_data(Data) ->
     #{
         counters => maps:get(counters, Data, []),
         goals => maps:get(goals, Data, [])
     }.
+
+spec_for_feature(Feature) ->
+    spec_for_feature(Feature, ?STORE_LIB).
+
+spec_for_feature(Feature, StoreLibMod) ->
+    #{id => {features_counter, Feature},
+      start => {features_counter, start_link, [StoreLibMod, Feature]}}.
