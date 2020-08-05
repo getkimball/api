@@ -32,4 +32,4 @@ handle_file({error, enoent}, Path) ->
     throw({enoent, Path}).
 
 store(_Data, State=#state{}) ->
-    {not_suported, State}.
+    {not_supported, State}.

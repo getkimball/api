@@ -205,13 +205,13 @@ bc_external_store_not_supporting_store(Config) ->
 
     StoreLibState = make_ref(),
 
-    ok = meck:expect(features_store_lib, store, ['_', '_'], {not_suported, StoreLibState}),
+    ok = meck:expect(features_store_lib, store, ['_', '_'], {not_supported, StoreLibState}),
 
 
     Resp = features_store:set_feature(Name, {boolean, Status},
                                             {rollout, undefined, undefined},
                                             {user, []}),
-    ?assertEqual(not_suported, Resp),
+    ?assertEqual(not_supported, Resp),
 
     Config.
 

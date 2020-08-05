@@ -2,17 +2,17 @@
 -behaviour(supervisor).
 -include_lib("kernel/include/logger.hrl").
 
--export([start_link/0]).
+-export([start_link/1]).
 -export([init/1]).
 
-start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+start_link(StoreLib) ->
+    supervisor:start_link({local, ?MODULE}, ?MODULE, [StoreLib]).
 
-init([]) ->
+init([StoreLib]) ->
     ?LOG_INFO(#{what=><<"Counter Supervisor starting">>}),
     Procs = [
         #{id    => features_count_router,
-          start => {features_count_router, start_link, []}}
+          start => {features_count_router, start_link, [StoreLib]}}
     ],
     Flags = #{strategy => rest_for_one,
               intensity => 0,

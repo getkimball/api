@@ -54,7 +54,7 @@ store_test() ->
 
     Resp = ?MUT:store(Data, State),
 
-    ?assertEqual({not_suported, State}, Resp),
+    ?assertEqual({not_supported, State}, Resp),
 
     unload(),
     ok.

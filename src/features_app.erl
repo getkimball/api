@@ -5,6 +5,8 @@
 -export([start/2]).
 -export([stop/1]).
 
+-define(DEFAULT_S3_BUCKET, "default_bucket").
+
 start(_Type, _Args) ->
     {ok, VSN} = application:get_key(features, vsn),
     ?LOG_INFO(#{what=><<"Starting">>,
@@ -13,6 +15,7 @@ start(_Type, _Args) ->
     Mode = get_features_mode(),
 
     ok = set_config(Mode),
+    StoreLib = decide_store_lib(),
 
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
@@ -37,7 +40,7 @@ start(_Type, _Args) ->
     Port = list_to_integer(os:getenv("API_PORT", "8080")),
 
     {ok, _} = cowboy:start_clear(http, [{port, Port}], HTTPOpts),
-    features_sup:start_link(Mode).
+    features_sup:start_link(Mode, StoreLib).
 
 stop(_State) ->
   ok.
@@ -103,7 +106,7 @@ setup_analytics_event_mod(sidecar) ->
     application:set_env(features, analytics_event_mod, Mod).
 
 setup_s3(Namespace) ->
-    EnvVarValue = os:getenv("S3_BUCKET", "undefined_bucket"),
+    EnvVarValue = os:getenv("S3_BUCKET", ?DEFAULT_S3_BUCKET),
     application:set_env(features, s3_bucket, EnvVarValue),
     application:set_env(features, s3_base_path, Namespace).
 
@@ -118,6 +121,14 @@ setup_additional_namespace_config() ->
                 namespaces=>Namespaces}),
     ok.
 
+
+decide_store_lib() ->
+    Lib = case application:get_env(features, s3_bucket) of
+        {ok, ?DEFAULT_S3_BUCKET} -> undefined;
+        {ok, ""} -> undefined;
+        {ok, _BucketWasSet} -> features_store_lib_s3
+    end,
+    Lib.
 % Removes empty response from split
 additional_namespaces_to_list([<<>>]) ->
     [];

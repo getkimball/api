@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API functions
--export([start_link/0]).
+-export([start_link/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -30,6 +30,7 @@
 
 -record(state, {counters=[],
                 goals=[],
+                store_lib=undefined,
                 store_lib_state=undefined}).
 
 -record(counter_registration, {name,
@@ -38,6 +39,7 @@
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
 -define(GLOBAL_COUNTER, global_counter).
 -define(STORE_LIB_MOD, features_store_lib_s3).
+-define(STORE_LIB_MOD_PT_KEY, features_count_router_store_lib_mod).
 %%%===================================================================
 %%% API functions
 %%%===================================================================
@@ -49,8 +51,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+start_link(StoreLib) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [StoreLib], []).
 
 add(CounterName, Key) ->
     FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
@@ -98,7 +100,7 @@ counts() ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
+init([StoreLib]) ->
     ?LOG_INFO(#{what=><<"features_count_router starting">>}),
     ?COUNTER_REGISTRY = ets:new(?COUNTER_REGISTRY,
                                 [set,
@@ -106,11 +108,13 @@ init([]) ->
                                  public,
                                  {read_concurrency, true},
                                  {keypos, #counter_registration.name}]),
-    StoreLibState = features_store_lib:init(?STORE_LIB_MOD,
+    persistent_term:put(?STORE_LIB_MOD_PT_KEY, StoreLib),
+    StoreLibState = features_store_lib:init(StoreLib,
                                             "count_router"),
     gen_server:cast(self(), load_or_init),
     self() ! start_global_counter,
-    {ok, #state{store_lib_state=StoreLibState}}.
+    {ok, #state{store_lib=StoreLib,
+                store_lib_state=StoreLibState}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -152,7 +156,10 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
-    {Data, StoreLibState1} = features_store_lib:get(StoreLibState),
+    {Data, StoreLibState1} = case features_store_lib:get(StoreLibState) of
+        {not_supported, NewState} -> {#{}, NewState};
+        Else -> Else
+    end,
     Counters = maps:get(counters, Data, []),
     Goals = maps:get(goals, Data, []),
     _Pids = [ensure_child_started(Counter) || Counter <- Counters],
@@ -214,12 +221,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 ensure_child_started(FeatureName) ->
+    StoreLibMod = persistent_term:get(?STORE_LIB_MOD_PT_KEY),
     ?LOG_DEBUG(#{what=>"Ensuring child started",
                  feature => FeatureName}),
     Spec = #{id => {features_counter, FeatureName},
              start => {features_counter,
                        start_link,
-                       [?STORE_LIB_MOD, FeatureName]}},
+                       [StoreLibMod, FeatureName]}},
     StartInfo =  supervisor:start_child(features_counter_sup, Spec),
     ?LOG_DEBUG(#{what=>"Ensure Starting info",
                  feature => FeatureName,
@@ -250,5 +258,9 @@ persist_state(State=#state{counters=Counters,
         counters => Counters,
         goals => Goals
     },
-    {ok, StoreLibState1} = features_store_lib:store(PersistData, StoreLibState),
+    % At the moment the only options are ok and not_supported, not much we
+    % can/should do here if things are supported
+    {_Status, StoreLibState1} = features_store_lib:store(
+                                        PersistData,
+                                        StoreLibState),
     State#state{store_lib_state=StoreLibState1}.

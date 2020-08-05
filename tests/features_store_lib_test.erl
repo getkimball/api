@@ -46,7 +46,7 @@ get_undefined_test() ->
     Mod = undefined,
 
     State = ?MUT:init(Mod, Name),
-    {not_suported, State} = ?MUT:get(State),
+    {not_supported, State} = ?MUT:get(State),
 
     unload().
 
@@ -73,7 +73,7 @@ store_undefined_test() ->
     Data = {"data", make_ref()},
 
     State = ?MUT:init(Mod, Name),
-    {not_suported, State} = ?MUT:store(Data, State),
+    {not_supported, State} = ?MUT:store(Data, State),
 
     unload().
 
