@@ -34,7 +34,8 @@
                 store_lib_state=undefined}).
 
 -record(counter_registration, {name,
-                               pid}).
+                               pid,
+                               is_goal=false}).
 
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
 -define(GLOBAL_COUNTER, global_counter).
@@ -78,8 +79,11 @@ register_counter(CounterName, Pid) ->
 
 counts() ->
     CountFun = fun(#counter_registration{name=CounterName, pid=Pid}, Acc0) ->
-        #{count := Count} = features_counter:count(Pid),
-        M = #{name => CounterName, count => Count},
+        #{count := Count,
+          tag_counts := TagCounts} = features_counter:count(Pid),
+        M = #{name => CounterName,
+              count => Count,
+              tag_counts => TagCounts},
         [M | Acc0]
     end,
     ets:foldl(CountFun, [], ?COUNTER_REGISTRY).
@@ -131,6 +135,12 @@ init([StoreLib]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
+    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, Goal),
+    case FeatureRegistration of
+        [] -> ok;
+        [CR] -> GoalRegistration = CR#counter_registration{is_goal=true},
+                          ets:insert(?COUNTER_REGISTRY, GoalRegistration)
+    end,
     State1 = case lists:member(Goal, Goals) of
         true -> State;
         false -> Goals1 = [Goal|Goals],
@@ -168,6 +178,8 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
                           store_lib_state=StoreLibState1}};
 handle_cast({register_counter, CounterName, Pid},
             State=#state{counters=Counters}) ->
+
+    % TODO: Check for goals
     CR = #counter_registration{name=CounterName, pid=Pid},
     ets:insert(?COUNTER_REGISTRY, CR),
     State1 = case lists:member(CounterName, Counters) of
@@ -239,10 +251,27 @@ ensure_child_started(FeatureName) ->
 
 ensure_started_and_add(Name, [], Key) ->
     Pid = ensure_child_started(Name),
+    % TODO Support goals here, this may need to slow-path through the server
     ok = features_counter:add(Key, Pid);
-ensure_started_and_add(_Name, [Registration], Key) ->
-    Pid = Registration#counter_registration.pid,
-    ok = features_counter:add(Key, Pid).
+ensure_started_and_add(_Name,
+                       [#counter_registration{pid=Pid, is_goal=false}],
+                       Key) ->
+    ok = features_counter:add(Key, Pid);
+ensure_started_and_add(_Name,
+                       [#counter_registration{pid=Pid, is_goal=true}],
+                       Key) ->
+    OtherCounters = counters_for_key(Key),
+    ok = features_counter:add(Key, OtherCounters, Pid).
+
+counters_for_key(Key) ->
+    F = fun(#counter_registration{name=Name, pid=Pid}, AccIn) ->
+            case features_counter:includes_key(Key, Pid) of
+                true -> [Name| AccIn];
+                false -> AccIn
+            end
+    end,
+    Counters = ets:foldl(F, [], ?COUNTER_REGISTRY),
+    Counters.
 
 pid_from_child_start({_, Pid}) when is_pid(Pid) ->
     Pid;
