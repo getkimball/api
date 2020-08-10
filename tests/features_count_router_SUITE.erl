@@ -28,7 +28,7 @@ groups() -> [{test_count, [
 init_meck(Config) ->
     meck:new(?COUNTER_MOD),
     meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
-    meck:expect(?COUNTER_MOD, count, ['_'], -1),
+    meck:expect(?COUNTER_MOD, count, ['_'], #{count => -1}),
 
     StoreLibState = {store_lib_state, make_ref()},
     meck:new(features_store_lib),
@@ -128,7 +128,8 @@ ac_test_counter_registration_race(Config) ->
 ba_test_counter_counts(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
-    Count = 1,
+    Num = 1,
+    Count = #{count => Num},
 
     meck:expect(features_counter, count, [Pid], Count),
 
@@ -138,14 +139,15 @@ ba_test_counter_counts(Config) ->
 
     Counts = ?MUT:counts(),
 
-    ?assertEqual([#{name => Feature, count => Count}], Counts),
+    ?assertEqual([#{name => Feature, count => Num}], Counts),
     Config.
 
 
 ca_test_start_with_existing_counters(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     Feature = <<"feature_name">>,
-    Count = 1,
+    Num = 1,
+    Count = #{count => Num},
     Spec = spec_for_feature(Feature),
     StoredData = #{counters => [Feature]},
 
@@ -165,20 +167,20 @@ ca_test_start_with_existing_counters(Config) ->
 cb_test_counter_registration_persists(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
-    Count = 1,
+    Num = 1,
+    Count = #{count => Num},
 
     meck:expect(features_counter, count, [Pid], Count),
 
     ?MUT:register_counter(Feature, Pid),
     meck:wait(features_store_lib, store, '_', 1000),
 
-
     ExpectedData = expected_stored_data(#{counters=>[Feature]}),
     ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Counts = ?MUT:counts(),
 
-    ?assertEqual([#{name => Feature, count => Count}], Counts),
+    ?assertEqual([#{name => Feature, count => Num}], Counts),
 
     Config.
 

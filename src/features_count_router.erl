@@ -78,7 +78,7 @@ register_counter(CounterName, Pid) ->
 
 counts() ->
     CountFun = fun(#counter_registration{name=CounterName, pid=Pid}, Acc0) ->
-        Count = features_counter:count(Pid),
+        #{count := Count} = features_counter:count(Pid),
         M = #{name => CounterName, count => Count},
         [M | Acc0]
     end,
