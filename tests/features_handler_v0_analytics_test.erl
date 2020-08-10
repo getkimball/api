@@ -39,13 +39,15 @@ setup_test() ->
 %   Get analytics from router
 %%%%
 
-get_boolean_features_test() ->
+get_basic_analytics_test() ->
     load(),
     Feature = <<"feature">>,
     Count = 4,
-    ok = meck:expect(features_count_router, counts, [], #{Feature => Count}),
+    ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
+                                                           count => Count}]),
 
-    ExpectedData = #{<<"counts">>=>#{Feature=>Count}},
+    ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
+                                      <<"count">> => Count}]},
 
     Req = ?CTH:req(),
     ?CTH:http_get(?MUT, Req, 200, ExpectedData),
