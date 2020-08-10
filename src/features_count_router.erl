@@ -71,6 +71,9 @@ add(CounterName, Key) ->
 add_goal(Goal) ->
     gen_server:call(?MODULE, {add_goal, Goal}).
 
+is_goal(Goal) ->
+    gen_server:call(?MODULE, {is_goal, Goal}).
+
 goals() ->
     gen_server:call(?MODULE, goals).
 
@@ -135,12 +138,15 @@ init([StoreLib]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
+    % Ensure registration, if it exists, knows that this is a goal
+    %
     FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, Goal),
     case FeatureRegistration of
         [] -> ok;
         [CR] -> GoalRegistration = CR#counter_registration{is_goal=true},
-                          ets:insert(?COUNTER_REGISTRY, GoalRegistration)
+                true = ets:insert(?COUNTER_REGISTRY, GoalRegistration)
     end,
+    % Include the goal in our internal list, then persist
     State1 = case lists:member(Goal, Goals) of
         true -> State;
         false -> Goals1 = [Goal|Goals],
@@ -148,6 +154,9 @@ handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
     end,
     Reply = ok,
     {reply, Reply, State1};
+handle_call({is_goal, Goal}, _From, State=#state{goals=Goals}) ->
+    Reply = lists:member(Goal, Goals),
+    {reply, Reply, State};
 handle_call(goals, _From, State=#state{goals=Goals}) ->
     Reply = Goals,
     {reply, Reply, State};
@@ -177,10 +186,13 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
                           goals=Goals,
                           store_lib_state=StoreLibState1}};
 handle_cast({register_counter, CounterName, Pid},
-            State=#state{counters=Counters}) ->
+            State=#state{counters=Counters,
+                         goals=Goals}) ->
 
-    % TODO: Check for goals
-    CR = #counter_registration{name=CounterName, pid=Pid},
+    IsGoal = lists:member(CounterName, Goals),
+    CR = #counter_registration{name=CounterName,
+                               pid=Pid,
+                               is_goal=IsGoal},
     ets:insert(?COUNTER_REGISTRY, CR),
     State1 = case lists:member(CounterName, Counters) of
         true -> State;
@@ -251,8 +263,9 @@ ensure_child_started(FeatureName) ->
 
 ensure_started_and_add(Name, [], Key) ->
     Pid = ensure_child_started(Name),
-    % TODO Support goals here, this may need to slow-path through the server
-    ok = features_counter:add(Key, Pid);
+    IsGoal = is_goal(Name),
+    R = #counter_registration{pid=Pid, is_goal=IsGoal},
+    ensure_started_and_add(Name, [R], Key);
 ensure_started_and_add(_Name,
                        [#counter_registration{pid=Pid, is_goal=false}],
                        Key) ->

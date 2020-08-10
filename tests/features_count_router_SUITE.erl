@@ -22,6 +22,7 @@ groups() -> [{test_count, [
                 da_test_new_goal,
                 db_test_existing_goal,
                 ea_test_triggering_a_goal,
+                eb_test_triggering_a_goal_registered_after_goal_added,
                 fa_test_event_no_persistence
               ]}
             ].
@@ -257,6 +258,62 @@ ea_test_triggering_a_goal(Config) ->
 
     ?MUT:add(NonGoalFeature, User),
     ?MUT:add(GoalFeature, User),
+
+    Counts = ?MUT:counts(),
+
+    ExpectedEvents = [global_counter, NonGoalFeature],
+    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 1)),
+    ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 2)),
+    ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 3)),
+
+    ExpectedCounts = [
+        #{count => 1, name => NonGoalFeature, tag_counts => #{[] => 1}},
+        #{count => 1, name => global_counter, tag_counts => #{[] => 1}},
+        #{count => 1, name => GoalFeature, tag_counts => #{[NonGoalFeature] => 1}}
+    ],
+
+    ?assertEqual(lists:sort(ExpectedCounts),
+                 lists:sort(Counts)),
+
+    Config.
+
+eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
+    User = <<"user_id">>,
+
+    NonGoalFeature = <<"non_goal">>,
+    GoalFeature = <<"goal">>,
+
+    GlobalCounterPid = erlang:list_to_pid("<0.0.0>"),
+    NonGoalCounterPid = erlang:list_to_pid("<0.0.1>"),
+    GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
+
+    meck:expect(supervisor, start_child, [features_counter_sup, '_'], meck:raise(error, should_not_hit_this)),
+
+    ?MUT:register_counter(global_counter, GlobalCounterPid),
+    ?MUT:register_counter(NonGoalFeature, NonGoalCounterPid),
+
+    ?MUT:add_goal(GoalFeature),
+
+    _Goals0 = ?MUT:goals(), % synchronize call
+
+    ?MUT:register_counter(GoalFeature, GoalCounterPid),
+
+    meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', GoalCounterPid], ok),
+    meck:expect(?COUNTER_MOD, includes_key, [{['_', NonGoalCounterPid], true},
+                                             {['_', GlobalCounterPid], true},
+                                             {['_', GoalCounterPid], false}]),
+
+
+    meck:expect(?COUNTER_MOD, count, [{[NonGoalCounterPid], #{count=>1, tag_counts=>#{[] => 1}}},
+                                      {[GlobalCounterPid], #{count=>1, tag_counts=>#{[] => 1}}},
+                                      {[GoalCounterPid], #{count=>1, tag_counts=>#{[NonGoalFeature] => 1}}}]),
+    _Goals1 = ?MUT:goals(), % synchronize call
+
+    ?MUT:add(NonGoalFeature, User),
+    ?MUT:add(GoalFeature, User),
+
+    _Goals2 = ?MUT:goals(), % synchronize call
 
     Counts = ?MUT:counts(),
 
