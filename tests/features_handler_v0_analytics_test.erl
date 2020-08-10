@@ -49,7 +49,7 @@ get_basic_analytics_test() ->
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
-                                      <<"tag_counts">> => []}]},
+                                      <<"event_counts">> => []}]},
 
     Req = ?CTH:req(),
     ?CTH:http_get(?MUT, Req, 200, ExpectedData),
@@ -68,7 +68,7 @@ get_basic_tag_counts_analytics_test() ->
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
-                                      <<"tag_counts">> => [#{<<"tags">> => [],
+                                      <<"event_counts">> => [#{<<"events">> => [],
                                                              <<"count">> => TagCount}]}]},
 
     Req = ?CTH:req(),
@@ -88,13 +88,13 @@ get_tag_counts_analytics_test() ->
                                                            tag_counts => TagCounts}]),
 
     ExpectedTagCounts = [
-        #{<<"count">> => 2, <<"tags">> => [<<"1">>, <<"2">>]},
-        #{<<"count">> => 1, <<"tags">> => [<<"1">>]},
-        #{<<"count">> => 0, <<"tags">> => []}
+        #{<<"count">> => 2, <<"events">> => [<<"1">>, <<"2">>]},
+        #{<<"count">> => 1, <<"events">> => [<<"1">>]},
+        #{<<"count">> => 0, <<"events">> => []}
     ],
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
-                                      <<"tag_counts">> => ExpectedTagCounts}]},
+                                      <<"event_counts">> => ExpectedTagCounts}]},
 
     Req = ?CTH:req(),
     ?CTH:http_get(?MUT, Req, 200, ExpectedData),

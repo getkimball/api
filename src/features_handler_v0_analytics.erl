@@ -138,11 +138,11 @@ render_count_map(#{name:=Name,
     RenderedTagCounts = render_tag_counts(TagCounts),
     #{name=>Name,
       count=>Count,
-      tag_counts=>RenderedTagCounts}.
+      event_counts=>RenderedTagCounts}.
 
 render_tag_counts(TagCounts) ->
     maps:fold(fun render_tag_count/3, [], TagCounts).
 
 render_tag_count(Tags, Count, AccIn) ->
-    [#{tags => Tags,
+    [#{events => Tags,
       count => Count}|AccIn].
