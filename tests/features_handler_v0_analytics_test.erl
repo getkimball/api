@@ -44,10 +44,57 @@ get_basic_analytics_test() ->
     Feature = <<"feature">>,
     Count = 4,
     ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
-                                                           count => Count}]),
+                                                           count => Count,
+                                                           tag_counts => #{}}]),
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
-                                      <<"count">> => Count}]},
+                                      <<"count">> => Count,
+                                      <<"tag_counts">> => []}]},
+
+    Req = ?CTH:req(),
+    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+
+    unload().
+
+get_basic_tag_counts_analytics_test() ->
+    load(),
+    Feature = <<"feature">>,
+    Count = 4,
+    TagCount = 1,
+    TagCounts = #{[] => TagCount},
+    ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
+                                                           count => Count,
+                                                           tag_counts => TagCounts}]),
+
+    ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
+                                      <<"count">> => Count,
+                                      <<"tag_counts">> => [#{<<"tags">> => [],
+                                                             <<"count">> => TagCount}]}]},
+
+    Req = ?CTH:req(),
+    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+
+    unload().
+
+get_tag_counts_analytics_test() ->
+    load(),
+    Feature = <<"feature">>,
+    Count = 4,
+    TagCounts = #{[] => 0,
+                  [<<"1">>] => 1,
+                  [<<"1">>, <<"2">>] => 2},
+    ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
+                                                           count => Count,
+                                                           tag_counts => TagCounts}]),
+
+    ExpectedTagCounts = [
+        #{<<"count">> => 2, <<"tags">> => [<<"1">>, <<"2">>]},
+        #{<<"count">> => 1, <<"tags">> => [<<"1">>]},
+        #{<<"count">> => 0, <<"tags">> => []}
+    ],
+    ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
+                                      <<"count">> => Count,
+                                      <<"tag_counts">> => ExpectedTagCounts}]},
 
     Req = ?CTH:req(),
     ?CTH:http_get(?MUT, Req, 200, ExpectedData),

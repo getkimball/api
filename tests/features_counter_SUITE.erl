@@ -24,7 +24,8 @@ groups() -> [{test_count, [
                 db_test_multiple_count_with_tags,
                 dc_test_multiple_count_single_user_with_tags,
                 dd_test_multiple_count_single_user_with_different_tags,
-                de_test_with_multiple_tags_and_mismatched_ordering
+                de_test_with_multiple_tags_and_mismatched_ordering,
+                ea_test_includes_key
               ]}
             ].
 
@@ -274,6 +275,19 @@ de_test_with_multiple_tags_and_mismatched_ordering(Config) ->
     }),
 
     ?assertEqual(ExpectedCounts, Counts),
+    Config.
+
+ea_test_includes_key(Config) ->
+    Pid = ?config(pid, Config),
+
+    Key = <<"test_key">>,
+
+    IsIncluded0 = ?MUT:includes_key(Key, Pid),
+    ?MUT:add(Key, Pid),
+    IsIncluded1 = ?MUT:includes_key(Key, Pid),
+
+    ?assertEqual(false, IsIncluded0),
+    ?assertEqual(true, IsIncluded1),
     Config.
 
 

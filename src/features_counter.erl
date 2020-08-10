@@ -113,6 +113,9 @@ handle_call(count, _From, State=#state{bloom=Bloom, tag_counts=TagCounts}) ->
     Reply = #{count => Size,
               tag_counts => TagCounts},
     {reply, Reply, State};
+handle_call({includes_key, Key}, _From, State=#state{bloom=Bloom}) ->
+    Included=etbloom:member(Key, Bloom),
+    {reply, Included, State};
 handle_call(persist, _From, State=#state{name=Name, unpersisted_write=false}) ->
     ?LOG_DEBUG(#{what=><<"features_counter persist">>,
                  needs_to_persist=>false,
