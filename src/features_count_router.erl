@@ -34,7 +34,8 @@
                 store_lib_state=undefined}).
 
 -record(counter_registration, {name,
-                               pid}).
+                               pid,
+                               is_goal=false}).
 
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
 -define(GLOBAL_COUNTER, global_counter).
@@ -70,6 +71,9 @@ add(CounterName, Key) ->
 add_goal(Goal) ->
     gen_server:call(?MODULE, {add_goal, Goal}).
 
+is_goal(Goal) ->
+    gen_server:call(?MODULE, {is_goal, Goal}).
+
 goals() ->
     gen_server:call(?MODULE, goals).
 
@@ -78,8 +82,11 @@ register_counter(CounterName, Pid) ->
 
 counts() ->
     CountFun = fun(#counter_registration{name=CounterName, pid=Pid}, Acc0) ->
-        Count = features_counter:count(Pid),
-        M = #{name => CounterName, count => Count},
+        #{count := Count,
+          tag_counts := TagCounts} = features_counter:count(Pid),
+        M = #{name => CounterName,
+              count => Count,
+              tag_counts => TagCounts},
         [M | Acc0]
     end,
     ets:foldl(CountFun, [], ?COUNTER_REGISTRY).
@@ -131,6 +138,15 @@ init([StoreLib]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
+    % Ensure registration, if it exists, knows that this is a goal
+    %
+    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, Goal),
+    case FeatureRegistration of
+        [] -> ok;
+        [CR] -> GoalRegistration = CR#counter_registration{is_goal=true},
+                true = ets:insert(?COUNTER_REGISTRY, GoalRegistration)
+    end,
+    % Include the goal in our internal list, then persist
     State1 = case lists:member(Goal, Goals) of
         true -> State;
         false -> Goals1 = [Goal|Goals],
@@ -138,6 +154,9 @@ handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
     end,
     Reply = ok,
     {reply, Reply, State1};
+handle_call({is_goal, Goal}, _From, State=#state{goals=Goals}) ->
+    Reply = lists:member(Goal, Goals),
+    {reply, Reply, State};
 handle_call(goals, _From, State=#state{goals=Goals}) ->
     Reply = Goals,
     {reply, Reply, State};
@@ -167,8 +186,13 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
                           goals=Goals,
                           store_lib_state=StoreLibState1}};
 handle_cast({register_counter, CounterName, Pid},
-            State=#state{counters=Counters}) ->
-    CR = #counter_registration{name=CounterName, pid=Pid},
+            State=#state{counters=Counters,
+                         goals=Goals}) ->
+
+    IsGoal = lists:member(CounterName, Goals),
+    CR = #counter_registration{name=CounterName,
+                               pid=Pid,
+                               is_goal=IsGoal},
     ets:insert(?COUNTER_REGISTRY, CR),
     State1 = case lists:member(CounterName, Counters) of
         true -> State;
@@ -239,10 +263,28 @@ ensure_child_started(FeatureName) ->
 
 ensure_started_and_add(Name, [], Key) ->
     Pid = ensure_child_started(Name),
+    IsGoal = is_goal(Name),
+    R = #counter_registration{pid=Pid, is_goal=IsGoal},
+    ensure_started_and_add(Name, [R], Key);
+ensure_started_and_add(_Name,
+                       [#counter_registration{pid=Pid, is_goal=false}],
+                       Key) ->
     ok = features_counter:add(Key, Pid);
-ensure_started_and_add(_Name, [Registration], Key) ->
-    Pid = Registration#counter_registration.pid,
-    ok = features_counter:add(Key, Pid).
+ensure_started_and_add(_Name,
+                       [#counter_registration{pid=Pid, is_goal=true}],
+                       Key) ->
+    OtherCounters = counters_for_key(Key),
+    ok = features_counter:add(Key, OtherCounters, Pid).
+
+counters_for_key(Key) ->
+    F = fun(#counter_registration{name=Name, pid=Pid}, AccIn) ->
+            case features_counter:includes_key(Key, Pid) of
+                true -> [Name| AccIn];
+                false -> AccIn
+            end
+    end,
+    Counters = ets:foldl(F, [], ?COUNTER_REGISTRY),
+    Counters.
 
 pid_from_child_start({_, Pid}) when is_pid(Pid) ->
     Pid;

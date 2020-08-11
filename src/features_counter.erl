@@ -21,12 +21,15 @@
          code_change/3]).
 
 -export([add/2,
+         add/3,
          count/1,
+         includes_key/2,
          persist/1]).
 
 -record(state, {name=undefined,
                 store_lib_state=undefined,
                 unpersisted_write=false,
+                tag_counts=#{},
                 bloom=undefined}).
 
 %%%===================================================================
@@ -36,10 +39,16 @@ add(Key, Pid) when is_integer(Key) ->
     KeyBin = list_to_binary(integer_to_list(Key)),
     add(KeyBin, Pid);
 add(Key, Pid) when is_binary(Key), is_pid(Pid) ->
-    gen_server:cast(Pid, {add, Key}).
+    gen_server:cast(Pid, {add, Key, []}).
+
+add(Key, Tags, Pid) when is_binary(Key), is_list(Tags), is_pid(Pid) ->
+    gen_server:cast(Pid, {add, Key, Tags}).
 
 count(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, count).
+
+includes_key(Key, Pid) when is_binary(Key), is_pid(Pid) ->
+    gen_server:call(Pid, {includes_key, Key}).
 
 persist(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, persist).
@@ -99,10 +108,14 @@ register_name(Name) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(count, _From, State=#state{bloom=Bloom}) ->
+handle_call(count, _From, State=#state{bloom=Bloom, tag_counts=TagCounts}) ->
     Size = etbloom:size(Bloom),
-    Reply = Size,
+    Reply = #{count => Size,
+              tag_counts => TagCounts},
     {reply, Reply, State};
+handle_call({includes_key, Key}, _From, State=#state{bloom=Bloom}) ->
+    Included=etbloom:member(Key, Bloom),
+    {reply, Included, State};
 handle_call(persist, _From, State=#state{name=Name, unpersisted_write=false}) ->
     ?LOG_DEBUG(#{what=><<"features_counter persist">>,
                  needs_to_persist=>false,
@@ -129,16 +142,26 @@ handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({add, Key}, State=#state{name=Name,
-                                     bloom=Bloom}) ->
+handle_cast({add, Key, Tags}, State=#state{name=Name,
+                                     bloom=Bloom,
+                                     tag_counts=TagCounts}) ->
+    InitialSize = etbloom:size(Bloom),
     NewBloom = etbloom:add(Key, Bloom),
-    Size = etbloom:size(NewBloom),
+    NewSize = etbloom:size(NewBloom),
 
+    SortedTags = lists:sort(Tags),
+
+    NewTagCounts = case InitialSize == NewSize of
+        true -> TagCounts;
+        false -> increment_tag_count(SortedTags, TagCounts)
+    end,
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
                  name=>Name,
-                 size=>Size,
+                 size=>NewSize,
+                 tags=>SortedTags,
                  key=>Key}),
     {noreply, State#state{bloom=NewBloom,
+                          tag_counts=NewTagCounts,
                           unpersisted_write=true}};
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
     {Data, StoreLibState1} = features_store_lib:get(StoreLibState),
@@ -197,3 +220,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+increment_tag_count(Tags, TagCounts) ->
+    Count = maps:get(Tags, TagCounts, 0),
+    NewCounts = maps:put(Tags, Count + 1, TagCounts),
+    NewCounts.

@@ -101,9 +101,10 @@ init(Req, Opts) ->
 
 handle_req(Req=#{method := <<"GET">>}, _Params, _Body=undefined, _Opts) ->
     Counts = features_count_router:counts(),
-    Data = #{<<"counts">> => Counts},
+    RenderedCounts = lists:map(fun render_count_map/1, Counts),
+    Data = #{<<"counts">> => RenderedCounts},
     ?LOG_DEBUG(#{what=> "Analytic counts",
-                 counts => Counts}),
+                 counts => RenderedCounts}),
     {Req, 200, Data, #{}};
 handle_req(Req=#{method := <<"POST">>},
            _Params,
@@ -129,3 +130,19 @@ handle_req(Req, Params, Body, State) ->
 
 post_req(_Response, _State) ->
     ok.
+
+
+render_count_map(#{name:=Name,
+                   count:=Count,
+                   tag_counts:=TagCounts}) ->
+    RenderedTagCounts = render_tag_counts(TagCounts),
+    #{name=>Name,
+      count=>Count,
+      event_counts=>RenderedTagCounts}.
+
+render_tag_counts(TagCounts) ->
+    maps:fold(fun render_tag_count/3, [], TagCounts).
+
+render_tag_count(Tags, Count, AccIn) ->
+    [#{events => Tags,
+      count => Count}|AccIn].

@@ -19,7 +19,13 @@ groups() -> [{test_count, [
                 ba_test_different_key_types,
                 ca_test_storage_lib_loading_data,
                 cb_test_storing_with_storage_lib,
-                cc_test_store_with_no_new_data
+                cc_test_store_with_no_new_data,
+                da_test_count_with_tags,
+                db_test_multiple_count_with_tags,
+                dc_test_multiple_count_single_user_with_tags,
+                dd_test_multiple_count_single_user_with_different_tags,
+                de_test_with_multiple_tags_and_mismatched_ordering,
+                ea_test_includes_key
               ]}
             ].
 
@@ -73,7 +79,8 @@ aa_test_single_user(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(1, Num),
+    ?assertEqual(counts(#{count => 1,
+                          tag_counts => #{[] => 1}}), Num),
     Config.
 
 ab_test_single_user_multiple_times(Config) ->
@@ -86,7 +93,8 @@ ab_test_single_user_multiple_times(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(1, Num),
+    ?assertEqual(counts(#{count => 1,
+                          tag_counts => #{[] => 1}}), Num),
     Config.
 
 ac_test_multiple_users(Config) ->
@@ -100,7 +108,8 @@ ac_test_multiple_users(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(2, Num),
+    ?assertEqual(counts(#{count => 2,
+                          tag_counts => #{[] => 2}}), Num),
     Config.
 
 ba_test_different_key_types(Config) ->
@@ -114,7 +123,8 @@ ba_test_different_key_types(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(1, Num),
+    ?assertEqual(counts(#{count => 1,
+                          tag_counts => #{[] => 1}}), Num),
     Config.
 
 ca_test_storage_lib_loading_data(Config) ->
@@ -140,7 +150,8 @@ ca_test_storage_lib_loading_data(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(1, Num),
+    ?assertEqual(counts(#{count => 1,
+                          tag_counts => #{[] => 1}}), Num),
     [{pid, Pid}|Config].
 
 cb_test_storing_with_storage_lib(Config) ->
@@ -167,3 +178,120 @@ cc_test_store_with_no_new_data(Config) ->
     ?assertError(not_found, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Config.
+
+da_test_count_with_tags(Config) ->
+    Pid = ?config(pid, Config),
+
+    User = <<"user_id">>,
+    Tags = [<<"foo">>],
+
+    ?MUT:add(User, Tags, Pid),
+
+    Counts = ?MUT:count(Pid),
+
+    ExpectedCounts = #{
+        count => 1,
+        tag_counts => #{Tags => 1}
+    },
+
+    ?assertEqual(ExpectedCounts, Counts),
+    Config.
+
+db_test_multiple_count_with_tags(Config) ->
+    Pid = ?config(pid, Config),
+
+    User1 = <<"user_id1">>,
+    User2 = <<"user_id2">>,
+    Tags = [<<"foo">>],
+
+    ?MUT:add(User1, Tags, Pid),
+    ?MUT:add(User2, Tags, Pid),
+
+    Counts = ?MUT:count(Pid),
+
+    ExpectedCounts = counts(#{
+        count => 2,
+        tag_counts => #{Tags => 2}
+    }),
+
+    ?assertEqual(ExpectedCounts, Counts),
+    Config.
+
+dc_test_multiple_count_single_user_with_tags(Config) ->
+    Pid = ?config(pid, Config),
+
+    User = <<"user_id">>,
+    Tags = [<<"foo">>],
+
+    ?MUT:add(User, Tags, Pid),
+    ?MUT:add(User, Tags, Pid),
+
+    Counts = ?MUT:count(Pid),
+
+    ExpectedCounts = counts(#{
+        count => 1,
+        tag_counts => #{Tags => 1}
+    }),
+
+    ?assertEqual(ExpectedCounts, Counts),
+    Config.
+
+dd_test_multiple_count_single_user_with_different_tags(Config) ->
+    Pid = ?config(pid, Config),
+
+    User = <<"user_id">>,
+    Tags1 = [<<"foo">>],
+    Tags2 = [<<"bar">> | Tags1],
+
+    ?MUT:add(User, Tags1, Pid),
+    ?MUT:add(User, Tags2, Pid),
+
+    Counts = ?MUT:count(Pid),
+
+    ExpectedCounts = counts(#{
+        count => 1,
+        tag_counts => #{Tags1 => 1}
+    }),
+
+    ?assertEqual(ExpectedCounts, Counts),
+    Config.
+
+de_test_with_multiple_tags_and_mismatched_ordering(Config) ->
+    Pid = ?config(pid, Config),
+
+    User1 = <<"user_id1">>,
+    User2 = <<"user_id2">>,
+    Tags = [<<"bar">>, <<"foo">>],
+    ReversedTags = lists:reverse(Tags),
+
+    ?MUT:add(User1, Tags, Pid),
+    ?MUT:add(User2, ReversedTags, Pid),
+
+    Counts = ?MUT:count(Pid),
+
+    ExpectedCounts = counts(#{
+        count => 2,
+        tag_counts => #{Tags => 2}
+    }),
+
+    ?assertEqual(ExpectedCounts, Counts),
+    Config.
+
+ea_test_includes_key(Config) ->
+    Pid = ?config(pid, Config),
+
+    Key = <<"test_key">>,
+
+    IsIncluded0 = ?MUT:includes_key(Key, Pid),
+    ?MUT:add(Key, Pid),
+    IsIncluded1 = ?MUT:includes_key(Key, Pid),
+
+    ?assertEqual(false, IsIncluded0),
+    ?assertEqual(true, IsIncluded1),
+    Config.
+
+
+counts(C) ->
+    Default = #{count => 0,
+                tag_counts => #{}},
+    maps:merge(Default, C).
