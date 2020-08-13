@@ -1,7 +1,7 @@
 PROJECT = features
 PROJECT_DESCRIPTION = New project
 
-DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven etbloom erlcloud
+DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven etbloom erlcloud recon
 BUILD_DEPS = elvis_mk version.mk sync
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
@@ -21,6 +21,7 @@ dep_kuberlnetes = git https://github.com/philipcristiano/kuberlnetes.git v0.0.5
 dep_prometheus = git https://github.com/deadtrickster/prometheus.erl.git v4.5.0
 dep_prometheus_cowboy = hex 0.1.8
 dep_ranch = git https://github.com/ninenines/ranch.git 1.7.1
+dep_recon = git https://github.com/ferd/recon.git 2.5.1
 dep_swaggerl = git https://github.com/philipcristiano/swaggerl.git v0.0.7
 dep_sync = git https://github.com/rustyio/sync.git master
 dep_trails = hex 2.0.0
