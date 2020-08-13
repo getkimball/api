@@ -23,6 +23,7 @@
 
 
 -export([add/2,
+         add/3,
          add_goal/1,
          counts/0,
          goals/0,
@@ -56,6 +57,16 @@ start_link(StoreLib) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [StoreLib], []).
 
 add(CounterName, Key) ->
+    add(CounterName, Key, #{}).
+
+add(CounterName, Key, Opts=#{ensure_goal:=false}) ->
+    Opts2 = maps:remove(ensure_goal, Opts),
+    add(CounterName, Key, Opts2);
+add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
+    add_goal(CounterName),
+    Opts2 = maps:remove(ensure_goal, Opts),
+    add(CounterName, Key, Opts2);
+add(CounterName, Key, _Opts) ->
     FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
     ensure_started_and_add(CounterName, FeatureRegistration, Key),
     GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
