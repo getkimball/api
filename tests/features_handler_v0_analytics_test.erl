@@ -14,7 +14,7 @@ load() ->
 
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
-    ok = meck:expect(features_count_router, add, ['_', '_'], ok),
+    ok = meck:expect(features_count_router, add, ['_', '_', '_'], ok),
 
     ok.
 
@@ -120,7 +120,42 @@ save_analytic_event_test() ->
 
     % features_count_router:add(Feature, UserId);
 
-    ?assertEqual(EventName, meck:capture(first, features_count_router, add, '_', 1)),
-    ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)),
+    ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>false}])),
+
+    unload().
+
+save_analytic_event_dont_ensure_goal_test() ->
+    load(),
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        event_name => EventName,
+        user_id => UserID,
+        ensure_goal => false
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+
+    ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>false}])),
+
+    unload().
+
+save_analytic_event_ensure_goal_test() ->
+    load(),
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        event_name => EventName,
+        user_id => UserID,
+        ensure_goal => true
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+
+    ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>true}])),
 
     unload().

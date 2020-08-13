@@ -23,6 +23,7 @@
 
 
 -export([add/2,
+         add/3,
          add_goal/1,
          counts/0,
          goals/0,
@@ -56,10 +57,20 @@ start_link(StoreLib) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [StoreLib], []).
 
 add(CounterName, Key) ->
-    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
-    ensure_started_and_add(CounterName, FeatureRegistration, Key),
+    add(CounterName, Key, #{}).
+
+add(CounterName, Key, Opts=#{ensure_goal:=false}) ->
+    Opts2 = maps:remove(ensure_goal, Opts),
+    add(CounterName, Key, Opts2);
+add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
+    ensure_goal(CounterName),
+    Opts2 = maps:remove(ensure_goal, Opts),
+    add(CounterName, Key, Opts2);
+add(CounterName, Key, _Opts) ->
     GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
     ensure_started_and_add(?GLOBAL_COUNTER, GlobalRegistration, Key),
+    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
+    ensure_started_and_add(CounterName, FeatureRegistration, Key),
     ?LOG_DEBUG(#{what=>"Router add 2",
                  name=>CounterName,
                  feature_registration=>FeatureRegistration,
@@ -67,6 +78,14 @@ add(CounterName, Key) ->
                  key=>Key}),
 
     ok.
+
+ensure_goal(Goal) ->
+    CR = ets:lookup(?COUNTER_REGISTRY, Goal),
+    case CR of
+        [#counter_registration{name=Goal, % just to ensure it's right
+                               is_goal=true}] -> ok;
+        _ -> add_goal(Goal)
+    end.
 
 add_goal(Goal) ->
     gen_server:call(?MODULE, {add_goal, Goal}).
