@@ -39,10 +39,12 @@ add(Key, Pid) when is_integer(Key) ->
     KeyBin = list_to_binary(integer_to_list(Key)),
     add(KeyBin, Pid);
 add(Key, Pid) when is_binary(Key), is_pid(Pid) ->
-    gen_server:cast(Pid, {add, Key, []}).
+    Key2 = binary:copy(Key),
+    gen_server:cast(Pid, {add, Key2, []}).
 
 add(Key, Tags, Pid) when is_binary(Key), is_list(Tags), is_pid(Pid) ->
-    gen_server:cast(Pid, {add, Key, Tags}).
+    Key2 = binary:copy(Key),
+    gen_server:cast(Pid, {add, Key2, Tags}).
 
 count(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, count).
@@ -172,8 +174,9 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
 bloom_filter_from_data(#{bloom:=Bloom}) ->
     Bloom;
 bloom_filter_from_data(_Else) ->
-    InitialSize = 1000000,
-    Bloom = etbloom:sbf(InitialSize),
+    InitialSize = 100000,
+    ErrProb = 0.001,
+    Bloom = etbloom:sbf(InitialSize, ErrProb),
     Bloom.
 
 store(Bloom, State) ->
