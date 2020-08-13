@@ -74,6 +74,10 @@ analytic_event_input_schema() ->
     #{
         required => [event_name, user_id],
         properties => #{
+           ensure_goal => #{
+               type => boolean,
+               description => <<"Ensure this is a goal counter">>
+           },
            event_name => #{
                type => string,
                description => <<"Name of event">>
@@ -108,7 +112,8 @@ handle_req(Req=#{method := <<"GET">>}, _Params, _Body=undefined, _Opts) ->
     {Req, 200, Data, #{}};
 handle_req(Req=#{method := <<"POST">>},
            _Params,
-           _Body=#{event_name:= EventName,
+           _Body=#{ensure_goal:=EnsureGoalArg,
+                   event_name:= EventName,
                    user_id:= UserID},
            State=#{analytics_event_mod:=AnalyticsEventMod}) ->
 
@@ -116,7 +121,12 @@ handle_req(Req=#{method := <<"POST">>},
                  user_id => UserID,
                  mode => AnalyticsEventMod,
                  event_name => EventName}),
-    AnalyticsEventMod:add(EventName, UserID),
+    EnsureGoal = case EnsureGoalArg of
+        undefined -> false;
+        Else -> Else
+    end,
+    Opts = #{ensure_goal => EnsureGoal},
+    AnalyticsEventMod:add(EventName, UserID, Opts),
 
     {Req, 204, <<"">>, State};
 handle_req(Req, Params, Body, State) ->
