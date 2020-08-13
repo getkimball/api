@@ -17,7 +17,8 @@ groups() -> [{test_count, [
                 ab_test_existing_counter,
                 ac_test_new_counter_as_goal,
                 ad_test_existing_counter_as_goal,
-                ae_test_counter_registration_race,
+                ae_test_new_counter_as_explictely_not_ensuring_goal,
+                af_test_counter_registration_race,
                 ba_test_counter_counts,
                 ca_test_start_with_existing_counters,
                 cb_test_counter_registration_persists,
@@ -155,7 +156,22 @@ ad_test_existing_counter_as_goal(Config) ->
 
     Config.
 
-ae_test_counter_registration_race(Config) ->
+ae_test_new_counter_as_explictely_not_ensuring_goal(Config) ->
+    Feature = <<"feature_name">>,
+    Pid = self(),
+    meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
+    User = <<"user_id">>,
+
+    ?MUT:add(Feature, User, #{ensure_goal=>false}),
+
+    Spec = spec_for_feature(Feature),
+
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, Pid])),
+
+    Config.
+
+af_test_counter_registration_race(Config) ->
     Feature = <<"feature_name">>,
     Pid = self(),
     SupResp = {error, {already_started, Pid}},
