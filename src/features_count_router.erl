@@ -63,7 +63,7 @@ add(CounterName, Key, Opts=#{ensure_goal:=false}) ->
     Opts2 = maps:remove(ensure_goal, Opts),
     add(CounterName, Key, Opts2);
 add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
-    add_goal(CounterName),
+    ensure_goal(CounterName),
     Opts2 = maps:remove(ensure_goal, Opts),
     add(CounterName, Key, Opts2);
 add(CounterName, Key, _Opts) ->
@@ -78,6 +78,14 @@ add(CounterName, Key, _Opts) ->
                  key=>Key}),
 
     ok.
+
+ensure_goal(Goal) ->
+    CR = ets:lookup(?COUNTER_REGISTRY, Goal),
+    case CR of
+        [#counter_registration{name=Goal, % just to ensure it's right
+                               is_goal=true}] -> ok;
+        _ -> add_goal(Goal)
+    end.
 
 add_goal(Goal) ->
     gen_server:call(?MODULE, {add_goal, Goal}).
