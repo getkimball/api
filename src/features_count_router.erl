@@ -67,10 +67,10 @@ add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
     Opts2 = maps:remove(ensure_goal, Opts),
     add(CounterName, Key, Opts2);
 add(CounterName, Key, _Opts) ->
-    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
-    ensure_started_and_add(CounterName, FeatureRegistration, Key),
     GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
     ensure_started_and_add(?GLOBAL_COUNTER, GlobalRegistration, Key),
+    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
+    ensure_started_and_add(CounterName, FeatureRegistration, Key),
     ?LOG_DEBUG(#{what=>"Router add 2",
                  name=>CounterName,
                  feature_registration=>FeatureRegistration,
