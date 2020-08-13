@@ -39,10 +39,12 @@ add(Key, Pid) when is_integer(Key) ->
     KeyBin = list_to_binary(integer_to_list(Key)),
     add(KeyBin, Pid);
 add(Key, Pid) when is_binary(Key), is_pid(Pid) ->
-    gen_server:cast(Pid, {add, Key, []}).
+    Key2 = binary:copy(Key),
+    gen_server:cast(Pid, {add, Key2, []}).
 
 add(Key, Tags, Pid) when is_binary(Key), is_list(Tags), is_pid(Pid) ->
-    gen_server:cast(Pid, {add, Key, Tags}).
+    Key2 = binary:copy(Key),
+    gen_server:cast(Pid, {add, Key2, Tags}).
 
 count(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, count).
