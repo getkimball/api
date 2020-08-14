@@ -58,6 +58,7 @@ start_link(StoreLib) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [StoreLib], []).
 
 add(Items) when is_list(Items) ->
+    [add(C, K, O) || {C, K, O} <- Items],
     ok.
 
 add(CounterName, Key) ->

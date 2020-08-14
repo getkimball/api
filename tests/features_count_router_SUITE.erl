@@ -20,6 +20,7 @@ groups() -> [{test_count, [
                 ae_test_new_counter_as_explictely_not_ensuring_goal,
                 af_test_existing_counter_as_existing_goal,
                 ag_test_counter_registration_race,
+                ah_test_multiple_counts_added_at_once,
                 ba_test_counter_counts,
                 ca_test_start_with_existing_counters,
                 cb_test_counter_registration_persists,
@@ -207,6 +208,23 @@ ag_test_counter_registration_race(Config) ->
 
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
     ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
+    Config.
+
+ah_test_multiple_counts_added_at_once(Config) ->
+    Pid = self(),
+    meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
+
+    Adds = [
+        {<<"event_1">>, <<"user_1">>, #{}},
+        {<<"event_2">>, <<"user_2">>, #{ensure_goal => true}}
+    ],
+
+    ?MUT:add(Adds),
+
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [<<"user_1">>, Pid])),
+    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [<<"user_2">>, Pid])),
+    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [<<"user_2">>, [], Pid])),
+
     Config.
 
 ba_test_counter_counts(Config) ->
