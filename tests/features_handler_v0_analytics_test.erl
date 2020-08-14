@@ -14,6 +14,7 @@ load() ->
 
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
+    ok = meck:expect(features_count_router, add, ['_'], ok),
     ok = meck:expect(features_count_router, add, ['_', '_', '_'], ok),
 
     ok.
@@ -118,7 +119,7 @@ save_analytic_event_test() ->
 
     ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
 
-    % features_count_router:add(Feature, UserId);
+    % features_count_router:add(feature, userid);
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>false}])),
 
@@ -157,5 +158,89 @@ save_analytic_event_ensure_goal_test() ->
     ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>true}])),
+
+    unload().
+
+save_multiple_analytic_events_test() ->
+    load(),
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        events => [
+          #{event_name => EventName, user_id => UserID},
+          #{event_name => EventName, user_id => UserID, ensure_goal => false},
+          #{event_name => EventName, user_id => UserID, ensure_goal => true}
+        ]
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+
+    Expected = [
+      {EventName, UserID, #{ensure_goal => false}},
+      {EventName, UserID, #{ensure_goal => false}},
+      {EventName, UserID, #{ensure_goal => true}}
+    ],
+
+    ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
+
+    unload().
+
+invalid_combination_of_single_and_multiple_events_test() ->
+    load(),
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        event_name => EventName,
+        user_id => UserID,
+        events => [
+          #{event_name => EventName, user_id => UserID}
+        ]
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ErrObj = ?CTH:json_roundtrip(Doc),
+
+    ErrorMessage = <<"Object matches more than oneOf specifications">>,
+    ExpectedResponse = #{<<"error">> =>
+                           #{<<"what">> => ErrorMessage,
+                             <<"object">> => ErrObj}},
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 400, ExpectedResponse),
+
+    ?assertEqual(0, meck:num_calls(features_count_router, add, '_')),
+
+    unload().
+
+non_matching_event_of_multiple_events_test() ->
+    load(),
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        events => [
+          #{event_name => EventName, user_id => UserID},
+          #{event => EventName, user_id => UserID}
+        ]
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ExpectedErrObj = ?CTH:json_roundtrip(Doc),
+
+    ErrorMessage = <<"Object does not match any of the oneOf specifications">>,
+
+    State = #{analytics_event_mod=>features_count_router},
+
+    #{<<"error">> := #{<<"what">>:= ErrWhat,
+                       <<"object">>:= ErrObj,
+                       <<"why">>:= Whys}} = ?CTH:http_post(?MUT, State, PostReq, 400),
+
+
+    ExpectedError = [<<"missing_required_key">>,<<"event_name">>],
+    ?assertEqual(ErrorMessage, ErrWhat),
+    ?assertEqual(ExpectedErrObj, ErrObj),
+    ?assert(lists:member(ExpectedError, Whys)),
 
     unload().

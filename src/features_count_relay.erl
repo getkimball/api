@@ -8,8 +8,12 @@
 -module(features_count_relay).
 -include_lib("kernel/include/logger.hrl").
 
--export([add/2,
+-export([add/1,
+         add/2,
          add/3]).
+
+add(Items) when is_list(Items) ->
+    ok.
 
 add(EventName, Key)  ->
     add(EventName, Key, #{}).

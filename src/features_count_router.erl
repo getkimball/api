@@ -22,7 +22,8 @@
          code_change/3]).
 
 
--export([add/2,
+-export([add/1,
+         add/2,
          add/3,
          add_goal/1,
          counts/0,
@@ -55,6 +56,9 @@
 %%--------------------------------------------------------------------
 start_link(StoreLib) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [StoreLib], []).
+
+add(Items) when is_list(Items) ->
+    ok.
 
 add(CounterName, Key) ->
     add(CounterName, Key, #{}).
