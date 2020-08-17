@@ -33,6 +33,8 @@ basic_case_test() ->
                                 user_id => UserId}),
     ExpectedOpts = [{timeout, 1000}],
 
+    meck:wait(hackney, request, '_', 1000),
+
     ?assertEqual(post, meck:capture(first, hackney, request, '_', 1)),
     ?assertEqual(URL, meck:capture(first, hackney, request, '_', 2)),
     ?assertEqual(ExpectedHeaders, meck:capture(first, hackney, request, '_', 3)),
@@ -65,6 +67,8 @@ multiple_counts_test() ->
     ]}),
     ExpectedOpts = [{timeout, 1000}],
 
+    meck:wait(hackney, request, '_', 1000),
+
     ?assertEqual(post, meck:capture(first, hackney, request, '_', 1)),
     ?assertEqual(URL, meck:capture(first, hackney, request, '_', 2)),
     ?assertEqual(ExpectedHeaders, meck:capture(first, hackney, request, '_', 3)),
@@ -95,6 +99,8 @@ ensure_goal_case_test() ->
                                 user_id => UserId}),
     ExpectedOpts = [{timeout, 1000}],
 
+    meck:wait(hackney, request, '_', 1000),
+
     ?assertEqual(post, meck:capture(first, hackney, request, '_', 1)),
     ?assertEqual(URL, meck:capture(first, hackney, request, '_', 2)),
     ?assertEqual(ExpectedHeaders, meck:capture(first, hackney, request, '_', 3)),
@@ -124,6 +130,8 @@ int_user_test() ->
                                 user_id => <<"42">>}),
     ExpectedOpts = [{timeout, 1000}],
 
+    meck:wait(hackney, request, '_', 1000),
+
     ?assertEqual(post, meck:capture(first, hackney, request, '_', 1)),
     ?assertEqual(URL, meck:capture(first, hackney, request, '_', 2)),
     ?assertEqual(ExpectedHeaders, meck:capture(first, hackney, request, '_', 3)),
@@ -141,5 +149,14 @@ no_analytics_url_test() ->
     persistent_term:put({features, analytics_url}, undefined),
 
     ok = ?MUT:add(EventName, UserId),
+
+    unload().
+
+no_analytics_url_multiple_events_test() ->
+    load(),
+
+    persistent_term:put({features, analytics_url}, undefined),
+
+    ok = ?MUT:add([]),
 
     unload().

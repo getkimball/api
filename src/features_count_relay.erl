@@ -10,11 +10,13 @@
 
 -export([add/1,
          add/2,
-         add/3]).
+         add/3,
+         send/2]).
 
 add(Items) when is_list(Items) ->
     AnalyticsURL = persistent_term:get({features, analytics_url}),
-    send_events(AnalyticsURL, Items).
+    send_events(AnalyticsURL, Items),
+    ok.
 
 add(EventName, Key)  ->
     add(EventName, Key, #{}).
@@ -24,7 +26,8 @@ add(EventName, Key, Opts) when is_binary(EventName), is_integer(Key) ->
     add(EventName, KeyB, Opts);
 add(EventName, Key, Opts) when is_binary(EventName), is_binary(Key) ->
     AnalyticsURL = persistent_term:get({features, analytics_url}),
-    send_event(AnalyticsURL, EventName, Key, Opts).
+    send_event(AnalyticsURL, EventName, Key, Opts),
+    ok.
 
 send_event(undefined, EventName, Key, Opts) ->
     ?LOG_INFO(#{
@@ -47,7 +50,8 @@ send_event(URL, EventName, Key, Opts) ->
         user_id => Key,
         opts => Opts
     }),
-    send(URL, ReqBody).
+    _Pid = send_spawn(URL, ReqBody),
+    ok.
 
 send_events(undefined, Items) ->
     ?LOG_INFO(#{
@@ -65,7 +69,11 @@ send_events(URL, Items) ->
         what => <<"count_relay forwarding">>,
         events => Events
     }),
-    send(URL, ReqBody).
+    _Pid = send_spawn(URL, ReqBody),
+    ok.
+
+send_spawn(URL, ReqBody) ->
+    spawn(?MODULE, send, [URL, ReqBody]).
 
 send(URL, ReqBody) ->
     ReqHeaders = [{<<"content-type">>, <<"application/json">>}],
@@ -93,7 +101,6 @@ send(URL, ReqBody) ->
     }),
 
     ok.
-
 
 event_add_to_api_event({Event, User, Opts}) ->
     #{<<"event_name">> => Event,
