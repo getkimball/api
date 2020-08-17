@@ -75,6 +75,20 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                                  type_expected=>Type,
                                  value=>Value}},
                     []);
+        {matches_more_than_oneOf, Object} ->
+            Msg = <<"Object matches more than oneOf specifications">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg, object=>Object}},
+                    []);
+        {not_any_oneOf, Object, Whys} ->
+            Msg = <<"Object does not match any of the oneOf specifications">>,
+            respond(Req,
+                    400,
+                    #{error => #{what=>Msg,
+                                 object=>Object,
+                                 why=>tuples_to_lists(Whys)}},
+                    []);
         {not_any_of, Object, Whys} ->
             Msg = <<"The object did not match anyOf">>,
             respond(Req,
@@ -149,6 +163,26 @@ match_params(_Params=[_Spec=#{name:=Name,
     Param = validate_property_spec(Value, Schema),
     [{Name, Param} | match_params(T, Req)].
 
+match_schema(_Schema=#{oneOf:=OneOfs}, Data) ->
+    %  Match each of the OneOfs
+    MapOfs = fun(O) ->
+        try match_schema(O, Data) of
+            Params -> {ok, Params}
+        catch
+            ValidationError -> {error, ValidationError}
+        end
+    end,
+    OneOfParams = lists:map(MapOfs, OneOfs),
+
+    % Split the matched params from the error params
+    Matched = proplists:get_all_values(ok, OneOfParams),
+    Errored = proplists:get_all_values(error, OneOfParams),
+
+    case Matched of
+        [OnlyMatch] -> OnlyMatch;
+        [] -> throw({not_any_oneOf, Data, Errored});
+        _ -> throw({matches_more_than_oneOf, Data})
+    end;
 match_schema(Schema=#{properties:=Properties}, Data) ->
     ?LOG_DEBUG(#{what=> <<"Match schema">>,
                  schema=> Schema,

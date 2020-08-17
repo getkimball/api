@@ -80,19 +80,27 @@ http_get(Mod, State, Req, ExpectedCode, ExpectedData) ->
 http_post(Mod, Req, 204) ->
     http_post(Mod, Req, 204, no_body).
 
-http_post(Mod, Req, ExpectedCode, ExpectedBody) ->
-    http_post(Mod, [], Req, ExpectedCode, ExpectedBody).
+http_post(Mod, Req, ExpectedCode, ExpectedBody) when is_integer(ExpectedCode) ->
+    http_post(Mod, [], Req, ExpectedCode, ExpectedBody);
+http_post(Mod, State, Req, ExpectedCode) ->
+    {PostCode, Data} = post(Mod, State, Req),
+    ?assertEqual(ExpectedCode, PostCode),
+    Data.
 
 http_post(Mod, State, Req, ExpectedCode, ExpectedBody) ->
+    {PostCode, Data} = post(Mod, State, Req),
+
+    ?assertEqual({ExpectedCode, ExpectedBody}, {PostCode, Data}),
+    ok.
+
+post(Mod, State, Req) ->
     CowPostResp = cowboy_test_helpers:init(Mod, Req, State),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
     Data = case PostBody of
         <<"">> -> no_body;
         Content -> jsx:decode(Content, [return_maps])
     end,
-
-    ?assertEqual({ExpectedCode, ExpectedBody}, {PostCode, Data}),
-    ok.
+    {PostCode, Data}.
 
 read_reply({ok, #{streamid:=StreamId}, _Opts}) ->
     receive

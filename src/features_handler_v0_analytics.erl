@@ -27,7 +27,11 @@ trails() ->
                     description => <<"Bad request, see response for details">>,
                     content => #{
                         'application/json' => #{
-                            schema => error_schema()
+                            schema => error_schema(),
+                            example => #{
+                                event_name => <<"click">>,
+                                user_id => <<"1">>
+                            }
                     }}
                 }
             }
@@ -71,7 +75,8 @@ analytics_return_schema() ->
     }.
 
 analytic_event_input_schema() ->
-    #{
+    EventSchema = #{
+        type => object,
         required => [event_name, user_id],
         properties => #{
            ensure_goal => #{
@@ -87,6 +92,21 @@ analytic_event_input_schema() ->
                description => <<"ID of the user">>
            }
         }
+    },
+    #{
+        oneOf => [
+          EventSchema,
+          #{type => object,
+            required => [events],
+            properties => #{
+               events => #{
+                   type => array,
+                   description => <<"List of events">>,
+                   items => EventSchema
+               }
+            }
+          }
+        ]
     }.
 
 error_schema() ->
@@ -110,22 +130,32 @@ handle_req(Req=#{method := <<"GET">>}, _Params, _Body=undefined, _Opts) ->
     ?LOG_DEBUG(#{what=> "Analytic counts",
                  counts => RenderedCounts}),
     {Req, 200, Data, #{}};
+
 handle_req(Req=#{method := <<"POST">>},
            _Params,
-           _Body=#{ensure_goal:=EnsureGoalArg,
-                   event_name:= EventName,
-                   user_id:= UserID},
+           _Body=#{events:=Events},
            State=#{analytics_event_mod:=AnalyticsEventMod}) ->
+
+    ?LOG_DEBUG(#{what=> "Analytic events",
+                 events => Events}),
+    EventCalls = lists:map(fun build_event_call/1, Events),
+
+    AnalyticsEventMod:add(EventCalls),
+
+    {Req, 204, <<"">>, State};
+handle_req(Req=#{method := <<"POST">>},
+           _Params,
+           Body,
+           State=#{analytics_event_mod:=AnalyticsEventMod}) ->
+
+    {EventName, UserID, Opts} = build_event_call(Body),
 
     ?LOG_DEBUG(#{what=> "Analytic event",
                  user_id => UserID,
                  mode => AnalyticsEventMod,
                  event_name => EventName}),
-    EnsureGoal = case EnsureGoalArg of
-        undefined -> false;
-        Else -> Else
-    end,
-    Opts = #{ensure_goal => EnsureGoal},
+
+
     AnalyticsEventMod:add(EventName, UserID, Opts),
 
     {Req, 204, <<"">>, State};
@@ -156,3 +186,16 @@ render_tag_counts(TagCounts) ->
 render_tag_count(Tags, Count, AccIn) ->
     [#{events => Tags,
       count => Count}|AccIn].
+
+
+build_event_call(#{ensure_goal := EnsureGoalArg,
+                   event_name := EventName,
+                   user_id := UserID}) ->
+    EnsureGoal = case EnsureGoalArg of
+        undefined -> false;
+        Else -> Else
+    end,
+    Opts = #{
+      ensure_goal => EnsureGoal
+    },
+    {EventName, UserID, Opts}.
