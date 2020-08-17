@@ -13,7 +13,8 @@
          add/3]).
 
 add(Items) when is_list(Items) ->
-    ok.
+    AnalyticsURL = persistent_term:get({features, analytics_url}),
+    send_events(AnalyticsURL, Items).
 
 add(EventName, Key)  ->
     add(EventName, Key, #{}).
@@ -23,7 +24,6 @@ add(EventName, Key, Opts) when is_binary(EventName), is_integer(Key) ->
     add(EventName, KeyB, Opts);
 add(EventName, Key, Opts) when is_binary(EventName), is_binary(Key) ->
     AnalyticsURL = persistent_term:get({features, analytics_url}),
-
     send_event(AnalyticsURL, EventName, Key, Opts).
 
 send_event(undefined, EventName, Key, Opts) ->
@@ -46,6 +46,24 @@ send_event(URL, EventName, Key, Opts) ->
         feature_name => EventName,
         user_id => Key,
         opts => Opts
+    }),
+    send(URL, ReqBody).
+
+send_events(undefined, Items) ->
+    ?LOG_INFO(#{
+        what => <<"ANALYTICS_HOST not set">>,
+        events => Items
+    }),
+    ok;
+send_events(URL, Items) ->
+    Events = lists:map(fun event_add_to_api_event/1, Items),
+    Data = #{
+      <<"events">> => Events
+    },
+    ReqBody = jsx:encode(Data),
+    ?LOG_INFO(#{
+        what => <<"count_relay forwarding">>,
+        events => Events
     }),
     send(URL, ReqBody).
 
@@ -75,3 +93,9 @@ send(URL, ReqBody) ->
     }),
 
     ok.
+
+
+event_add_to_api_event({Event, User, Opts}) ->
+    #{<<"event_name">> => Event,
+      <<"user_id">> => User,
+      <<"ensure_goal">> => maps:get(ensure_goal, Opts)}.
