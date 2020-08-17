@@ -23,9 +23,10 @@ add(EventName, Key, Opts) when is_binary(EventName), is_integer(Key) ->
     add(EventName, KeyB, Opts);
 add(EventName, Key, Opts) when is_binary(EventName), is_binary(Key) ->
     AnalyticsURL = persistent_term:get({features, analytics_url}),
-    send(AnalyticsURL, EventName, Key, Opts).
 
-send(undefined, EventName, Key, Opts) ->
+    send_event(AnalyticsURL, EventName, Key, Opts).
+
+send_event(undefined, EventName, Key, Opts) ->
     ?LOG_INFO(#{
         what => <<"ANALYTICS_HOST not set">>,
         feature_name => EventName,
@@ -33,13 +34,22 @@ send(undefined, EventName, Key, Opts) ->
         opts => Opts
     }),
     ok;
-send(URL, EventName, Key, Opts) ->
+send_event(URL, EventName, Key, Opts) ->
     Data = #{
       <<"event_name">> => EventName,
       <<"user_id">> => Key,
       <<"ensure_goal">> => maps:get(ensure_goal, Opts, false)
     },
     ReqBody = jsx:encode(Data),
+    ?LOG_INFO(#{
+        what => <<"count_relay forwarding">>,
+        feature_name => EventName,
+        user_id => Key,
+        opts => Opts
+    }),
+    send(URL, ReqBody).
+
+send(URL, ReqBody) ->
     ReqHeaders = [{<<"content-type">>, <<"application/json">>}],
     Method = post,
     RequestOpts = [{timeout, 1000}],
