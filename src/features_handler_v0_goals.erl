@@ -25,9 +25,10 @@ trails() ->
                     description => <<"Bad request, see response for details">>,
                     content => #{
                         'application/json' => #{
-                            schema => error_schema()
+                            schema => features_handler_v0:error_schema()
                     }}
-                }
+                },
+                404 => features_handler_v0:not_found_spec()
             }
         },
         <<"post">> => #{
@@ -50,7 +51,8 @@ trails() ->
             }
         }
     },
-    State = #{},
+    {ok, Mod} = application:get_env(features, analytics_event_mod),
+    State = #{analytics_event_mod => Mod},
     [trails:trail("/v0/goals", ?MODULE, State, Metadata)].
 
 goals_return_schema() ->
@@ -78,26 +80,25 @@ goal_event_input_schema() ->
         }
     }.
 
-error_schema() ->
-    #{
-        type => object,
-        properties => #{
-           <<"error">> => #{
-              type => object,
-              description => <<"Object describing the error">>
-           }
-        }
-    }.
-
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 
-handle_req(Req=#{method := <<"GET">>}, _Params, _Body=undefined, _Opts) ->
+handle_req(Req=#{method := <<"GET">>},
+           _Params,
+           _Body=undefined,
+           #{analytics_event_mod := features_count_router}) ->
     Goals = features_count_router:goals(),
     Data = #{<<"goals">> => Goals},
     ?LOG_DEBUG(#{what=> "Goal Events",
                  goals => Goals}),
     {Req, 200, Data, #{}};
+handle_req(Req=#{method := <<"GET">>},
+           _Params,
+           _Body=undefined,
+           _State) ->
+    Data = #{<<"error">> => #{
+                <<"what">> => <<"Daemonset cannot GET goals">>}},
+    {Req, 404, Data, #{}};
 handle_req(Req=#{method := <<"POST">>},
            _Params,
            _Body=#{goal_name:= GoalName},
@@ -107,15 +108,7 @@ handle_req(Req=#{method := <<"POST">>},
                  goal_name => GoalName}),
     features_count_router:add_goal(GoalName),
 
-    {Req, 204, <<"">>, State};
-handle_req(Req, Params, Body, State) ->
-    ?LOG_DEBUG(#{what => "Goal event request 404",
-                 req => Req,
-                 params => Params,
-                 body => Body,
-                 state => State}),
-
-    {Req, 404, #{}, #{}}.
+    {Req, 204, <<"">>, State}.
 
 post_req(_Response, _State) ->
     ok.

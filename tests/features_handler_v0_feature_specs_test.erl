@@ -72,6 +72,23 @@ create_feature_missing_required_name_test() ->
 
     unload().
 
+create_feature_set_feature_not_supported_test() ->
+    load(),
+    Name = <<"feature_name">>,
+    Boolean = true,
+    Doc = #{
+        name => Name,
+        boolean => Boolean
+    },
+
+    PostReq = cowboy_test_helpers:req(post, json, Doc),
+    ok = meck:expect(features_store, set_feature, ['_', '_', '_', '_'], not_supported),
+
+    Expected = #{<<"error">> => #{<<"what">> => <<"Setting feature not supported">>}},
+
+    ok = ?CTH:http_post(?MUT, PostReq, 405, Expected),
+
+    unload().
 %%%%
 %   Boolean Tests
 %%%%
