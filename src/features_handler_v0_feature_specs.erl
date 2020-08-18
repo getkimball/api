@@ -48,7 +48,7 @@ trails() ->
                 405 => #{
                     description => <<"Sidecar unable to update features">>,
                     content => #{
-                        'application/json' => #{}
+                        'application/json' => features_handler_v0:error_schema()
                 }}
             }
       }
@@ -188,11 +188,12 @@ handle_req(Req=#{method := <<"POST">>}, _Params, Body, Opts) ->
     UserSpec = process_user_spec_input(UserSpecIn),
     User = {user, UserSpec},
     Ok = features_store:set_feature(Name, Boolean, Rollout, User),
-    Code = case Ok of
-        ok -> 204;
-        _ -> 405
+    {Code, Data} = case Ok of
+        ok -> {204, #{}};
+        _ -> {405, #{<<"error">> => #{
+                        <<"what">> => <<"Setting feature not supported">>}}}
     end,
-    {Req, Code, #{}, Opts}.
+    {Req, Code, Data, Opts}.
 
 post_req(_Response, _State) ->
     ok.
