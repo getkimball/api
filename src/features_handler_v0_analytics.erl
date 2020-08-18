@@ -46,7 +46,11 @@ trails() ->
             requestBody => #{
                 content => #{
                     'application/json' => #{
-                        schema => analytic_event_input_schema()
+                        schema => analytic_event_input_schema(),
+                        example => #{
+                            event_name => <<"click">>,
+                            user_id => <<"1">>
+                        }
                     }
                 }
             },
