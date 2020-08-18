@@ -27,16 +27,10 @@ trails() ->
                     description => <<"Bad request, see response for details">>,
                     content => #{
                         'application/json' => #{
-                            schema => error_schema()
+                            schema => features_handler_v0:error_schema()
                     }}
                 },
-                404 => #{
-                    description => <<"Daemonset instances cannot GET data">>,
-                    content => #{
-                        'application/json' => #{
-                            schema => error_schema()
-                    }}
-                }
+                404 => features_handler_v0:not_found_spec()
             }
         },
         <<"post">> => #{
@@ -114,17 +108,6 @@ analytic_event_input_schema() ->
             }
           }
         ]
-    }.
-
-error_schema() ->
-    #{
-        type => object,
-        properties => #{
-           <<"error">> => #{
-              type => object,
-              description => <<"Object describing the error">>
-           }
-        }
     }.
 
 init(Req, Opts) ->
