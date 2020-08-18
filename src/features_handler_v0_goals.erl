@@ -107,15 +107,7 @@ handle_req(Req=#{method := <<"POST">>},
                  goal_name => GoalName}),
     features_count_router:add_goal(GoalName),
 
-    {Req, 204, <<"">>, State};
-handle_req(Req, Params, Body, State) ->
-    ?LOG_DEBUG(#{what => "Goal event request 404",
-                 req => Req,
-                 params => Params,
-                 body => Body,
-                 state => State}),
-
-    {Req, 404, #{}, #{}}.
+    {Req, 204, <<"">>, State}.
 
 post_req(_Response, _State) ->
     ok.

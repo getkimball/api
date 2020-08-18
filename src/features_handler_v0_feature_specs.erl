@@ -192,10 +192,7 @@ handle_req(Req=#{method := <<"POST">>}, _Params, Body, Opts) ->
         ok -> 204;
         _ -> 405
     end,
-    {Req, Code, #{}, Opts};
-handle_req(Req, _Params, _Body, Opts) ->
-    {Req, 404, #{}, Opts}.
-
+    {Req, Code, #{}, Opts}.
 
 post_req(_Response, _State) ->
     ok.

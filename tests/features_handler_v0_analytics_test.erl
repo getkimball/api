@@ -53,7 +53,18 @@ get_basic_analytics_test() ->
                                       <<"event_counts">> => []}]},
 
     Req = ?CTH:req(),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    State = #{analytics_event_mod => features_count_router},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+
+    unload().
+
+get_basic_analytics_in_sidecar_mode_404s_test() ->
+    load(),
+    Req = ?CTH:req(),
+    State = #{analytics_event_mod => features_count_relay},
+    ExpectedData = #{<<"error">>=>#{<<"what">> => <<"Daemonset cannot GET analytics">>}},
+
+    ?CTH:http_get(?MUT, State, Req, 404, ExpectedData),
 
     unload().
 
@@ -73,7 +84,8 @@ get_basic_tag_counts_analytics_test() ->
                                                              <<"count">> => TagCount}]}]},
 
     Req = ?CTH:req(),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    State = #{analytics_event_mod => features_count_router},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
 
     unload().
 
@@ -98,7 +110,8 @@ get_tag_counts_analytics_test() ->
                                       <<"event_counts">> => ExpectedTagCounts}]},
 
     Req = ?CTH:req(),
-    ?CTH:http_get(?MUT, Req, 200, ExpectedData),
+    State = #{analytics_event_mod => features_count_router},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
 
     unload().
 

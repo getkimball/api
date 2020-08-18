@@ -27,11 +27,14 @@ trails() ->
                     description => <<"Bad request, see response for details">>,
                     content => #{
                         'application/json' => #{
-                            schema => error_schema(),
-                            example => #{
-                                event_name => <<"click">>,
-                                user_id => <<"1">>
-                            }
+                            schema => error_schema()
+                    }}
+                },
+                404 => #{
+                    description => <<"Daemonset instances cannot GET data">>,
+                    content => #{
+                        'application/json' => #{
+                            schema => error_schema()
                     }}
                 }
             }
@@ -123,7 +126,10 @@ error_schema() ->
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 
-handle_req(Req=#{method := <<"GET">>}, _Params, _Body=undefined, _Opts) ->
+handle_req(Req=#{method := <<"GET">>},
+           _Params,
+           _Body=undefined,
+           #{analytics_event_mod := features_count_router}) ->
     Counts = features_count_router:counts(),
     RenderedCounts = lists:map(fun render_count_map/1, Counts),
     Data = #{<<"counts">> => RenderedCounts},
@@ -159,14 +165,16 @@ handle_req(Req=#{method := <<"POST">>},
     AnalyticsEventMod:add(EventName, UserID, Opts),
 
     {Req, 204, <<"">>, State};
-handle_req(Req, Params, Body, State) ->
+
+handle_req(Req=#{method := <<"GET">>}, Params, Body, State) ->
     ?LOG_DEBUG(#{what => "Analytics request 404",
                  req => Req,
                  params => Params,
                  body => Body,
                  state => State}),
-
-    {Req, 404, #{}, #{}}.
+    Data = #{<<"error">> => #{
+                <<"what">> => <<"Daemonset cannot GET analytics">>}},
+    {Req, 404, Data, #{}}.
 
 post_req(_Response, _State) ->
     ok.

@@ -102,9 +102,7 @@ handle_req(Req=#{method := <<"GET">>}, Params, _Body=undefined, State) ->
                  user => UserObj,
                  map => Features}),
     Data = #{<<"features">> => CollapsedFeatures},
-    {Req, 200, Data, State#{user=>UserObj, context=>ContextObj}};
-handle_req(Req, _Params, _Body, _Opts) ->
-    {Req, 404, #{}, #{}}.
+    {Req, 200, Data, State#{user=>UserObj, context=>ContextObj}}.
 
 post_req(_Response, _State=#{analytics_event_mod:=AnalyticsEventMod,
                              user:=User,
