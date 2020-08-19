@@ -106,11 +106,8 @@ register_counter(CounterName, Pid) ->
 
 counts() ->
     CountFun = fun(#counter_registration{name=CounterName, pid=Pid}, Acc0) ->
-        #{count := Count,
-          tag_counts := TagCounts} = features_counter:count(Pid),
-        M = #{name => CounterName,
-              count => Count,
-              tag_counts => TagCounts},
+        Counts = features_counter:count(Pid),
+        M = Counts#{name => CounterName},
         [M | Acc0]
     end,
     ets:foldl(CountFun, [], ?COUNTER_REGISTRY).
