@@ -80,6 +80,7 @@ aa_test_single_user(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 1,
+                          single_tag_counts => #{},
                           tag_counts => #{[] => 1}}), Num),
     Config.
 
@@ -94,6 +95,7 @@ ab_test_single_user_multiple_times(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 1,
+                          single_tag_counts => #{},
                           tag_counts => #{[] => 1}}), Num),
     Config.
 
@@ -109,6 +111,7 @@ ac_test_multiple_users(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 2,
+                          single_tag_counts => #{},
                           tag_counts => #{[] => 2}}), Num),
     Config.
 
@@ -124,6 +127,7 @@ ba_test_different_key_types(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 1,
+                          single_tag_counts => #{},
                           tag_counts => #{[] => 1}}), Num),
     Config.
 
@@ -151,6 +155,7 @@ ca_test_storage_lib_loading_data(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 1,
+                          single_tag_counts => #{},
                           tag_counts => #{[] => 1}}), Num),
     [{pid, Pid}|Config].
 
@@ -183,7 +188,8 @@ da_test_count_with_tags(Config) ->
     Pid = ?config(pid, Config),
 
     User = <<"user_id">>,
-    Tags = [<<"foo">>],
+    Tag = <<"foo">>,
+    Tags = [Tag],
 
     ?MUT:add(User, Tags, Pid),
 
@@ -191,7 +197,8 @@ da_test_count_with_tags(Config) ->
 
     ExpectedCounts = #{
         count => 1,
-        tag_counts => #{Tags => 1}
+        tag_counts => #{Tags => 1},
+        single_tag_counts => #{Tag => 1}
     },
 
     ?assertEqual(ExpectedCounts, Counts),
@@ -202,7 +209,8 @@ db_test_multiple_count_with_tags(Config) ->
 
     User1 = <<"user_id1">>,
     User2 = <<"user_id2">>,
-    Tags = [<<"foo">>],
+    Tag = <<"foo">>,
+    Tags = [Tag],
 
     ?MUT:add(User1, Tags, Pid),
     ?MUT:add(User2, Tags, Pid),
@@ -211,7 +219,8 @@ db_test_multiple_count_with_tags(Config) ->
 
     ExpectedCounts = counts(#{
         count => 2,
-        tag_counts => #{Tags => 2}
+        tag_counts => #{Tags => 2},
+        single_tag_counts => #{Tag => 2}
     }),
 
     ?assertEqual(ExpectedCounts, Counts),
@@ -221,7 +230,8 @@ dc_test_multiple_count_single_user_with_tags(Config) ->
     Pid = ?config(pid, Config),
 
     User = <<"user_id">>,
-    Tags = [<<"foo">>],
+    Tag = <<"foo">>,
+    Tags = [Tag],
 
     ?MUT:add(User, Tags, Pid),
     ?MUT:add(User, Tags, Pid),
@@ -230,7 +240,8 @@ dc_test_multiple_count_single_user_with_tags(Config) ->
 
     ExpectedCounts = counts(#{
         count => 1,
-        tag_counts => #{Tags => 1}
+        tag_counts => #{Tags => 1},
+        single_tag_counts => #{Tag => 1}
     }),
 
     ?assertEqual(ExpectedCounts, Counts),
@@ -240,8 +251,10 @@ dd_test_multiple_count_single_user_with_different_tags(Config) ->
     Pid = ?config(pid, Config),
 
     User = <<"user_id">>,
-    Tags1 = [<<"foo">>],
-    Tags2 = [<<"bar">> | Tags1],
+    Tag1 = <<"foo">>,
+    Tag2 = <<"bar">>,
+    Tags1 = [Tag1],
+    Tags2 = [Tag2 | Tags1],
 
     ?MUT:add(User, Tags1, Pid),
     ?MUT:add(User, Tags2, Pid),
@@ -250,7 +263,8 @@ dd_test_multiple_count_single_user_with_different_tags(Config) ->
 
     ExpectedCounts = counts(#{
         count => 1,
-        tag_counts => #{Tags1 => 1}
+        tag_counts => #{Tags1 => 1},
+        single_tag_counts => #{Tag1 => 1}
     }),
 
     ?assertEqual(ExpectedCounts, Counts),
@@ -261,8 +275,11 @@ de_test_with_multiple_tags_and_mismatched_ordering(Config) ->
 
     User1 = <<"user_id1">>,
     User2 = <<"user_id2">>,
-    Tags = [<<"bar">>, <<"foo">>],
+    Tag1 = <<"foo">>,
+    Tag2 = <<"bar">>,
+    Tags = [Tag1, Tag2],
     ReversedTags = lists:reverse(Tags),
+    SortedTags = lists:sort(Tags),
 
     ?MUT:add(User1, Tags, Pid),
     ?MUT:add(User2, ReversedTags, Pid),
@@ -271,7 +288,11 @@ de_test_with_multiple_tags_and_mismatched_ordering(Config) ->
 
     ExpectedCounts = counts(#{
         count => 2,
-        tag_counts => #{Tags => 2}
+        tag_counts => #{SortedTags => 2},
+        single_tag_counts => #{
+            Tag1 => 2,
+            Tag2 => 2
+        }
     }),
 
     ?assertEqual(ExpectedCounts, Counts),
@@ -293,5 +314,6 @@ ea_test_includes_key(Config) ->
 
 counts(C) ->
     Default = #{count => 0,
+                single_tag_counts => #{},
                 tag_counts => #{}},
     maps:merge(Default, C).

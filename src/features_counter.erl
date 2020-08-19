@@ -30,6 +30,7 @@
                 store_lib_state=undefined,
                 unpersisted_write=false,
                 tag_counts=#{},
+                single_tag_counts=#{},
                 bloom=undefined}).
 
 %%%===================================================================
@@ -110,9 +111,12 @@ register_name(Name) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(count, _From, State=#state{bloom=Bloom, tag_counts=TagCounts}) ->
+handle_call(count, _From, State=#state{bloom=Bloom,
+                                       single_tag_counts=STC,
+                                       tag_counts=TagCounts}) ->
     Size = etbloom:size(Bloom),
     Reply = #{count => Size,
+              single_tag_counts => STC,
               tag_counts => TagCounts},
     {reply, Reply, State};
 handle_call({includes_key, Key}, _From, State=#state{bloom=Bloom}) ->
@@ -146,6 +150,7 @@ handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
 %%--------------------------------------------------------------------
 handle_cast({add, Key, Tags}, State=#state{name=Name,
                                      bloom=Bloom,
+                                     single_tag_counts=STC,
                                      tag_counts=TagCounts}) ->
     InitialSize = etbloom:size(Bloom),
     NewBloom = etbloom:add(Key, Bloom),
@@ -153,9 +158,10 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
 
     SortedTags = lists:sort(Tags),
 
-    NewTagCounts = case InitialSize == NewSize of
-        true -> TagCounts;
-        false -> increment_tag_count(SortedTags, TagCounts)
+    {NewTagCounts, STC1} = case InitialSize == NewSize of
+        true -> {TagCounts, STC};
+        false -> {increment_tag_count(SortedTags, TagCounts),
+                  increment_single_tag_counts(SortedTags, STC)}
     end,
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
                  name=>Name,
@@ -164,6 +170,7 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
                  key=>Key}),
     {noreply, State#state{bloom=NewBloom,
                           tag_counts=NewTagCounts,
+                          single_tag_counts=STC1,
                           unpersisted_write=true}};
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
     {Data, StoreLibState1} = features_store_lib:get(StoreLibState),
@@ -227,3 +234,10 @@ increment_tag_count(Tags, TagCounts) ->
     Count = maps:get(Tags, TagCounts, 0),
     NewCounts = maps:put(Tags, Count + 1, TagCounts),
     NewCounts.
+
+increment_single_tag_counts(Tags, TagCounts) ->
+    Incr = fun(T, AccIn) ->
+        Val = maps:get(T, AccIn, 0),
+        AccIn#{T => Val + 1}
+    end,
+    lists:foldl(Incr, TagCounts, Tags).
