@@ -46,10 +46,12 @@ get_basic_analytics_test() ->
     Count = 4,
     ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
                                                            count => Count,
+                                                           single_tag_counts => #{},
                                                            tag_counts => #{}}]),
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
+                                      <<"single_event_counts">> => [],
                                       <<"event_counts">> => []}]},
 
     Req = ?CTH:req(),
@@ -76,10 +78,12 @@ get_basic_tag_counts_analytics_test() ->
     TagCounts = #{[] => TagCount},
     ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
                                                            count => Count,
+                                                           single_tag_counts => #{},
                                                            tag_counts => TagCounts}]),
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
+                                      <<"single_event_counts">> => [],
                                       <<"event_counts">> => [#{<<"events">> => [],
                                                              <<"count">> => TagCount}]}]},
 
@@ -96,8 +100,11 @@ get_tag_counts_analytics_test() ->
     TagCounts = #{[] => 0,
                   [<<"1">>] => 1,
                   [<<"1">>, <<"2">>] => 2},
+    STC = #{<<"1">> => 3,
+            <<"2">> => 2},
     ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
                                                            count => Count,
+                                                           single_tag_counts => STC,
                                                            tag_counts => TagCounts}]),
 
     ExpectedTagCounts = [
@@ -105,8 +112,14 @@ get_tag_counts_analytics_test() ->
         #{<<"count">> => 1, <<"events">> => [<<"1">>]},
         #{<<"count">> => 0, <<"events">> => []}
     ],
+    ExpectedSTC = [
+        #{<<"count">> => 2, <<"event">> => <<"2">>},
+        #{<<"count">> => 3, <<"event">> => <<"1">>}
+    ],
+
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
+                                      <<"single_event_counts">> => ExpectedSTC,
                                       <<"event_counts">> => ExpectedTagCounts}]},
 
     Req = ?CTH:req(),

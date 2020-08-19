@@ -474,5 +474,6 @@ spec_for_feature(Feature, StoreLibMod) ->
 
 counts(C) ->
     Default = #{count => 0,
+                single_tag_counts => #{},
                 tag_counts => #{}},
     maps:merge(Default, C).

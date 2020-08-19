@@ -166,22 +166,24 @@ handle_req(Req=#{method := <<"GET">>}, Params, Body, State) ->
 post_req(_Response, _State) ->
     ok.
 
-
 render_count_map(#{name:=Name,
                    count:=Count,
+                   single_tag_counts:=STC,
                    tag_counts:=TagCounts}) ->
-    RenderedTagCounts = render_tag_counts(TagCounts),
+    RenderedTagCounts = maps:fold(fun render_tag_count/3, [], TagCounts),
+    RenderedSTC = maps:fold(fun render_single_tag_count/3, [], STC),
     #{name=>Name,
       count=>Count,
+      single_event_counts=>RenderedSTC,
       event_counts=>RenderedTagCounts}.
-
-render_tag_counts(TagCounts) ->
-    maps:fold(fun render_tag_count/3, [], TagCounts).
 
 render_tag_count(Tags, Count, AccIn) ->
     [#{events => Tags,
-      count => Count}|AccIn].
+       count => Count}|AccIn].
 
+render_single_tag_count(Tag, Count, AccIn) ->
+    [#{event => Tag,
+       count => Count}|AccIn].
 
 build_event_call(#{ensure_goal := EnsureGoalArg,
                    event_name := EventName,
