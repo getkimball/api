@@ -20,6 +20,7 @@ groups() -> [{test_count, [
                 ca_test_storage_lib_loading_data,
                 cb_test_storing_with_storage_lib,
                 cc_test_store_with_no_new_data,
+                cd_test_store_with_unsupported_store_lib_operation,
                 da_test_count_with_tags,
                 db_test_multiple_count_with_tags,
                 dc_test_multiple_count_single_user_with_tags,
@@ -183,6 +184,32 @@ cc_test_store_with_no_new_data(Config) ->
     ?assertError(not_found, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Config.
+
+cd_test_store_with_unsupported_store_lib_operation(Config) ->
+    StoreLibState = ?config(store_lib_state, Config),
+    Name = ?config(name, Config),
+
+    meck:expect(features_store_lib, get, ['_'], {not_supported, StoreLibState}),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
+    meck:wait(features_store_lib, get, '_', 1000),
+
+    Key = <<"42">>,
+
+    ?MUT:add(Key, Pid),
+
+    Name = ?config(name, Config),
+
+    ?assertEqual(?STORE_LIB, meck:capture(first, features_store_lib, init, '_', 1)),
+    ?assertEqual({"counter", Name}, meck:capture(first, features_store_lib, init, '_', 2)),
+
+    ?assertEqual(StoreLibState, meck:capture(first, features_store_lib, get, '_', 1)),
+
+    Num = ?MUT:count(Pid),
+
+    ?assertEqual(counts(#{count => 1,
+                          single_tag_counts => #{},
+                          tag_counts => #{[] => 1}}), Num),
+    [{pid, Pid}|Config].
 
 da_test_count_with_tags(Config) ->
     Pid = ?config(pid, Config),

@@ -84,9 +84,9 @@ start_link(StoreLib, Name) ->
 init([StoreLib, Name]) ->
     ?LOG_DEBUG(#{what=><<"features_counter starting">>,
                  name=>Name}),
-    register_name(Name),
     StoreLibState = features_store_lib:init(StoreLib, {"counter", Name}),
     gen_server:cast(self(), load_or_init),
+    register_name(Name),
     {ok, _TRef} = timer:apply_interval(15000, ?MODULE, persist, [self()]),
     {ok, #state{name=Name,
                 store_lib_state=StoreLibState,
@@ -128,12 +128,11 @@ handle_call(persist, _From, State=#state{name=Name, unpersisted_write=false}) ->
                  name=>Name}),
     {reply, ok, State};
 handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
-                                         name=Name,
-                                         bloom=Bloom}) ->
+                                         name=Name}) ->
     ?LOG_DEBUG(#{what=><<"features_counter persist">>,
                  needs_to_persist=>true,
                  name=>Name}),
-    {Status, StoreLibState1} = store(Bloom, StoreLibState),
+    {Status, StoreLibState1} = store(StoreLibState, State),
     Reply = Status,
     {reply, Reply, State#state{store_lib_state=StoreLibState1,
                                unpersisted_write=false}}.
@@ -172,11 +171,23 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
                           tag_counts=NewTagCounts,
                           single_tag_counts=STC1,
                           unpersisted_write=true}};
-handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
-    {Data, StoreLibState1} = features_store_lib:get(StoreLibState),
+handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
+                                       single_tag_counts=STC,
+                                       tag_counts=TagCounts}) ->
+    {LoadedData, StoreLibState1} = features_store_lib:get(StoreLibState),
+    Data = case LoadedData of
+        not_supported -> #{};
+        Else -> Else
+    end,
+
     Bloom = bloom_filter_from_data(Data),
+    LoadedSTC = maps:get(single_tag_counts, Data, STC),
+    LoadedTagCounts = maps:get(tag_counts, Data, TagCounts),
+
     {noreply, State#state{bloom=Bloom,
-                          store_lib_state=StoreLibState1}}.
+                          single_tag_counts=LoadedSTC,
+                          store_lib_state=StoreLibState1,
+                          tag_counts=LoadedTagCounts}}.
 
 bloom_filter_from_data(#{bloom:=Bloom}) ->
     Bloom;
@@ -186,9 +197,13 @@ bloom_filter_from_data(_Else) ->
     Bloom = etbloom:sbf(InitialSize, ErrProb),
     Bloom.
 
-store(Bloom, State) ->
-    Data = #{bloom => Bloom},
-    features_store_lib:store(Data, State).
+store(StoreLibState, _State=#state{bloom=Bloom,
+                                  single_tag_counts=STC,
+                                  tag_counts=TagCounts}) ->
+    Data = #{bloom => Bloom,
+             single_tag_counts => STC,
+             tag_counts => TagCounts},
+    features_store_lib:store(Data, StoreLibState).
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
