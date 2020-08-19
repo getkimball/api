@@ -174,7 +174,12 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
                                        single_tag_counts=STC,
                                        tag_counts=TagCounts}) ->
-    {Data, StoreLibState1} = features_store_lib:get(StoreLibState),
+    {LoadedData, StoreLibState1} = features_store_lib:get(StoreLibState),
+    Data = case LoadedData of
+        not_supported -> #{};
+        Else -> Else
+    end,
+
     Bloom = bloom_filter_from_data(Data),
     LoadedSTC = maps:get(single_tag_counts, Data, STC),
     LoadedTagCounts = maps:get(tag_counts, Data, TagCounts),
