@@ -84,9 +84,9 @@ start_link(StoreLib, Name) ->
 init([StoreLib, Name]) ->
     ?LOG_DEBUG(#{what=><<"features_counter starting">>,
                  name=>Name}),
-    register_name(Name),
     StoreLibState = features_store_lib:init(StoreLib, {"counter", Name}),
     gen_server:cast(self(), load_or_init),
+    register_name(Name),
     {ok, _TRef} = timer:apply_interval(15000, ?MODULE, persist, [self()]),
     {ok, #state{name=Name,
                 store_lib_state=StoreLibState,
