@@ -10,7 +10,7 @@
     onMount(async () => {
         const res = await fetch(`v0/analytics`);
         const json = await res.json();
-        analytics = json.counts;
+        analytics = json.counts.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase())
     });
 
 </script>
