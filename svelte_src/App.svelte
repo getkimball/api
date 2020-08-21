@@ -17,7 +17,7 @@
     onMount(async () => {
         const res = await fetch(`v0/featureSpecs`);
         const json = await res.json();
-        featureSpecs = json.featureSpecs;
+        featureSpecs = json.featureSpecs.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase());
     });
 
     let newFlagName = "";

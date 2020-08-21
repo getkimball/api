@@ -28,10 +28,6 @@
     let failAlertVisibile = false;
     let failAlertMessage = "";
 
-    function toggle() {
-        isOpen = !isOpen;
-    };
-
     async function save() {
         // Reset notifications
         saveAlertVisibile = false;
@@ -99,7 +95,7 @@
 
     <Col xs="auto" align="center">
     <Card>
-        <CardHeader on:click={toggle} >
+        <CardHeader on:click={() => (isOpen = !isOpen)} >
             <CardTitle>{spec.name}</CardTitle>
         </CardHeader>
         <Collapse {isOpen}>
