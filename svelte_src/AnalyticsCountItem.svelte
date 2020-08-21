@@ -10,6 +10,7 @@
              Container,
              FormGroup,
              Input,
+             Progress,
              Row } from "sveltestrap";
 
 
@@ -32,7 +33,8 @@
           Before doing this users also did:
           <br />
           {#each item.single_event_counts as sec }
-          {sec.event} - {sec.count}
+          {sec.event}
+          <Progress value={sec.count / item.count * 100} />
           <br />
 
           {/each}
