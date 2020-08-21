@@ -26,6 +26,16 @@
         </CardHeader>
         <Collapse {isOpen}>
         <CardBody>
+          Unique users: {item.count}
+          <br />
+          <br />
+          Before doing this users also did:
+          <br />
+          {#each item.single_event_counts as sec }
+          {sec.event} - {sec.count}
+          <br />
+
+          {/each}
 
         </CardBody>
         </Collapse>
