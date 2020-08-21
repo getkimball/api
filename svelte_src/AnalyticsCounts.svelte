@@ -17,7 +17,6 @@
 
 <Row>
 
-<h2>Analytics</h2>
 <Table>
   <thead>
     <th>Feature<th>
