@@ -17,26 +17,20 @@
 
 <Row>
 
-<Table>
-  <thead>
-    <th>Feature<th>
-    <th>Count</th>
-  </thead>
-
-<tbody>
+<Col>
 {#each analytics as analyticItem }
-<tr>
-
-    <td scope="row">{analyticItem.name}</td>
-    <td>{analyticItem.count}</td>
-</tr>
+<Row>
+  <Col></Col>
+  <Col xs="6">
+  <AnalyticsCountItem item={analyticItem} />
+  </Col>
+  <Col></Col>
+</Row>
 {:else}
-    <td>No feature analytics yet</td>
-    <td>Make sure "user_id" and "feature" are set</td>
+    No feature analytics yet
+    Make sure "user_id" and "feature" are set
 {/each}
 
-</tbody>
 
-</Table>
-
+</Col>
 </Row>

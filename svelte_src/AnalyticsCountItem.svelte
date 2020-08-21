@@ -1,7 +1,12 @@
 <script>
     import { onMount } from "svelte";
     import { Button,
+             Card,
+             CardBody,
+             CardHeader,
+             CardTitle,
              Col,
+             Collapse,
              Container,
              FormGroup,
              Input,
@@ -10,7 +15,18 @@
 
     export let item = {};
 
+    let isOpen = false;
+
 </script>
 
-{ item.name } - { item.count }
+<Card>
 
+        <CardHeader on:click={() => (isOpen = !isOpen)} >
+            <CardTitle>{item.name}</CardTitle>
+        </CardHeader>
+        <Collapse {isOpen}>
+        <CardBody>
+
+        </CardBody>
+        </Collapse>
+</Card>
