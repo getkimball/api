@@ -5,6 +5,9 @@
              Container,
              FormGroup,
              Input,
+             Nav,
+             NavItem,
+             NavLink,
              Row } from "sveltestrap";
 
     import FeatureSpec from './FeatureSpec.svelte';
@@ -18,6 +21,13 @@
     });
 
     let newFlagName = "";
+
+    let navItems = [
+      { "name": "features", "title": "Features"},
+      { "name": "analytics", "title": "Analytics"},
+    ];
+    let currentNav = "features";
+
     async function createNewFlag() {
         let newFlag = {
             "name": newFlagName,
@@ -55,7 +65,21 @@
         <h1>Kimball Features</h1>
         </Col>
     </Row>
+    <Row>
+        <Col>
+        <Nav tabs>
+          {#each navItems as navItem }
+          <NavItem>
+            <NavLink href=# on:click={() => currentNav=navItem.name } >{ navItem.title }</NavLink>
+          </NavItem>
+          {/each}
+        </Nav>
 
+        </Col>
+    </Row>
+    <br />
+
+    {#if currentNav == 'features' }
     <Row>
         <Col></Col>
         <Col xs="6">
@@ -66,16 +90,26 @@
     </Row>
 
     <Row>
+        <Col></Col>
         <Col xs=8>
-    {#each featureSpecs as featureSpec }
-        <FeatureSpec spec={featureSpec} />
-    {/each}
+          {#each featureSpecs as featureSpec }
+              <FeatureSpec spec={featureSpec} />
+          {/each}
         </Col>
+        <Col></Col>
+    </Row>
+    {/if}
 
-        <Col xs=4>
+    {#if currentNav == 'analytics' }
+
+    <Row>
+        <Col></Col>
+        <Col xs=8>
             <AnalyticsCounts />
         </Col>
+        <Col></Col>
     </Row>
+    {/if}
 
 </Container>
 </main>
