@@ -34,7 +34,7 @@
           <br />
           {#each item.single_event_counts as sec }
           {sec.event}
-          <Progress value={sec.count / item.count * 100} />
+          <Progress value={sec.count / item.count * 100}>{sec.count}</Progress>
           <br />
 
           {/each}
