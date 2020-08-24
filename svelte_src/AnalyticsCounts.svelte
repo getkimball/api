@@ -20,7 +20,6 @@
 
         analyticLookup = analytics.reduce(function(map, obj) {
             map[obj.name] = obj.count;
-            console.log(obj.name);
             return map;
         }, {});
 
@@ -49,7 +48,7 @@
 {#each analytics as analyticItem }
 <Row>
   <Col></Col>
-  <Col xs="6">
+  <Col xs="10">
   <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
   </Col>
   <Col></Col>
