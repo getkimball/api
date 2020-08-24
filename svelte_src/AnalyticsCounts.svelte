@@ -9,7 +9,7 @@
     let analytics = [];
     let analyticLookup = {};
     let goals = [];
-    let predictions = [];
+    let predictions = {};
 
     onMount(async () => {
         const res = await fetch(`v0/analytics`);
@@ -30,10 +30,11 @@
         let event;
         let probability;
         for (goal of goals) {
+          predictions[goal.name] = {};
           for (event of goal.single_event_counts) {
 
             probability = ((event.count / goal.count) * (goal.count / global_count)) / (analyticLookup[event.event] / global_count);
-            predictions = [...predictions, {"goal": goal.name, "event": event.event, "probability": probability}];
+            predictions[goal.name][event.event] = probability;
           }
 
         }
@@ -49,7 +50,7 @@
 <Row>
   <Col></Col>
   <Col xs="6">
-  <AnalyticsCountItem item={analyticItem} />
+  <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
   </Col>
   <Col></Col>
 </Row>
@@ -59,14 +60,3 @@
 {/each}
 </Col>
 </Row>
-
-{#each predictions as prediction }
-<Row>
-  <Col></Col>
-  <Col xs="6">
-  {prediction.goal} - {prediction.event} - {prediction.probability}
-  <br />
-  </Col>
-  <Col></Col>
-</Row>
-{/each}
