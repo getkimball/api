@@ -106,6 +106,9 @@ analytic_event_input_schema() ->
                    items => EventSchema
                }
             }
+          },
+          #{type => array,
+            items => EventSchema
           }
         ]
     }.
@@ -124,6 +127,12 @@ handle_req(Req=#{method := <<"GET">>},
                  counts => RenderedCounts}),
     {Req, 200, Data, #{}};
 
+handle_req(Req=#{method := <<"POST">>},
+           Params,
+           _Body=Events,
+           State) when is_list(Events)->
+    Body = #{events => Events},
+    handle_req(Req, Params, Body, State);
 handle_req(Req=#{method := <<"POST">>},
            _Params,
            _Body=#{events:=Events},
