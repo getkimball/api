@@ -183,7 +183,16 @@ match_schema(_Schema=#{oneOf:=OneOfs}, Data) ->
         [] -> throw({not_any_oneOf, Data, Errored});
         _ -> throw({matches_more_than_oneOf, Data})
     end;
-match_schema(Schema=#{properties:=Properties}, Data) ->
+match_schema(_Schema=#{items:=ItemSpec}, Data) when is_list(Data) ->
+    MatchItem = fun(Item) ->
+        match_schema(ItemSpec, Item)
+    end,
+    lists:map(MatchItem, Data);
+match_schema(_Schema=#{items:=_Properties}, Data) ->
+    % items means this is an array, but the data should have matched above
+    % with is_list
+    throw({incorrect_type, Data, array});
+match_schema(Schema=#{properties:=Properties}, Data) when is_map(Data) ->
     ?LOG_DEBUG(#{what=> <<"Match schema">>,
                  schema=> Schema,
                  data=> Data}),
@@ -199,7 +208,11 @@ match_schema(Schema=#{properties:=Properties}, Data) ->
 
     Params = maps:fold(Fun, #{}, Properties),
     assert_has_keys(Required, Params),
-    Params.
+    Params;
+match_schema(_Schema=#{properties:=_Properties}, Data) ->
+    % properties means this is an object, but the data should have matched
+    % above with is_map
+    throw({incorrect_type, Data, object}).
 
 validate_property_spec(undefined, _Spec) ->
     undefined;

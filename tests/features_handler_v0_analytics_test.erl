@@ -213,6 +213,30 @@ save_multiple_analytic_events_test() ->
 
     unload().
 
+save_list_multiple_analytic_events_test() ->
+    load(),
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = [
+          #{event_name => EventName, user_id => UserID},
+          #{event_name => EventName, user_id => UserID, ensure_goal => false},
+          #{event_name => EventName, user_id => UserID, ensure_goal => true}
+    ],
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+
+    Expected = [
+      {EventName, UserID, #{ensure_goal => false}},
+      {EventName, UserID, #{ensure_goal => false}},
+      {EventName, UserID, #{ensure_goal => true}}
+    ],
+
+    ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
+
+    unload().
+
 invalid_combination_of_single_and_multiple_events_test() ->
     load(),
     EventName = <<"event_name">>,
