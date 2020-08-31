@@ -44,7 +44,9 @@ make live-js
     * `sidecar` - Read only API meant to be deployed as a sidecar. Features features from `/features/data` volume in Kubernetes.
 * `NAMESPACE` - Namespace to use for reading/writing in Kubernetes
 
-* `S3_BUCKET` - Bucket to use for storage
+* `S3_BUCKET` - AWS S3 Bucket to use for storage
+* `GCS_BUCKET` - Google Cloud Storage Bucket to use for storage
+* `GOOGLE_APPLICATION_CREDENTIALS` - Path to a JSON Service Account Key
 
 
 ## Releasing
