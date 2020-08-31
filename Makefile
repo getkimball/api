@@ -1,7 +1,22 @@
 PROJECT = features
 PROJECT_DESCRIPTION = New project
 
-DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven etbloom erlcloud recon
+DEPS = \
+	cowboy \
+	cowboy_swagger \
+	eraven \
+	erlcloud \
+	etbloom \
+	hackney \
+	jsx \
+	kuberlnetes \
+	prometheus \
+	prometheus_cowboy \
+	ranch \
+	recon\
+	swaggerl \
+	trails
+
 BUILD_DEPS = elvis_mk version.mk sync
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
