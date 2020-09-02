@@ -22,7 +22,7 @@ init(Name) ->
 get_all(State=#state{path=Path}) ->
     ReadFile = file:read_file(Path),
     DataBin = handle_file(ReadFile, Path),
-    Data = jsx:decode(DataBin, [return_maps]),
+    Data = erlang:binary_to_term(DataBin),
 
     {Data, State}.
 
