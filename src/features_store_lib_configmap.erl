@@ -43,7 +43,7 @@ get_all(State=#state{configmap_ref=#{namespace:=NS, name:=Name}}) ->
     Data = case Code of
       404 -> ConfigMap = configmap(Name, []),
              create_configmap(State, NS, Name, ConfigMap),
-             [];
+             #{};
       200 -> data_from_configmap_doc(ConfigMapResp)
     end,
 

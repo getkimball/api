@@ -5,7 +5,7 @@
          get/1]).
 
 -type callback_state() :: any().
--type lib_data() :: list(map()).
+-type lib_data() :: map().
 -type name() :: string()| {string(), string()}.
 
 -callback init(name()) -> callback_state().
