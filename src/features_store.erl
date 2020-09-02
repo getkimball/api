@@ -155,7 +155,8 @@ boolean_to_atom(<<"disabled">>) ->
 handle_cast(load_from_store, State=#state{refresh_interval=RefreshInterval,
                                           store_lib_state=StoreLibState}) ->
 
-    {AllFeatures, NewStoreLibState} = features_store_lib:get(StoreLibState),
+    {Data, NewStoreLibState} = features_store_lib:get(StoreLibState),
+    AllFeatures = maps:get(feature_maps, Data, []),
     store_features(AllFeatures),
 
     trigger_refresh_get(RefreshInterval),
@@ -239,7 +240,8 @@ store_features([Feature=#feature{} | T]) ->
 store_in_storelib(State=#state{store_lib_state=StoreLibState}) ->
     AllFeatures = get_boolean_features_pl(),
     FeatureMaps = feature_tuples_to_maps(AllFeatures),
-    {Resp, StoreLibState1} = features_store_lib:store(FeatureMaps,
+    Data = #{feature_maps=> FeatureMaps},
+    {Resp, StoreLibState1} = features_store_lib:store(Data,
                                                       StoreLibState),
     {Resp, State#state{store_lib_state=StoreLibState1}}.
 

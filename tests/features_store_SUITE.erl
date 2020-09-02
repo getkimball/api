@@ -33,7 +33,7 @@ init_per_testcase(ba_external_store_init, Config) ->
 
     meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
-        {[], Ref}
+        {#{feature_maps => []}, Ref}
     end),
 
     meck:expect(features_store_lib, store, fun(_, Ref) ->
@@ -51,7 +51,7 @@ init_per_testcase(_, Config) ->
 
     meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
-        {[], Ref}
+        {#{feature_maps => []}, Ref}
     end),
 
     meck:expect(features_store_lib, store, fun(_, Ref) ->
@@ -153,9 +153,10 @@ ba_external_store_init(Config) ->
                                                                           rollout_start=><<"undefined">>,
                                                                           rollout_end=>1}))
     ],
+    Data = #{feature_maps => All},
     ok = meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
-        {All, Ref}
+        {Data, Ref}
     end),
 
     %% TODO: ^ test with binary keys
@@ -193,8 +194,11 @@ bb_external_store_store_data(Config) ->
                                           {rollout, undefined, undefined},
                                           {user, UserSpecs}),
 
-    Expected = [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
-                                                          user=>UserSpecs})],
+    Expected = #{feature_maps=>
+                  [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
+                                                             user=>UserSpecs})]
+    },
+
     ?assertEqual(Expected, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Config.

@@ -43,7 +43,7 @@ get_all(State=#state{configmap_ref=#{namespace:=NS, name:=Name}}) ->
     Data = case Code of
       404 -> ConfigMap = configmap(Name, []),
              create_configmap(State, NS, Name, ConfigMap),
-             [];
+             #{};
       200 -> data_from_configmap_doc(ConfigMapResp)
     end,
 
@@ -81,7 +81,7 @@ get_configmap(#state{api=API}, NS, Name) ->
 
 
 data_from_configmap_doc(#{<<"data">> := #{<<"data">> := Data}}) ->
-    jsx:decode(Data, [return_maps]).
+    erlang:binary_to_term(Data).
 
 create_configmap(#state{api=API}, NS, Name, Doc) ->
     Fields = configmap_request_fields(NS, Name, Doc),
@@ -122,7 +122,7 @@ write_configmap(State=#state{}, NS, Name, Data) ->
 
 
 configmap(Name, Data) ->
-    Serialized = jsx:encode(Data),
+    Serialized = erlang:term_to_binary(Data),
     #{<<"apiVersion">> => <<"v1">>,
       <<"kind">> => <<"ConfigMap">>,
       <<"metadata">> => #{
