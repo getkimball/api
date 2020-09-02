@@ -5,6 +5,9 @@
 -export([start/2]).
 -export([stop/1]).
 
+-export([decide_store_lib/0]).
+
+-define(DEFAULT_GCS_BUCKET, "default_bucket").
 -define(DEFAULT_S3_BUCKET, "default_bucket").
 
 start(_Type, _Args) ->
@@ -70,6 +73,7 @@ set_config(Mode) ->
     setup_analytics_url(),
     setup_analytics_event_mod(Mode),
     setup_s3(Namespace),
+    setup_gcs(Namespace),
 
     ok = application:set_env(trails, api_root, "/"),
     ok = application:set_env(features, mode, Mode),
@@ -105,10 +109,18 @@ setup_analytics_event_mod(sidecar) ->
     Mod = features_count_relay,
     application:set_env(features, analytics_event_mod, Mod).
 
+setup_gcs(Namespace) ->
+    EnvVarValue = os:getenv("GCS_BUCKET", ?DEFAULT_GCS_BUCKET),
+    GAC_EnvVarValue = os:getenv("GOOGLE_APPLICATION_CREDENTIALS", ""),
+    application:set_env(features, gcs_bucket, EnvVarValue),
+    application:set_env(features, gcs_base_path, Namespace),
+    application:set_env(features, gcs_credentials_path, GAC_EnvVarValue).
+
 setup_s3(Namespace) ->
     EnvVarValue = os:getenv("S3_BUCKET", ?DEFAULT_S3_BUCKET),
     application:set_env(features, s3_bucket, EnvVarValue),
     application:set_env(features, s3_base_path, Namespace).
+
 
 setup_additional_namespace_config() ->
     NamespacesString = os:getenv("ADDITIONAL_NAMESPACES", ""),
@@ -123,12 +135,27 @@ setup_additional_namespace_config() ->
 
 
 decide_store_lib() ->
-    Lib = case application:get_env(features, s3_bucket) of
-        {ok, ?DEFAULT_S3_BUCKET} -> undefined;
-        {ok, ""} -> undefined;
-        {ok, _BucketWasSet} -> features_store_lib_s3
+    S3Set = case application:get_env(features, s3_bucket) of
+        {ok, ?DEFAULT_S3_BUCKET} -> false;
+        {ok, ""} -> false;
+        {ok, _S3BucketWasSet} -> true
     end,
+
+    GCSSet = case application:get_env(features, gcs_bucket) of
+        {ok, ?DEFAULT_GCS_BUCKET} -> false;
+        {ok, ""} -> false;
+        {ok, _GCSBucketWasSet} -> true
+    end,
+
+    Lib = case {S3Set, GCSSet} of
+      {true, true} -> throw({not_supported, multiple_storage_set});
+      {true, _} -> features_store_lib_s3;
+      {_, true} -> features_store_lib_gcs;
+      {false, false} -> undefined
+    end,
+
     Lib.
+
 % Removes empty response from split
 additional_namespaces_to_list([<<>>]) ->
     [];

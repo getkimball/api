@@ -1,7 +1,23 @@
 PROJECT = features
 PROJECT_DESCRIPTION = New project
 
-DEPS = ranch cowboy jsx prometheus prometheus_cowboy hackney trails cowboy_swagger swaggerl kuberlnetes eraven etbloom erlcloud recon
+DEPS = \
+	cowboy \
+	cowboy_swagger \
+	enenra \
+	eraven \
+	erlcloud \
+	etbloom \
+	hackney \
+	jsx \
+	kuberlnetes \
+	prometheus \
+	prometheus_cowboy \
+	ranch \
+	recon\
+	swaggerl \
+	trails
+
 BUILD_DEPS = elvis_mk version.mk sync
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
@@ -11,6 +27,7 @@ DIALYZER_DIRS = --src src tests
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.8.0
 dep_cowboy_swagger = hex 2.2.0
 dep_elvis_mk = git https://github.com/inaka/elvis.mk.git 1.0.0
+dep_enenra = git https://github.com/nlfiedler/enenra.git e6ad391bf50dafee4fa719cc08316fcada7a188d # Waiting on a tag https://github.com/nlfiedler/enenra/issues/12
 dep_eraven = git https://github.com/getkimball/eraven.git 2020-05-20
 dep_erlcloud = git https://github.com/erlcloud/erlcloud.git 3.3.3
 dep_etbloom = git https://github.com/getkimball/etbloom.git 1.0.1
