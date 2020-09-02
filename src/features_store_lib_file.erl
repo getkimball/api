@@ -21,7 +21,8 @@ init(Name) ->
 
 get_all(State=#state{path=Path}) ->
     ReadFile = file:read_file(Path),
-    DataBin = handle_file(ReadFile, Path),
+    B64Bin = handle_file(ReadFile, Path),
+    DataBin = base64:decode(B64Bin),
     Data = erlang:binary_to_term(DataBin),
 
     {Data, State}.

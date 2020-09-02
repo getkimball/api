@@ -81,7 +81,8 @@ get_configmap(#state{api=API}, NS, Name) ->
 
 
 data_from_configmap_doc(#{<<"data">> := #{<<"data">> := Data}}) ->
-    erlang:binary_to_term(Data).
+    B64Decoded = base64:decode(Data),
+    erlang:binary_to_term(B64Decoded).
 
 create_configmap(#state{api=API}, NS, Name, Doc) ->
     Fields = configmap_request_fields(NS, Name, Doc),
@@ -122,7 +123,7 @@ write_configmap(State=#state{}, NS, Name, Data) ->
 
 
 configmap(Name, Data) ->
-    Serialized = erlang:term_to_binary(Data),
+    Serialized = base64:encode(erlang:term_to_binary(Data)),
     #{<<"apiVersion">> => <<"v1">>,
       <<"kind">> => <<"ConfigMap">>,
       <<"metadata">> => #{

@@ -25,7 +25,7 @@ read_test() ->
     ok = meck:expect(application, get_env, [features, file_store_path], {ok, RootPath}),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
-    DataBin = erlang:term_to_binary(Data),
+    DataBin = base64:encode(erlang:term_to_binary(Data)),
     ok = meck:expect(file, read_file, ['_'], {ok, DataBin}),
 
     % API = make_ref(),
@@ -46,7 +46,7 @@ store_test() ->
     ok = meck:expect(application, get_env, [features, file_store_path], {ok, []}),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
-    DataBin = erlang:term_to_binary(Data),
+    DataBin = base64:encode(erlang:term_to_binary(Data)),
     ok = meck:expect(file, read_file, ['_'], {ok, DataBin}),
 
     % API = make_ref(),
