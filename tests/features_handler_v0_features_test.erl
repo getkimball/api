@@ -76,9 +76,14 @@ post_fails() ->
 %   Boolean Tests
 %%%%
 
+boolean_test_() ->
+    {foreach,
+      fun load/0,
+      fun unload/1,
+      [fun get_boolean_features/0,
+       fun get_feature_boolean/0]}.
 
-get_boolean_features_test() ->
-    load(),
+get_boolean_features() ->
     FeatureName = <<"feature_foo">>,
     Features = [test_utils:defaulted_feature_spec(FeatureName, #{boolean=>false})],
     ok = meck:expect(features_store, get_features, fun() -> Features end),
@@ -86,12 +91,9 @@ get_boolean_features_test() ->
     ExpectedData = #{<<"features">>=>#{FeatureName=>false}},
 
     Req = cowboy_test_helpers:req(),
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData).
 
-    unload().
-
-get_feature_boolean_test() ->
-    load(),
+get_feature_boolean() ->
     Name = <<"feature_name">>,
     Boolean = true,
 
@@ -105,16 +107,19 @@ get_feature_boolean_test() ->
     }},
 
     GetReq = cowboy_test_helpers:req(),
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, GetReq, 200, ExpectedData),
-
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, GetReq, 200, ExpectedData).
 
 %%%%
 %   Rollout Tests
 %%%%
 
-get_feature_rollout_test() ->
-    load(),
+rollout_test_() ->
+    {foreach,
+      fun load/0,
+      fun unload/1,
+      [fun get_feature_rollout/0]}.
+
+get_feature_rollout() ->
     Name = <<"feature_name">>,
     Now = erlang:system_time(seconds),
     Later = Now + 100,
@@ -130,17 +135,26 @@ get_feature_rollout_test() ->
         <<"features">> => #{
             Name => false
     }},
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, GetReq, 200, ExpectedData),
-
-    unload().
-
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, GetReq, 200, ExpectedData).
 
 %%%%
 %   Get user features tests
 %%%%
 
-get_user_features_string_test() ->
-    load(),
+user_features_test_() ->
+    {foreach,
+      fun load/0,
+      fun unload/1,
+      [fun get_user_features_string/0,
+       fun get_user_features_integer/0,
+       fun get_user_features_membership_integer/0,
+       fun get_user_features_membership_string/0,
+       fun get_user_features_invalid_user_json/0,
+       fun get_user_features_invalid_user_base64/0,
+       fun get_user_features_invalid_context_json/0,
+       fun get_user_features_invalid_context_base64/0]}.
+
+get_user_features_string() ->
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -158,11 +172,9 @@ get_user_features_string_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData),
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData).
 
-get_user_features_integer_test() ->
-    load(),
+get_user_features_integer() ->
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -180,11 +192,9 @@ get_user_features_integer_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData),
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData).
 
-get_user_features_membership_integer_test() ->
-    load(),
+get_user_features_membership_integer() ->
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -202,11 +212,9 @@ get_user_features_membership_integer_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData),
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData).
 
-get_user_features_membership_string_test() ->
-    load(),
+get_user_features_membership_string() ->
     Name = <<"feature_name">>,
 
     UserProp = <<"user_id">>,
@@ -224,11 +232,9 @@ get_user_features_membership_string_test() ->
     ExpectedData = #{<<"features">>=>#{Name=>true}},
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData),
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, ExpectedData).
 
-get_user_features_invalid_user_json_test() ->
-    load(),
+get_user_features_invalid_user_json() ->
     UserQuery = base64:encode(<<"{ not valid json ]">>),
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
@@ -236,11 +242,9 @@ get_user_features_invalid_user_json_test() ->
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => <<"user_obj">>}},
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected),
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected).
 
-get_user_features_invalid_user_base64_test() ->
-    load(),
+get_user_features_invalid_user_base64() ->
     UserQuery = <<"b'badb64">>,
 
     Req = cowboy_test_helpers:req(get, [{<<"user_obj">>, UserQuery}]),
@@ -248,11 +252,9 @@ get_user_features_invalid_user_base64_test() ->
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => UserQuery}},
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected),
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected).
 
-get_user_features_invalid_context_json_test() ->
-    load(),
+get_user_features_invalid_context_json() ->
     ContextQuery = base64:encode(<<"{ not valid json ]">>),
 
     Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery}]),
@@ -260,11 +262,9 @@ get_user_features_invalid_context_json_test() ->
     Msg = <<"The object is not valid JSON">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => <<"context_obj">>}},
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected),
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected).
 
-get_user_features_invalid_context_base64_test() ->
-    load(),
+get_user_features_invalid_context_base64() ->
     ContextQuery = <<"b'badb64">>,
 
     Req = cowboy_test_helpers:req(get, [{<<"context_obj">>, ContextQuery}]),
@@ -272,16 +272,19 @@ get_user_features_invalid_context_base64_test() ->
     Msg = <<"The object cannot be base64 decoded">>,
     Expected = #{<<"error">> => #{<<"what">> => Msg,
                                   <<"object">> => ContextQuery}},
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected),
-
-    unload().
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 400, Expected).
 
 %%%%
 %   Record context tests
 %%%%
 
-get_features_api_mode_with_context_and_user_test() ->
-    load(),
+features_api_mode_test_() ->
+    {foreach,
+      fun load/0,
+      fun unload/1,
+      [fun get_features_api_mode_with_context_and_user/0]}.
+
+get_features_api_mode_with_context_and_user() ->
     UserIDProp = <<"user_id">>,
     UserID = 42,
     FeatureName = <<"feature_name">>,
@@ -297,5 +300,4 @@ get_features_api_mode_with_context_and_user_test() ->
     ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, 200, Expected),
 
     ?assertEqual(FeatureName, meck:capture(first, features_count_router, add, '_', 1)),
-    ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)),
-    unload().
+    ?assertEqual(UserID, meck:capture(first, features_count_router, add, '_', 2)).

@@ -11,9 +11,6 @@ load() ->
     ok = meck:expect(features_store, set_feature, fun(_, _, _, _) -> ok end),
     ok.
 
-unload(_) ->
-    unload().
-
 unload() ->
     ?assert(meck:validate(features_store)),
     ok = meck:unload(features_store),
