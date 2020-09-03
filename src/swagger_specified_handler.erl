@@ -14,8 +14,8 @@
                  cowboy_http:opts()}.
 
 upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
-    Spec = method_metadata(Handler, Method),
-    Response = try handle_req(Req, Spec, Handler, HandlerState) of
+    Response = try Spec = method_metadata(Handler, Method),
+                   handle_req(Req, Spec, Handler, HandlerState) of
         {Req1, Code, Data, State} ->
             respond(Req1, Code, Data, State)
     catch
@@ -24,6 +24,12 @@ upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
                     400,
                     #{error => #{what=><<"Missing required element">>,
                                  key=>Key}},
+                    []);
+        {method_not_defined, ErrorMethod} ->
+            respond(Req,
+                    405,
+                    #{error => #{what=><<"Method not allowed">>,
+                                 method=>ErrorMethod}},
                     []);
         {invalid_feature, Message} ->
             respond(Req,
@@ -302,8 +308,10 @@ method_metadata(Handler, Method) ->
     LowerMethod = string:lowercase(Method),
     [Trails] = Handler:trails(),
     Metadata = trails:metadata(Trails),
-    MethodSpec = maps:get(LowerMethod, Metadata),
-    MethodSpec.
+    case maps:is_key(LowerMethod, Metadata) of
+        false -> throw({method_not_defined, LowerMethod});
+        true -> maps:get(LowerMethod, Metadata)
+    end.
 
 params_from_request(Req=#{}, Spec) ->
     SpecParams = maps:get(parameters, Spec, []),

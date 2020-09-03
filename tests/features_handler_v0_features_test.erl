@@ -23,6 +23,9 @@ load() ->
 
     ok.
 
+unload(_) ->
+    unload().
+
 unload() ->
     ?assert(meck:validate(features_store)),
     ok = meck:unload(features_store),
@@ -39,25 +42,35 @@ unload() ->
     ok = cowboy_test_helpers:cleanup(),
     ok.
 
-setup_test() ->
-    load(),
+general_test_() ->
+    {foreach,
+      fun load/0,
+      fun unload/1,
+      [fun handler_metadata/0,
+       fun simple_get/0,
+       fun post_fails/0]}.
 
+handler_metadata() ->
     [Trail] = ?MUT:trails(),
     Path = trails:path_match(Trail),
-    ?assertEqual("/v0/features", Path),
+    ?assertEqual("/v0/features", Path).
 
-    unload().
 
-ok_test() ->
-    load(),
-
+simple_get() ->
     Req = cowboy_test_helpers:req(),
     ExpectedCode = 200,
     ExpectedData = #{<<"features">> => #{}},
 
-    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, ExpectedCode, ExpectedData),
+    ?CTH:http_get(?MUT, #{analytics_event_mod=>features_count_router}, Req, ExpectedCode, ExpectedData).
 
-    unload().
+post_fails() ->
+    Req = cowboy_test_helpers:req(post, json, #{}),
+    ExpectedCode = 405,
+    ExpectedData = #{<<"error">> => #{
+                       <<"method">> => <<"post">>,
+                       <<"what">> => <<"Method not allowed">>}},
+
+    ?CTH:http_post(?MUT, Req, ExpectedCode, ExpectedData).
 
 %%%%
 %   Boolean Tests
