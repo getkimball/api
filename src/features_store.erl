@@ -156,12 +156,14 @@ handle_cast(load_from_store, State=#state{refresh_interval=RefreshInterval,
                                           store_lib_state=StoreLibState}) ->
 
     {Data, NewStoreLibState} = features_store_lib:get(StoreLibState),
+    LoadedState = State#state{store_lib_state=NewStoreLibState},
     AllFeatures = maps:get(feature_maps, Data, []),
     store_features(AllFeatures),
 
     trigger_refresh_get(RefreshInterval),
+    {_StoreResp, ReadyState} = store_in_storelib(LoadedState),
 
-    {noreply, State#state{store_lib_state=NewStoreLibState}};
+    {noreply, ReadyState};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
