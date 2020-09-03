@@ -78,6 +78,9 @@ aa_write_read(Config) ->
                                           {user, undefined}),
     Resp = features_store:get_features(),
 
+    ExpectedStore = #{feature_maps => []},
+    ?assertEqual(ExpectedStore, meck:capture(first, features_store_lib, store, '_', 1)),
+
     Expected = [test_utils:defaulted_feature_spec(Name,
       #{boolean => Boolean})],
     ?assertEqual(Expected, Resp),
@@ -199,7 +202,7 @@ bb_external_store_store_data(Config) ->
                                                              user=>UserSpecs})]
     },
 
-    ?assertEqual(Expected, meck:capture(first, features_store_lib, store, '_', 1)),
+    ?assertEqual(Expected, meck:capture(2, features_store_lib, store, '_', 1)),
 
     Config.
 
