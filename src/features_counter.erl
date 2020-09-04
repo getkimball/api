@@ -150,27 +150,36 @@ handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
 handle_cast({add, Key, Tags}, State=#state{name=Name,
                                      bloom=Bloom,
                                      single_tag_counts=STC,
-                                     tag_counts=TagCounts}) ->
+                                     tag_counts=TagCounts,
+                                     unpersisted_write=UnpersistedWrite}) ->
     InitialSize = etbloom:size(Bloom),
     NewBloom = etbloom:add(Key, Bloom),
     NewSize = etbloom:size(NewBloom),
 
     SortedTags = lists:sort(Tags),
 
-    {NewTagCounts, STC1} = case InitialSize == NewSize of
-        true -> {TagCounts, STC};
-        false -> {increment_tag_count(SortedTags, TagCounts),
+    IsNewWrite = InitialSize /= NewSize,
+    ShouldPersist = UnpersistedWrite or IsNewWrite,
+
+    {NewTagCounts, STC1} = case IsNewWrite of
+        false -> {TagCounts, STC};
+        true -> {increment_tag_count(SortedTags, TagCounts),
                   increment_single_tag_counts(SortedTags, STC)}
     end,
+
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
                  name=>Name,
                  size=>NewSize,
                  tags=>SortedTags,
+                 should_persist=>ShouldPersist,
+                 is_new_write=>IsNewWrite,
+                 initial_filter_size=>InitialSize,
+                 new_filter_size=>NewSize,
                  key=>Key}),
     {noreply, State#state{bloom=NewBloom,
                           tag_counts=NewTagCounts,
                           single_tag_counts=STC1,
-                          unpersisted_write=true}};
+                          unpersisted_write=ShouldPersist}};
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
                                        single_tag_counts=STC,
                                        tag_counts=TagCounts}) ->
