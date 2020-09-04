@@ -4,7 +4,7 @@ ADD . /app/src
 RUN npm install
 RUN npm run build
 
-FROM erlang:22 AS builder
+FROM erlang:23.0.2 AS builder
 WORKDIR /app/src
 ADD . /app/src
 

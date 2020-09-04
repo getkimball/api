@@ -9,8 +9,8 @@ let
   pinnedPkgs = sysPkg.fetchFromGitHub {
     owner = "NixOS";
     repo = "nixpkgs";
-    rev = "1ddbd8ce8a6cde8c6c72fc305fed1f6dd4e0d24c";
-    sha256 = "032zr8862r3cfl1f35qmy12b4f2al49qq66ls5pyigr4v4b0ykvy";
+    rev = "2b8a7711f63a701d80e1b2047e4e39e00f298165";
+    sha256 = "0z5m47pyc2pyv9nnvf3rrgxj77zlh8zgaif16gicnz02h6llggk3";
   };
 
   released_pkgs = import pinnedPkgs {};
@@ -20,7 +20,7 @@ let
 in stdenv.mkDerivation {
   name = "env";
   buildInputs = [ released_pkgs.gnumake
-                  released_pkgs.erlang
+                  pinned_pkgs.erlangR23
                   pinned_pkgs.aws-iam-authenticator
                   pinned_pkgs.awscli
                   pinned_pkgs.kubectl
