@@ -9,8 +9,8 @@ let
   pinnedPkgs = sysPkg.fetchFromGitHub {
     owner = "NixOS";
     repo = "nixpkgs";
-    rev = "c7e8da62257a8ff5537c3b3c43eb68228f51e5df";
-    sha256 = "0b5qiywfccng1w6gxs045mhwfz623jw72m68g8viwh1g3p500k3y";
+    rev = "2b8a7711f63a701d80e1b2047e4e39e00f298165";
+    sha256 = "0z5m47pyc2pyv9nnvf3rrgxj77zlh8zgaif16gicnz02h6llggk3";
   };
 
   released_pkgs = import pinnedPkgs {};

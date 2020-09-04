@@ -2,6 +2,7 @@ PROJECT = features
 PROJECT_DESCRIPTION = New project
 
 DEPS = \
+	jiffy \
 	cowboy \
 	cowboy_swagger \
 	enenra \
@@ -33,6 +34,12 @@ dep_erlcloud = git https://github.com/erlcloud/erlcloud.git 3.3.3
 dep_etbloom = git https://github.com/getkimball/etbloom.git 1.0.1
 dep_hackney = hex 1.16.0
 dep_jesse = git https://github.com/for-GET/jesse.git 1.5.5
+
+# Jiffy is used by other deps, forcing an update here to make R23 compatible.
+# There seems to be an upstream issue with Jiffy on some systems so use our
+# fork that has a patch for that https://github.com/davisp/jiffy/issues/203
+dep_jiffy = git https://github.com/getkimball/jiffy.git 1.0.5-getkimball
+
 dep_jsx = git https://github.com/talentdeficit/jsx.git v2.10.0
 dep_kuberlnetes = git https://github.com/philipcristiano/kuberlnetes.git v0.0.5
 dep_prometheus = git https://github.com/deadtrickster/prometheus.erl.git v4.5.0
