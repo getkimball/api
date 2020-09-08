@@ -68,12 +68,13 @@ setup_trails() ->
 set_config(Mode) ->
     setup_sentry(),
     Namespace = setup_namespace(),
+    StoragePathPrefix = os:getenv("STORAGE_PATH_PREFIX", Namespace),
     setup_additional_namespace_config(),
     setup_file_store_path(),
     setup_analytics_url(),
     setup_analytics_event_mod(Mode),
-    setup_s3(Namespace),
-    setup_gcs(Namespace),
+    setup_s3(StoragePathPrefix),
+    setup_gcs(StoragePathPrefix),
 
     ok = application:set_env(trails, api_root, "/"),
     ok = application:set_env(features, mode, Mode),
