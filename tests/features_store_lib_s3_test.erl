@@ -1,16 +1,32 @@
 -module(features_store_lib_s3_test).
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("erlcloud/include/erlcloud_aws.hrl").
 
 -define(MUT, features_store_lib_s3).
 -define(BUCKET, "test_bucket").
 -define(BASE_PATH, "test_base_path").
--define(AWS_CONFIG, "test_aws_config").
+-define(AWS_CONFIG, #aws_config{}).
 
+init_test_() ->
+    {foreach,
+     fun load/0,
+     fun unload/1,
+     [fun basic_init/0,
+      fun init_custom_s3/0]}.
 
-init_test() ->
-    load(),
-    _State = ?MUT:init("test"),
-    unload().
+basic_init() ->
+    _State = ?MUT:init("test").
+
+init_custom_s3() ->
+    CustomS3Host = "test.host.example.com",
+    ok = meck:expect(application, get_env, [{[features, s3_bucket], {ok, ?BUCKET}},
+                                            {[features, s3_base_path], {ok, ?BASE_PATH}},
+                                            {[features, s3_host], {ok, CustomS3Host}}]),
+
+    State = ?MUT:init("test"),
+    AWSConfig = ?MUT:aws_config(State),
+    io:format("record ~p~n", [State]),
+    ?assertEqual(CustomS3Host, AWSConfig#aws_config.s3_host).
 
 read_test() ->
     load(),
@@ -105,7 +121,8 @@ load() ->
     ok = meck:expect(erlcloud_aws, auto_config, [], {ok, ?AWS_CONFIG}),
 
     ok = meck:expect(application, get_env, [{[features, s3_bucket], {ok, ?BUCKET}},
-                                            {[features, s3_base_path], {ok, ?BASE_PATH}}]),
+                                            {[features, s3_base_path], {ok, ?BASE_PATH}},
+                                            {[features, s3_host], {ok, ""}}]),
     ok.
 
 unload() ->
@@ -116,3 +133,6 @@ unload() ->
     ok = meck:unload(erlcloud_s3),
     ok = meck:unload(application),
     ok.
+
+unload(_) ->
+    unload().

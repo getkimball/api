@@ -119,9 +119,10 @@ setup_gcs(Namespace) ->
 
 setup_s3(Namespace) ->
     EnvVarValue = os:getenv("S3_BUCKET", ?DEFAULT_S3_BUCKET),
+    S3Host = os:getenv("S3_HOST", ""),
     application:set_env(features, s3_bucket, EnvVarValue),
-    application:set_env(features, s3_base_path, Namespace).
-
+    application:set_env(features, s3_base_path, Namespace),
+    application:set_env(features, s3_host, S3Host).
 
 setup_additional_namespace_config() ->
     NamespacesString = os:getenv("ADDITIONAL_NAMESPACES", ""),

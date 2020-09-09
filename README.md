@@ -45,6 +45,7 @@ make live-js
 * `NAMESPACE` - Namespace to use for reading/writing in Kubernetes
 
 * `S3_BUCKET` - AWS S3 Bucket to use for storage
+* `S3_HOST` - AWS S3 Host to use for storage. This will attempt to auto configure when running in AWS.
 * `GCS_BUCKET` - Google Cloud Storage Bucket to use for storage
 * `GOOGLE_APPLICATION_CREDENTIALS` - Path to a JSON Service Account Key
 * `STORAGE_PATH_PREFIX` - Path prefix to use when storing files in S3/GCS. Defaults to the installation namespace.
