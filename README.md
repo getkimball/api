@@ -32,6 +32,34 @@ make live-js
 
 ## Configuration
 
+### Config file
+
+An Erlang configuration file will be loaded from `/kimball/app.config` as part of the Release/Dockerfile. A user configuration file can be placed there to provide more complex configuration described below.
+
+#### Counter Configuration
+
+The initial bloom filter type, size, and error probability can be configured for counters. This is configured as a list with a regular expression matching the name of the filter.
+
+* `pattern` - The regular expression
+* `type` - `bloom_fixed_size` or `bloom_scalable`
+* `size` - The fixed size or initial size (for `bloom_scalable` filters)
+* `error_probability` - Bloom filter error probability
+
+Example
+
+```
+[{features, [
+    {counters, #{
+        init => [
+            #{pattern => ".*",
+              type => bloom_fixed_size,
+              size => 10000,
+              error_probability => 0.01}
+        ]
+    }}
+]}].
+```
+
 ### Environment variables
 
 * `ADDITIONAL_NAMESPACES` - A comma separated list of namespaces to sync feature config to. This should include any namespaces where you intend to run sidecars

@@ -22,5 +22,6 @@ COPY --from=builder /app.tar.gz /app.tar.gz
 WORKDIR /app
 
 RUN tar -xzf /app.tar.gz
+ADD config/default.config /kimball/app.config
 
 CMD ["/app/bin/features_release", "foreground"]

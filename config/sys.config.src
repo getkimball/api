@@ -5,4 +5,5 @@
     %% Console logger
     {handler, default, logger_std_h, #{}}
   ]}
-]}].
+]},
+"/kimball/app"].
