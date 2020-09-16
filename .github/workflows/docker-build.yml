@@ -108,7 +108,8 @@ jobs:
             --set service.type=${SERVICE_TYPE} \
             --set kimball.sentry_dsn=${SENTRY_DSN} \
             --set kimball.daemonsetPort=${DAEMONSET_PORT} \
-            --set kimball.s3_bucket=${S3_BUCKET}
+            --set kimball.s3_bucket=${S3_BUCKET} \
+            --set-file kimball.app_config=config/example.config
 
   upload_to_quay:
     runs-on: ubuntu-latest
