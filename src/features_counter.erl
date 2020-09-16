@@ -189,7 +189,7 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
         Else -> Else
     end,
 
-    Bloom = bloom_filter_from_data(Data),
+    Bloom = bloom_filter_from_data(Data, State),
     LoadedSTC = maps:get(single_tag_counts, Data, STC),
     LoadedTagCounts = maps:get(tag_counts, Data, TagCounts),
 
@@ -198,13 +198,10 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
                           store_lib_state=StoreLibState1,
                           tag_counts=LoadedTagCounts}}.
 
-bloom_filter_from_data(#{bloom:=Bloom}) ->
+bloom_filter_from_data(#{bloom:=Bloom}, _State) ->
     Bloom;
-bloom_filter_from_data(_Else) ->
-    InitialSize = 100000,
-    ErrProb = 0.001,
-    Bloom = etbloom:sbf(InitialSize, ErrProb),
-    Bloom.
+bloom_filter_from_data(_Else, #state{name=Name}) ->
+    features_bloom_filter:create(Name).
 
 store(StoreLibState, _State=#state{bloom=Bloom,
                                   single_tag_counts=STC,

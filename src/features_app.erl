@@ -18,6 +18,7 @@ start(_Type, _Args) ->
     Mode = get_features_mode(),
 
     ok = set_config(Mode),
+    ok = features_bloom_filter:validate_config(),
     StoreLib = decide_store_lib(),
 
     Routes = [
