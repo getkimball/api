@@ -78,6 +78,11 @@ Example
 * `GOOGLE_APPLICATION_CREDENTIALS` - Path to a JSON Service Account Key
 * `STORAGE_PATH_PREFIX` - Path prefix to use when storing files in S3/GCS. Defaults to the installation namespace.
 
+## Metrics
+
+* `kimball_counters` - The number of counters registered with the router. Equivalent to the number of events tracked.
+* `kimball_persist_counters_managed` - The number of counters the persistence manager triggered in the last run. Should track, but lag, `kimball_counters`.
+
 ## Releasing
 
 ```

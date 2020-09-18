@@ -34,6 +34,7 @@ groups() -> [{test_count, [
             ].
 
 init_meck(Config) ->
+    test_utils:meck_load_prometheus(),
     meck:new(?COUNTER_MOD),
     meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
     meck:expect(?COUNTER_MOD, add, ['_', '_', '_'], ok),
@@ -62,6 +63,7 @@ init_per_testcase(_, Config) ->
     [{pid, Pid}|Config1].
 
 end_per_testcase(_, Config) ->
+    test_utils:meck_unload_prometheus(),
     ?assert(meck:validate(?COUNTER_MOD)),
     meck:unload(?COUNTER_MOD),
 

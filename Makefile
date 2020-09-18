@@ -42,7 +42,7 @@ dep_jiffy = git https://github.com/getkimball/jiffy.git 1.0.5-getkimball
 
 dep_jsx = git https://github.com/talentdeficit/jsx.git v2.10.0
 dep_kuberlnetes = git https://github.com/philipcristiano/kuberlnetes.git v0.0.5
-dep_prometheus = git https://github.com/deadtrickster/prometheus.erl.git v4.5.0
+dep_prometheus = git https://github.com/deadtrickster/prometheus.erl.git v4.6.0
 dep_prometheus_cowboy = hex 0.1.8
 dep_ranch = git https://github.com/ninenines/ranch.git 1.7.1
 dep_recon = git https://github.com/ferd/recon.git 2.5.1

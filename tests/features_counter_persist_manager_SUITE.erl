@@ -17,6 +17,7 @@ groups() -> [{all, [
             ].
 
 init_meck(Config) ->
+    test_utils:meck_load_prometheus(),
     meck:new(features_count_router),
 
     meck:new(timer, [unstick]),
@@ -34,7 +35,7 @@ init_per_testcase(_, Config) ->
     [{pid, Pid}|NewConfig].
 
 end_per_testcase(_, _Config) ->
-
+    test_utils:meck_unload_prometheus(),
     ?assert(meck:validate(timer)),
     meck:unload(timer),
 
