@@ -68,6 +68,7 @@ ab_test_single_counter_is_persisted(Config) ->
 
     ?MUT:persist(),
 
+    meck:wait(features_counter, persist, '_', 1000),
     io:format("Calls ~p~n", [meck:history(features_counter)]),
     ?assertEqual(1, meck:num_calls(features_counter, persist, [CounterPid])),
 
