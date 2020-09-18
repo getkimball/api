@@ -34,9 +34,6 @@ init_meck(Config) ->
     meck:new(features_count_router),
     meck:expect(features_count_router, register_counter, ['_', '_'], ok),
 
-    meck:new(timer, [unstick]),
-    meck:expect(timer, apply_interval, ['_', '_', '_', '_'], {ok, tref}),
-
     StoreLibState = {store_lib_state, make_ref()},
     meck:new(features_store_lib),
     meck:expect(features_store_lib, init, ['_', '_'], StoreLibState),
@@ -63,9 +60,6 @@ init_per_testcase(_, Config) ->
 end_per_testcase(_, _Config) ->
     ?assert(meck:validate(features_store_lib)),
     meck:unload(features_store_lib),
-
-    ?assert(meck:validate(timer)),
-    meck:unload(timer),
 
     ?assert(meck:validate(features_count_router)),
     meck:unload(features_count_router),
@@ -163,10 +157,6 @@ ca_test_storage_lib_loading_data(Config) ->
 cb_test_storing_with_storage_lib(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     Pid = ?config(pid, Config),
-
-    ?assertEqual(?MUT, meck:capture(first, timer, apply_interval, '_', 2)),
-    ?assertEqual(persist, meck:capture(first, timer, apply_interval, '_', 3)),
-    ?assertEqual([Pid], meck:capture(first, timer, apply_interval, '_', 4)),
 
     Key = <<"42">>,
     ?MUT:add(Key, Pid),

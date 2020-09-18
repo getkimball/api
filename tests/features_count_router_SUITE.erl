@@ -22,6 +22,7 @@ groups() -> [{test_count, [
                 ag_test_counter_registration_race,
                 ah_test_multiple_counts_added_at_once,
                 ba_test_counter_counts,
+                bb_test_counter_pids,
                 ca_test_start_with_existing_counters,
                 cb_test_counter_registration_persists,
                 da_test_new_goal,
@@ -244,6 +245,18 @@ ba_test_counter_counts(Config) ->
     ?assertEqual([counts(#{name => Feature, count => Num})], Counts),
     Config.
 
+bb_test_counter_pids(Config) ->
+    Feature = <<"feature_name">>,
+    Pid = self(),
+
+    ?MUT:register_counter(Feature, Pid),
+
+    ?MUT:goals(), % Run to synchronize/handle all messages
+
+    Pids = ?MUT:counter_pids(),
+
+    ?assertEqual([Pid], Pids),
+    Config.
 
 ca_test_start_with_existing_counters(Config) ->
     StoreLibState = ?config(store_lib_state, Config),

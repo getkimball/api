@@ -12,7 +12,9 @@ init([StoreLib]) ->
     ?LOG_INFO(#{what=><<"Counter Supervisor starting">>}),
     Procs = [
         #{id    => features_count_router,
-          start => {features_count_router, start_link, [StoreLib]}}
+          start => {features_count_router, start_link, [StoreLib]}},
+        #{id    => features_counter_persist_manager,
+          start => {features_counter_persist_manager, start_link, []}}
     ],
     Flags = #{strategy => rest_for_one,
               intensity => 0,

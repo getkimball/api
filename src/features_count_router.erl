@@ -27,6 +27,7 @@
          add/3,
          add_goal/1,
          counts/0,
+         counter_pids/0,
          goals/0,
          register_counter/2]).
 
@@ -111,6 +112,12 @@ counts() ->
         [M | Acc0]
     end,
     ets:foldl(CountFun, [], ?COUNTER_REGISTRY).
+
+counter_pids() ->
+    PidFun = fun(#counter_registration{pid=Pid}, Acc0) ->
+        [Pid | Acc0]
+    end,
+    ets:foldl(PidFun, [], ?COUNTER_REGISTRY).
 
 
 %%%===================================================================
