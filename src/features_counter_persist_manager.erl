@@ -22,6 +22,7 @@
          terminate/2,
          code_change/3]).
 
+-define(COUNTER_NAME, kimball_persist_counters_managed).
 
 -record(state, {}).
 
@@ -59,6 +60,9 @@ persist() ->
 %%--------------------------------------------------------------------
 init([]) ->
     {ok, _TRef} = timer:apply_interval(60000, ?MODULE, persist, []),
+    prometheus_gauge:declare([
+      {name, ?COUNTER_NAME},
+      {help, "Number of counters that are periodically persisted"}]),
     {ok, #state{}}.
 
 %%--------------------------------------------------------------------
@@ -92,8 +96,11 @@ handle_call(_Request, _From, State) ->
 handle_cast(persist, State) ->
     ?LOG_DEBUG(#{what=>"Start persist round"}),
     CounterPids = features_count_router:counter_pids(),
+    NumCounters = length(CounterPids),
     lists:foreach(fun features_counter:persist/1, CounterPids),
-    ?LOG_DEBUG(#{what=>"Finished persist round"}),
+    ?LOG_DEBUG(#{what=>"Finished persist round",
+                 num_counters=>NumCounters}),
+    prometheus_gauge:set(?COUNTER_NAME, NumCounters),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
