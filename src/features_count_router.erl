@@ -42,6 +42,7 @@
 
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
 -define(PROM_COUNTER_NAME, kimball_counters).
+-define(PROM_ADD_DURATION, kimball_event_add_duration_microseconds).
 -define(GLOBAL_COUNTER, global_counter).
 -define(STORE_LIB_MOD, features_store_lib_s3).
 -define(STORE_LIB_MOD_PT_KEY, features_count_router_store_lib_mod).
@@ -74,6 +75,7 @@ add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
     Opts2 = maps:remove(ensure_goal, Opts),
     add(CounterName, Key, Opts2);
 add(CounterName, Key, _Opts) ->
+    Start = erlang:monotonic_time(microsecond),
     GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
     ensure_started_and_add(?GLOBAL_COUNTER, GlobalRegistration, Key),
     FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
@@ -83,7 +85,10 @@ add(CounterName, Key, _Opts) ->
                  feature_registration=>FeatureRegistration,
                  glocal_registration=>GlobalRegistration,
                  key=>Key}),
+    End = erlang:monotonic_time(microsecond),
 
+    Duration = End - Start,
+    prometheus_summary:observe(?PROM_ADD_DURATION, Duration),
     ok.
 
 ensure_goal(Goal) ->
@@ -148,6 +153,9 @@ init([StoreLib]) ->
     StoreLibState = features_store_lib:init(StoreLib,
                                             "count_router"),
 
+    prometheus_summary:declare([
+      {name, ?PROM_ADD_DURATION},
+      {help, "Time in microseconds to add an event"}]),
     prometheus_gauge:declare([
       {name, ?PROM_COUNTER_NAME},
       {help, "Number of counters registered"}]),

@@ -20,8 +20,16 @@ meck_load_prometheus() ->
     ok = meck:new(prometheus_gauge),
     meck:expect(prometheus_gauge, declare, ['_'], ok),
     meck:expect(prometheus_gauge, set, ['_', '_'], ok),
+
+    ok = meck:new(prometheus_summary),
+    meck:expect(prometheus_summary, declare, ['_'], ok),
+    meck:expect(prometheus_summary, observe, ['_', '_'], ok),
+
     ok.
 
 meck_unload_prometheus() ->
     ?assert(meck:validate(prometheus_gauge)),
-    meck:unload(prometheus_gauge).
+    meck:unload(prometheus_gauge),
+
+    ?assert(meck:validate(prometheus_summary)),
+    meck:unload(prometheus_summary).
