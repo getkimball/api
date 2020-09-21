@@ -70,8 +70,8 @@ Example
 * `FEATURES_MODE` - Which mode to start the application in
     * `api` (default) - Fully feature API server, storing state in configmaps
     * `sidecar` - Read only API meant to be deployed as a sidecar. Features features from `/features/data` volume in Kubernetes.
+* `KUBERNETES_MEMORY_LIMIT` - The container limit in bytes, used for computing the metric `memory_remaining_bytes`
 * `NAMESPACE` - Namespace to use for reading/writing in Kubernetes
-
 * `S3_BUCKET` - AWS S3 Bucket to use for storage
 * `S3_HOST` - AWS S3 Host to use for storage. This will attempt to auto configure when running in AWS.
 * `GCS_BUCKET` - Google Cloud Storage Bucket to use for storage

@@ -2,13 +2,15 @@
 -behaviour(supervisor).
 -include_lib("kernel/include/logger.hrl").
 
--export([start_link/2]).
+-export([start_link/3]).
 -export([init/1]).
 
-start_link(Mode, StoreLib) ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, [Mode, StoreLib]).
+start_link(Mode, StoreLib, MetricsOpts) ->
+    supervisor:start_link({local, ?MODULE},
+                          ?MODULE,
+                          [Mode, StoreLib, MetricsOpts]).
 
-init([Mode, StoreLib]) ->
+init([Mode, StoreLib, MetricsOpts]) ->
     ?LOG_INFO(#{what=><<"Supervisor starting">>,
                 mode=>Mode,
                 store_lib=>StoreLib}),
@@ -29,4 +31,11 @@ init([Mode, StoreLib]) ->
         }]
     end,
 
-    {ok, {{one_for_one, 1, 5}, Procs}}.
+    AlwaysProcs = [
+        #{id    => metrics_server,
+          start => {metrics_server,
+                    start_link,
+                    [MetricsOpts]}}
+    ],
+
+    {ok, {{one_for_one, 1, 5}, Procs ++ AlwaysProcs}}.
