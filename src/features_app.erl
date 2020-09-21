@@ -18,6 +18,7 @@ start(_Type, _Args) ->
     Mode = get_features_mode(),
 
     ok = set_config(Mode),
+    MetricsOpts = metrics_opts(),
     ok = features_bloom_filter:validate_config(),
     StoreLib = decide_store_lib(),
 
@@ -44,10 +45,16 @@ start(_Type, _Args) ->
     Port = list_to_integer(os:getenv("API_PORT", "8080")),
 
     {ok, _} = cowboy:start_clear(http, [{port, Port}], HTTPOpts),
-    features_sup:start_link(Mode, StoreLib).
+    features_sup:start_link(Mode, StoreLib, MetricsOpts).
 
 stop(_State) ->
   ok.
+
+metrics_opts() ->
+    MemLimitStr = os:getenv("KUBERNETES_MEMORY_LIMIT", "0"),
+    {MemLimit, []} = string:to_integer(MemLimitStr),
+    Opts = #{memory_limit => MemLimit},
+    Opts.
 
 trails_handlers() ->
     Handlers = [
