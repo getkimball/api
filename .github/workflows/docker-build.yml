@@ -86,16 +86,33 @@ jobs:
         KUBERNETES_NAMESPACE: ${{ needs.build_docker.outputs.namespace }}
         KUBE_CONFIG_DATA: ${{ secrets.KUBECONFIG }}
 
+        PROMETHEUS_URL: ${{ secrets.PROMETHEUS_URL }}
+        PROMETHEUS_USERNAME: ${{ secrets.PROMETHEUS_USERNAME }}
+        PROMETHEUS_PASSWORD: ${{ secrets.PROMETHEUS_PASSWORD }}
+
         S3_BUCKET: getkimball-features-app
       with:
         command: |
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
               SERVICE_TYPE=ClusterIP
               DAEMONSET_PORT=7233
+              CLUSTER=pr
           else
               SERVICE_TYPE=LoadBalancer
               DAEMONSET_PORT=7232
+              CLUSTER=demo
           fi
+
+          cat << EOF > ./app.config
+          [{cortex_remote_write, [
+              {url, "${PROMETHEUS_URL}"},
+              {username, "${PROMETHEUS_USERNAME}"},
+              {password, "${PROMETHEUS_PASSWORD}"},
+              {default_labels, [
+                {"cluster", "${CLUSTER}"}
+              ]}
+          ]}].
+          EOF
 
           helm repo add getkimball https://getkimball.github.io/charts/stable
           helm upgrade kimball-api getkimball/kimball-api --install \
@@ -109,7 +126,7 @@ jobs:
             --set kimball.sentry_dsn=${SENTRY_DSN} \
             --set kimball.daemonsetPort=${DAEMONSET_PORT} \
             --set kimball.s3_bucket=${S3_BUCKET} \
-            --set-file kimball.app_config=config/example.config
+            --set-file kimball.app_config=app.config
 
   upload_to_quay:
     runs-on: ubuntu-latest

@@ -3,6 +3,7 @@ PROJECT_DESCRIPTION = New project
 
 DEPS = \
 	jiffy \
+	cortex_remote_write \
 	cowboy \
 	cowboy_swagger \
 	enenra \
@@ -15,7 +16,8 @@ DEPS = \
 	prometheus \
 	prometheus_cowboy \
 	ranch \
-	recon\
+	recon \
+	snappy \
 	swaggerl \
 	trails
 
@@ -25,6 +27,7 @@ TEST_DEPS = meck jesse
 TEST_DIR = tests
 DIALYZER_DIRS = --src src tests
 
+dep_cortex_remote_write = git https://github.com/getkimball/cortex_remote_write 0.1.0
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.8.0
 dep_cowboy_swagger = hex 2.2.0
 dep_elvis_mk = git https://github.com/inaka/elvis.mk.git 1.0.0
@@ -46,6 +49,7 @@ dep_prometheus = git https://github.com/deadtrickster/prometheus.erl.git v4.6.0
 dep_prometheus_cowboy = hex 0.1.8
 dep_ranch = git https://github.com/ninenines/ranch.git 1.7.1
 dep_recon = git https://github.com/ferd/recon.git 2.5.1
+dep_snappy = git https://github.com/skunkwerks/snappy-erlang-nif.git master
 dep_swaggerl = git https://github.com/philipcristiano/swaggerl.git v0.0.7
 dep_sync = git https://github.com/rustyio/sync.git master
 dep_trails = hex 2.0.0
