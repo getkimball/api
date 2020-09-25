@@ -109,6 +109,7 @@ jobs:
               {username, "${PROMETHEUS_USERNAME}"},
               {password, "${PROMETHEUS_PASSWORD}"},
               {default_labels, [
+                {"site", "kimball"},
                 {"cluster", "${CLUSTER}"}
               ]}
           ]}].
