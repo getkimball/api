@@ -105,6 +105,7 @@ jobs:
 
           cat << EOF > ./app.config
           [{cortex_remote_write, [
+              {interval, 120000},
               {url, "${PROMETHEUS_URL}"},
               {username, "${PROMETHEUS_USERNAME}"},
               {password, "${PROMETHEUS_PASSWORD}"},
