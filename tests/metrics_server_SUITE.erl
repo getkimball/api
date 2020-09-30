@@ -35,7 +35,9 @@ init_per_testcase(_, Config) ->
     [{pid, Pid},
      {memory, Memory} |NewConfig].
 
-end_per_testcase(_, _Config) ->
+end_per_testcase(_, Config) ->
+    Pid = ?config(pid, Config),
+    ok = gen_server:stop(Pid),
     test_utils:meck_unload_prometheus(),
     ?assert(meck:validate(timer)),
     meck:unload(timer),
