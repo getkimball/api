@@ -1,7 +1,7 @@
--module(features_bloom_filter_test).
+-module(features_counter_config_test).
 -include_lib("eunit/include/eunit.hrl").
 
--define(MUT, features_bloom_filter).
+-define(MUT, features_counter_config).
 
 -define(TEST_BLOOM, test_bloom_filter).
 -define(CONFIG_KEY, counters).
@@ -28,7 +28,7 @@ create_test_() ->
 create_scalable_filter() ->
     Probability = 0.001,
     Size = 0,
-    BF = ?MUT:create(<<"foo">>),
+    BF = ?MUT:create_bloom(<<"foo">>),
     {sbf, Probability, _, _, Size, _} = BF.
 
 create_filter_with_no_matching_config() ->
@@ -43,7 +43,7 @@ create_filter_with_no_matching_config() ->
     set_filter_initial_config(InitConfig),
 
     Size = 0,
-    BF = ?MUT:create(<<"foo">>),
+    BF = ?MUT:create_bloom(<<"foo">>),
     {sbf, 0.001, _, _, Size, _} = BF.
 
 create_scalable_filter_with_probability() ->
@@ -58,7 +58,7 @@ create_scalable_filter_with_probability() ->
     set_filter_initial_config(InitConfig),
 
     Size = 0,
-    BF = ?MUT:create(<<"foo">>),
+    BF = ?MUT:create_bloom(<<"foo">>),
     {sbf, Probability, _, _, Size, _} = BF.
 
 create_fixed_filter() ->
@@ -73,7 +73,7 @@ create_fixed_filter() ->
     Probability = 0.001,
     MaxNumElements = 11395, % value gathered experimentally for the NumElements
     Size = 0,
-    BF = ?MUT:create(<<"foo">>),
+    BF = ?MUT:create_bloom(<<"foo">>),
     {bloom, Probability, MaxNumElements, _, Size, _} = BF.
 
 create_fixed_filter_with_probability() ->
@@ -89,7 +89,7 @@ create_fixed_filter_with_probability() ->
 
     MaxNumElements = 105, % value gathered experimentally for the NumElements
     Size = 0,
-    BF = ?MUT:create(<<"foo">>),
+    BF = ?MUT:create_bloom(<<"foo">>),
     {bloom, Probability, MaxNumElements, _, Size, _} = BF.
 
 create_fixed_filter_with_multiple_configs() ->
@@ -110,7 +110,7 @@ create_fixed_filter_with_multiple_configs() ->
     Probability = 0.1,
     MaxNumElements = 1691, % value gathered experimentally for the NumElements
     Size = 0,
-    BF = ?MUT:create(<<"foo">>),
+    BF = ?MUT:create_bloom(<<"foo">>),
     {bloom, Probability, MaxNumElements, _, Size, _} = BF.
 
 validate_config_test_() ->
