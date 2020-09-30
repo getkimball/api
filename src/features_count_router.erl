@@ -76,15 +76,13 @@ add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
     add(CounterName, Key, Opts2);
 add(CounterName, Key, _Opts) ->
     Start = erlang:monotonic_time(microsecond),
-    GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
-    ensure_started_and_add(?GLOBAL_COUNTER, GlobalRegistration, Key),
-    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
-    ensure_started_and_add(CounterName, FeatureRegistration, Key),
-    ?LOG_DEBUG(#{what=>"Router add 2",
-                 name=>CounterName,
-                 feature_registration=>FeatureRegistration,
-                 glocal_registration=>GlobalRegistration,
-                 key=>Key}),
+
+    Counters = counters_for_event(CounterName),
+    StartAndAdd = fun({Name, CounterRegistration}) ->
+        ensure_started_and_add(Name, CounterRegistration, Key)
+    end,
+    ok = lists:foreach(StartAndAdd, Counters),
+
     End = erlang:monotonic_time(microsecond),
 
     Duration = End - Start,
@@ -287,6 +285,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+counters_for_event(CounterName) ->
+    GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
+    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
+    [{?GLOBAL_COUNTER, GlobalRegistration},
+     {CounterName, FeatureRegistration}].
+
 ensure_child_started(FeatureName) ->
     StoreLibMod = persistent_term:get(?STORE_LIB_MOD_PT_KEY),
     ?LOG_DEBUG(#{what=>"Ensuring child started",
