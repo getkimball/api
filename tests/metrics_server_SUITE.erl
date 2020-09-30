@@ -50,7 +50,7 @@ aa_test_timer_is_setup(Config) ->
 ab_test_mem_remaning(Config) ->
     ?MUT:tick(),
 
-    meck:wait(prometheus_gauge, set, ['_', '_'], 1000),
+    meck:wait(2, prometheus_gauge, set, ['_', '_'], 1000),
     io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
 
     % Tick in this test will call it, as well as the init for the server
