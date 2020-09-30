@@ -78,8 +78,8 @@ add(CounterName, Key, _Opts) ->
     Start = erlang:monotonic_time(microsecond),
 
     Counters = counters_for_event(CounterName),
-    StartAndAdd = fun({Name, CounterRegistration}) ->
-        ensure_started_and_add(Name, CounterRegistration, Key)
+    StartAndAdd = fun(CounterRegistration) ->
+        ensure_started_and_add(CounterRegistration, Key)
     end,
     ok = lists:foreach(StartAndAdd, Counters),
 
@@ -286,10 +286,10 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 counters_for_event(CounterName) ->
-    GlobalRegistration = ets:lookup(?COUNTER_REGISTRY, ?GLOBAL_COUNTER),
-    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterName),
-    [{?GLOBAL_COUNTER, GlobalRegistration},
-     {CounterName, FeatureRegistration}].
+    GlobalRegistration = get_registration(?GLOBAL_COUNTER),
+    FeatureRegistration = get_registration(CounterName),
+    [GlobalRegistration,
+     FeatureRegistration].
 
 ensure_child_started(FeatureName) ->
     StoreLibMod = persistent_term:get(?STORE_LIB_MOD_PT_KEY),
@@ -308,20 +308,23 @@ ensure_child_started(FeatureName) ->
                  pid => Pid}),
     Pid.
 
-ensure_started_and_add(Name, [], Key) ->
+ensure_started_and_add(CR=#counter_registration{name=Name, pid=undefined},
+                       Key) ->
     Pid = ensure_child_started(Name),
     IsGoal = is_goal(Name),
-    R = #counter_registration{pid=Pid, is_goal=IsGoal},
-    ensure_started_and_add(Name, [R], Key);
-ensure_started_and_add(_Name,
-                       [#counter_registration{pid=Pid, is_goal=false}],
-                       Key) ->
+    R = CR#counter_registration{pid=Pid, is_goal=IsGoal},
+    ensure_started_and_add(R, Key);
+ensure_started_and_add(#counter_registration{pid=Pid, is_goal=false}, Key) ->
     ok = features_counter:add(Key, Pid);
-ensure_started_and_add(_Name,
-                       [#counter_registration{pid=Pid, is_goal=true}],
-                       Key) ->
+ensure_started_and_add(#counter_registration{pid=Pid, is_goal=true}, Key) ->
     OtherCounters = counters_for_key(Key),
     ok = features_counter:add(Key, OtherCounters, Pid).
+
+get_registration(Name) ->
+    case ets:lookup(?COUNTER_REGISTRY, Name) of
+      [] -> #counter_registration{name=Name};
+      [R] -> R
+    end.
 
 counters_for_key(Key) ->
     F = fun(#counter_registration{name=Name, pid=Pid}, AccIn) ->
