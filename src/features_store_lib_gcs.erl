@@ -15,9 +15,6 @@
 %   features_store api
 %%%%
 
-init({Type, Name}) ->
-    FullName = filename:join(Type, Name),
-    init(FullName);
 init(Name) ->
     {ok, Bucket} = application:get_env(features, gcs_bucket),
     {ok, BasePath} = application:get_env(features, gcs_base_path),
@@ -26,7 +23,7 @@ init(Name) ->
     {ok, Creds} = enenra:load_credentials(GCSCP),
 
     BinBucket = ensure_bin(Bucket),
-    Path = ensure_bin(filename:join(BasePath, Name)),
+    Path = ensure_bin(features_store_lib_lib:name_to_path(BasePath, Name)),
     #state{bucket=BinBucket,
            creds=Creds,
            path=Path}.

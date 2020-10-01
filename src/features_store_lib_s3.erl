@@ -16,9 +16,6 @@
 %   features_store api
 %%%%
 
-init({Type, Name}) ->
-    FullName = filename:join(Type, Name),
-    init(FullName);
 init(Name) ->
     {ok, Bucket} = application:get_env(features, s3_bucket),
     {ok, BasePath} = application:get_env(features, s3_base_path),
@@ -30,7 +27,7 @@ init(Name) ->
     end,
 
     {ok, BasePath} = application:get_env(features, s3_base_path),
-    Path = ensure_list(filename:join(BasePath, Name)),
+    Path = ensure_list(features_store_lib_lib:name_to_path(BasePath, Name)),
     #state{bucket=Bucket,
            aws_config=AWSConfig,
            path=Path}.
