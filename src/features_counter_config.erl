@@ -1,11 +1,11 @@
--module(features_bloom_filter).
+-module(features_counter_config).
 -include_lib("kernel/include/logger.hrl").
 
--export([create/1,
+-export([create_bloom/1,
          validate_config/0]).
 
 
-create(Name) ->
+create_bloom(Name) ->
     CounterConfig = application:get_env(features, counters, #{}),
     CounterInitConfigs = maps:get(init, CounterConfig, []),
 

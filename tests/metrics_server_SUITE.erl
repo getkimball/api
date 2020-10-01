@@ -35,7 +35,9 @@ init_per_testcase(_, Config) ->
     [{pid, Pid},
      {memory, Memory} |NewConfig].
 
-end_per_testcase(_, _Config) ->
+end_per_testcase(_, Config) ->
+    Pid = ?config(pid, Config),
+    ok = gen_server:stop(Pid),
     test_utils:meck_unload_prometheus(),
     ?assert(meck:validate(timer)),
     meck:unload(timer),
@@ -50,7 +52,7 @@ aa_test_timer_is_setup(Config) ->
 ab_test_mem_remaning(Config) ->
     ?MUT:tick(),
 
-    meck:wait(prometheus_gauge, set, ['_', '_'], 1000),
+    meck:wait(2, prometheus_gauge, set, ['_', '_'], 1000),
     io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
 
     % Tick in this test will call it, as well as the init for the server

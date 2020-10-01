@@ -200,7 +200,7 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
 bloom_filter_from_data(#{bloom:=Bloom}, _State) ->
     Bloom;
 bloom_filter_from_data(_Else, #state{name=Name}) ->
-    features_bloom_filter:create(Name).
+    features_counter_config:create_bloom(Name).
 
 store(StoreLibState, _State=#state{bloom=Bloom,
                                   single_tag_counts=STC,

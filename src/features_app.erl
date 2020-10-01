@@ -19,7 +19,7 @@ start(_Type, _Args) ->
 
     ok = set_config(Mode),
     MetricsOpts = metrics_opts(),
-    ok = features_bloom_filter:validate_config(),
+    ok = features_counter_config:validate_config(),
     StoreLib = decide_store_lib(),
 
     Routes = [
