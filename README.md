@@ -42,6 +42,7 @@ The initial bloom filter type, size, and error probability can be configured for
 
 * `pattern` - The regular expression
 * `type` - `bloom_fixed_size` or `bloom_scalable`
+* `date_cohort` - `weekly` or omitted. Whether to automatically generate counters for each week to track events over time.
 * `size` - The fixed size or initial size (for `bloom_scalable` filters)
 * `error_probability` - Bloom filter error probability
 
@@ -53,6 +54,7 @@ Example
         init => [
             #{pattern => ".*",
               type => bloom_fixed_size,
+              date_cohort => weekly,
               size => 10000,
               error_probability => 0.01}
         ]

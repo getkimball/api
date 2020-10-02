@@ -1,5 +1,6 @@
 -module(features_handler_v0_analytics_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("../include/counter_names.hrl").
 
 -define(MUT, features_handler_v0_analytics).
 -define(CTH, cowboy_test_helpers).
@@ -52,6 +53,7 @@ get_basic_analytics_test() ->
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
+                                      <<"type">> => <<"default">>,
                                       <<"event_counts">> => []}]},
 
     Req = ?CTH:req(),
@@ -84,6 +86,34 @@ get_basic_tag_counts_analytics_test() ->
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
+                                      <<"type">> => <<"default">>,
+                                      <<"event_counts">> => [#{<<"events">> => [],
+                                                             <<"count">> => TagCount}]}]},
+
+    Req = ?CTH:req(),
+    State = #{analytics_event_mod => features_count_router},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+
+    unload().
+
+get_date_cohort_tag_counts_analytics_test() ->
+    load(),
+    BinName = <<"feature">>,
+    Name = #counter_name_weekly{name=BinName, year=2020, week=1},
+    Count = 4,
+    TagCount = 1,
+    TagCounts = #{[] => TagCount},
+    ok = meck:expect(features_count_router, counts, [], [#{name => Name,
+                                                           count => Count,
+                                                           single_tag_counts => #{},
+                                                           tag_counts => TagCounts}]),
+
+    ExpectedData = #{<<"counts">>=>[#{<<"name">> => <<"feature 20201">>,
+                                      <<"year">> => 2020,
+                                      <<"week">> => 1,
+                                      <<"count">> => Count,
+                                      <<"single_event_counts">> => [],
+                                      <<"type">> => <<"weekly">>,
                                       <<"event_counts">> => [#{<<"events">> => [],
                                                              <<"count">> => TagCount}]}]},
 
@@ -120,6 +150,7 @@ get_tag_counts_analytics_test() ->
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => ExpectedSTC,
+                                      <<"type">> => <<"default">>,
                                       <<"event_counts">> => ExpectedTagCounts}]},
 
     Req = ?CTH:req(),

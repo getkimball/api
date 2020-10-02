@@ -1,5 +1,6 @@
 -module(features_handler_v0_analytics).
 -include_lib("kernel/include/logger.hrl").
+-include("counter_names.hrl").
 -export([trails/0]).
 -export([init/2]).
 
@@ -175,6 +176,25 @@ handle_req(Req=#{method := <<"GET">>}, Params, Body, State) ->
 post_req(_Response, _State) ->
     ok.
 
+render_count_map(#{name:=#counter_name_weekly{name=Name, year=Year, week=Week},
+                   count:=Count,
+                   single_tag_counts:=STC,
+                   tag_counts:=TagCounts}) ->
+    RenderedTagCounts = maps:fold(fun render_tag_count/3, [], TagCounts),
+    RenderedSTC = maps:fold(fun render_single_tag_count/3, [], STC),
+    YearBin = list_to_binary(integer_to_list(Year)),
+    WeekBin = list_to_binary(integer_to_list(Week)),
+    FullName = << Name/binary,
+                  <<" ">>/binary,
+                  YearBin/binary,
+                  WeekBin/binary >>,
+    #{name=>FullName,
+      type=> <<"weekly">>,
+      year=>Year,
+      week=>Week,
+      count=>Count,
+      single_event_counts=>RenderedSTC,
+      event_counts=>RenderedTagCounts};
 render_count_map(#{name:=Name,
                    count:=Count,
                    single_tag_counts:=STC,
@@ -182,9 +202,11 @@ render_count_map(#{name:=Name,
     RenderedTagCounts = maps:fold(fun render_tag_count/3, [], TagCounts),
     RenderedSTC = maps:fold(fun render_single_tag_count/3, [], STC),
     #{name=>Name,
+      type=> <<"default">>,
       count=>Count,
       single_event_counts=>RenderedSTC,
       event_counts=>RenderedTagCounts}.
+
 
 render_tag_count(Tags, Count, AccIn) ->
     [#{events => Tags,
@@ -205,3 +227,4 @@ build_event_call(#{ensure_goal := EnsureGoalArg,
       ensure_goal => EnsureGoal
     },
     {EventName, UserID, Opts}.
+

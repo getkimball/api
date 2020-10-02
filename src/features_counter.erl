@@ -155,7 +155,7 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
     NewBloom = etbloom:add(Key, Bloom),
     NewSize = etbloom:size(NewBloom),
 
-    SortedTags = lists:sort(Tags),
+    SortedTags = lists:usort(Tags),
 
     IsNewWrite = InitialSize /= NewSize,
     ShouldPersist = UnpersistedWrite or IsNewWrite,
