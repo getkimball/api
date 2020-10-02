@@ -1,17 +1,21 @@
 -module(features_counter_config).
 -include_lib("kernel/include/logger.hrl").
 
--export([create_bloom/1,
+-export([config_for_counter/2,
+         create_bloom/1,
          validate_config/0]).
 
+config_for_counter(Name, Type) ->
+    CounterConfig = application:get_env(features, counters, #{}),
+    CounterInitConfigs = maps:get(Type, CounterConfig, []),
+    FilterConfig = match_config_for_name(Name, CounterInitConfigs),
+    FilterConfig.
 
 create_bloom(Name) ->
-    CounterConfig = application:get_env(features, counters, #{}),
-    CounterInitConfigs = maps:get(init, CounterConfig, []),
-
-    FilterConfig = match_config_for_name(Name, CounterInitConfigs),
+    FilterConfig = config_for_counter(Name, init),
 
     ?LOG_DEBUG(#{what => "Creating bloom filter",
+                 name => Name,
                  config => FilterConfig}),
 
     Filter = init_filter(FilterConfig),
@@ -45,11 +49,14 @@ init_filter(#{type:=bloom_fixed_size, size:=Size}) ->
 
 match_config_for_name(_Name, []) ->
     undefined;
-match_config_for_name(Name, [Config=#{pattern:=Pattern}|T]) ->
+match_config_for_name(Name,
+                      [Config=#{pattern:=Pattern}|T]) when is_binary(Name) ->
     case re:run(Name, Pattern) of
         {match, _Captured} -> Config;
         nomatch -> match_config_for_name(Name, T)
-    end.
+    end;
+match_config_for_name(Name, Config) when is_atom(Name) ->
+    match_config_for_name(erlang:atom_to_binary(Name, utf8), Config).
 
 default_filter() ->
     etbloom:sbf(100000, 0.001).
