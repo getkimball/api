@@ -4,6 +4,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
+-include("include/counter_names.hrl").
 
 
 -define(MUT, features_count_router).
@@ -25,6 +26,8 @@ groups() -> [{test_count, [
                 bb_test_counter_pids,
                 ca_test_start_with_existing_counters,
                 cb_test_counter_registration_persists,
+                cc_test_weekly_cohort_counter_created,
+                cd_test_weekly_cohort_counter_created_and_added_again,
                 da_test_new_goal,
                 db_test_existing_goal,
                 ea_test_triggering_a_goal,
@@ -41,6 +44,9 @@ init_meck(Config) ->
     meck:expect(?COUNTER_MOD, count, ['_'], counts(#{count => -1})),
     meck:expect(?COUNTER_MOD, includes_key, ['_', '_'], false),
 
+    meck:new(features_counter_config),
+    meck:expect(features_counter_config, config_for_counter, ['_', init], undefined),
+
     StoreLibState = {store_lib_state, make_ref()},
     meck:new(features_store_lib),
     meck:expect(features_store_lib, init, ['_', "count_router"], StoreLibState),
@@ -52,6 +58,10 @@ init_meck(Config) ->
     [{store_lib_state, StoreLibState}|Config].
 
 init_per_testcase(ca_test_start_with_existing_counters, Config) ->
+    init_meck(Config);
+init_per_testcase(cc_test_weekly_cohort_counter_created, Config) ->
+    init_meck(Config);
+init_per_testcase(cd_test_weekly_cohort_counter_created_and_added_again, Config) ->
     init_meck(Config);
 init_per_testcase(db_test_existing_goal, Config) ->
     init_meck(Config);
@@ -66,6 +76,9 @@ end_per_testcase(_, Config) ->
     test_utils:meck_unload_prometheus(),
     ?assert(meck:validate(?COUNTER_MOD)),
     meck:unload(?COUNTER_MOD),
+
+    ?assert(meck:validate(features_counter_config)),
+    meck:unload(features_counter_config),
 
     ?assert(meck:validate(features_store_lib)),
     meck:unload(features_store_lib),
@@ -301,6 +314,64 @@ cb_test_counter_registration_persists(Config) ->
 
     Config.
 
+cc_test_weekly_cohort_counter_created(Config) ->
+    CounterConfig = #{date_cohort => weekly},
+    meck:expect(features_counter_config, config_for_counter, ['_', init], CounterConfig),
+    StoreLibState = ?config(store_lib_state, Config),
+    {Year, Week} = calendar:iso_week_number(),
+    Name = <<"cc_feature">>,
+    Feature = #counter_name_weekly{name=Name, year=Year, week=Week},
+    Num = 1,
+    Count = #{count => Num},
+
+    Spec = spec_for_feature(Name),
+    WeeklySpec = spec_for_feature(Feature),
+    StoredData = #{},
+
+    meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
+    meck:expect(features_counter, count, ['_'], Count),
+
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
+    Config1 = [{pid, Pid}|Config],
+
+    ?MUT:add(Name, <<"user_id">>),
+
+    meck:wait(supervisor, start_child, [features_counter_sup, WeeklySpec], 1000),
+
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec])),
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, WeeklySpec])),
+
+    Config1.
+
+cd_test_weekly_cohort_counter_created_and_added_again(Config) ->
+    CounterConfig = #{date_cohort => weekly},
+    meck:expect(features_counter_config, config_for_counter, ['_', init], CounterConfig),
+    StoreLibState = ?config(store_lib_state, Config),
+    {Year, Week} = calendar:iso_week_number(),
+    Name = <<"cc_feature">>,
+    Feature = #counter_name_weekly{name=Name, year=Year, week=Week},
+    Num = 1,
+    Count = #{count => Num},
+
+    Spec = spec_for_feature(Name),
+    WeeklySpec = spec_for_feature(Feature),
+    StoredData = #{},
+
+    meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
+    meck:expect(features_counter, count, ['_'], Count),
+
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
+    Config1 = [{pid, Pid}|Config],
+
+    ?MUT:add(Name, <<"user_id">>),
+    ?MUT:add(Name, <<"user_id">>),
+
+    meck:wait(supervisor, start_child, [features_counter_sup, WeeklySpec], 1000),
+
+    ?assertEqual(2, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec])),
+    ?assertEqual(2, meck:num_calls(supervisor, start_child, [features_counter_sup, WeeklySpec])),
+
+    Config1.
 
 da_test_new_goal(Config) ->
     Goal = <<"goal_name">>,

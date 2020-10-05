@@ -1,6 +1,7 @@
 -module(features_store_lib_s3_test).
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("erlcloud/include/erlcloud_aws.hrl").
+-include("../include/counter_names.hrl").
 
 -define(MUT, features_store_lib_s3).
 -define(BUCKET, "test_bucket").
@@ -48,6 +49,27 @@ read_test() ->
 
     unload().
 
+read_counter_name_weekly_test() ->
+    load(),
+    Name = "test",
+    CNW = #counter_name_weekly{name=Name, year=2020, week=1},
+    ExpectedPath = ?BASE_PATH ++ "/" ++ Name ++ "/2020/1",
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    DataBin = erlang:term_to_binary(Data),
+    Obj = [{content, DataBin}],
+    ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], Obj),
+
+    State = ?MUT:init(CNW),
+    {ReturnedData, State} = ?MUT:get_all(State),
+
+    ?assertEqual(?BUCKET, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 1)),
+    ?assertEqual(ExpectedPath, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 2)),
+
+    ?assertEqual(Data, ReturnedData),
+
+    unload().
+
 read_with_type_test() ->
     load(),
     Name = "test",
@@ -69,6 +91,27 @@ read_with_type_test() ->
 
     unload().
 
+read_counter_name_weekly_with_type_test() ->
+    load(),
+    Name = "test",
+    Type = "type",
+    CNW = #counter_name_weekly{name=Name, year=2020, week=1},
+    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/" ++ Name ++ "/2020/1",
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    DataBin = erlang:term_to_binary(Data),
+    Obj = [{content, DataBin}],
+    ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], Obj),
+
+    State = ?MUT:init({Type, CNW}),
+    {ReturnedData, State} = ?MUT:get_all(State),
+
+    ?assertEqual(?BUCKET, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 1)),
+    ?assertEqual(ExpectedPath, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 2)),
+
+    ?assertEqual(Data, ReturnedData),
+
+    unload().
 
 read_404_test() ->
     load(),

@@ -1,5 +1,6 @@
 -module(features_counter_config_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("../include/counter_names.hrl").
 
 -define(MUT, features_counter_config).
 
@@ -20,6 +21,7 @@ create_test_() ->
      [fun create_scalable_filter/0,
       fun create_filter_with_no_matching_config/0,
       fun create_scalable_filter_with_probability/0,
+      fun create_counter_name_weekly_scalable_filter_with_probability/0,
       fun create_fixed_filter/0,
       fun create_fixed_filter_with_atom/0,
       fun create_fixed_filter_with_probability/0,
@@ -60,6 +62,21 @@ create_scalable_filter_with_probability() ->
 
     Size = 0,
     BF = ?MUT:create_bloom(<<"foo">>),
+    {sbf, Probability, _, _, Size, _} = BF.
+
+create_counter_name_weekly_scalable_filter_with_probability() ->
+    NumElements = 1000,
+    Probability = 0.1,
+    InitConfig = [
+      #{pattern => ".*",
+        type => bloom_scalable,
+        size => NumElements,
+        error_probability => Probability}],
+
+    set_filter_initial_config(InitConfig),
+
+    Size = 0,
+    BF = ?MUT:create_bloom(#counter_name_weekly{name= <<"foo">>}),
     {sbf, Probability, _, _, Size, _} = BF.
 
 create_fixed_filter() ->

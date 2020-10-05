@@ -1,5 +1,6 @@
 -module(features_counter_config).
 -include_lib("kernel/include/logger.hrl").
+-include("counter_names.hrl").
 
 -export([config_for_counter/2,
          create_bloom/1,
@@ -55,6 +56,8 @@ match_config_for_name(Name,
         {match, _Captured} -> Config;
         nomatch -> match_config_for_name(Name, T)
     end;
+match_config_for_name(#counter_name_weekly{name=Name}, Config) ->
+    match_config_for_name(Name, Config);
 match_config_for_name(Name, Config) when is_atom(Name) ->
     match_config_for_name(erlang:atom_to_binary(Name, utf8), Config).
 

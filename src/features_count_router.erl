@@ -8,6 +8,7 @@
 
 -module(features_count_router).
 -include_lib("kernel/include/logger.hrl").
+-include("counter_names.hrl").
 -behaviour(gen_server).
 
 %% API functions
@@ -36,10 +37,17 @@
                 store_lib=undefined,
                 store_lib_state=undefined}).
 
+-type counter_name() :: binary().
+-type date_cohort() :: undefined | weekly.
+
+-record(counter_config, {name        :: counter_name(),
+                         date_cohort :: date_cohort()}).
+
 -record(counter_registration, {id               :: binary(),
                                pid,
-                               is_goal=false}).
+                               is_goal=false    :: boolean()}).
 
+-define(COUNTER_CONFIG, feature_counter_config_table).
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
 -define(PROM_COUNTER_NAME, kimball_counters).
 -define(PROM_ADD_DURATION, kimball_event_add_duration_microseconds).
@@ -76,8 +84,10 @@ add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
     add(CounterName, Key, Opts2);
 add(CounterName, Key, _Opts) ->
     Start = erlang:monotonic_time(microsecond),
+    YearWeekNum = calendar:iso_week_number(),
 
-    Counters = counters_for_event(CounterName),
+    CounterConfig = counter_config_for_name(CounterName),
+    Counters = counters_for_event(CounterName, CounterConfig, YearWeekNum),
     StartAndAdd = fun(CounterRegistration) ->
         ensure_started_and_add(CounterRegistration, Key)
     end,
@@ -146,6 +156,12 @@ init([StoreLib]) ->
                                  public,
                                  {read_concurrency, true},
                                  {keypos, #counter_registration.id}]),
+    ?COUNTER_CONFIG = ets:new(?COUNTER_CONFIG,
+                              [set,
+                               named_table,
+                               public,
+                               {read_concurrency, true},
+                               {keypos, #counter_config.name}]),
     persistent_term:put(?STORE_LIB_MOD_PT_KEY, StoreLib),
     StoreLibState = features_store_lib:init(StoreLib,
                                             "count_router"),
@@ -192,14 +208,22 @@ handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
     end,
     Reply = ok,
     {reply, Reply, State1};
-handle_call({is_goal, Goal}, _From, State=#state{goals=Goals}) ->
+handle_call({is_goal, Goal}, _From, State=#state{goals=Goals})
+                      when is_binary(Goal) ->
+    Reply = lists:member(Goal, Goals),
+    {reply, Reply, State};
+handle_call({is_goal, Goal}, _From, State=#state{goals=Goals})
+                      when is_atom(Goal) ->
+    Reply = lists:member(Goal, Goals),
+    {reply, Reply, State};
+handle_call({is_goal,
+            #counter_name_weekly{name=Goal}},
+            _From,
+            State=#state{goals=Goals}) ->
     Reply = lists:member(Goal, Goals),
     {reply, Reply, State};
 handle_call(goals, _From, State=#state{goals=Goals}) ->
     Reply = Goals,
-    {reply, Reply, State};
-handle_call(_Request, _From, State) ->
-    Reply = ok,
     {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -284,11 +308,36 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-counters_for_event(CounterName) ->
+counters_for_event(CounterName,
+                   #counter_config{date_cohort=DateCohort},
+                   {Year, WeekNum}) ->
     GlobalRegistration = get_registration(?GLOBAL_COUNTER),
     FeatureRegistration = get_registration(CounterName),
-    [GlobalRegistration,
-     FeatureRegistration].
+
+    DateCohortRegistrations = case DateCohort of
+        undefined -> [];
+        weekly ->   [get_registration(
+                                #counter_name_weekly{name=CounterName,
+                                                     year=Year,
+                                                     week=WeekNum})]
+    end,
+    [GlobalRegistration, FeatureRegistration] ++ DateCohortRegistrations.
+
+counter_config_for_name(Name) ->
+    case ets:lookup(?COUNTER_CONFIG, Name) of
+      [] -> LookedUpConfig = features_counter_config:config_for_counter(
+                                Name, init),
+            InitConfig = case LookedUpConfig of
+                undefined -> #{};
+                Else -> Else
+            end,
+            DateCohort = maps:get(date_cohort, InitConfig, undefined),
+            CC = #counter_config{name=Name, date_cohort=DateCohort},
+            true = ets:insert(?COUNTER_CONFIG, CC),
+            CC;
+
+      [LookedUpConfig] -> LookedUpConfig
+    end.
 
 ensure_child_started(CounterID) ->
     StoreLibMod = persistent_term:get(?STORE_LIB_MOD_PT_KEY),
