@@ -332,8 +332,10 @@ counter_config_for_name(Name) ->
                 Else -> Else
             end,
             DateCohort = maps:get(date_cohort, InitConfig, undefined),
-            #counter_config{name=Name,
-                            date_cohort=DateCohort};
+            CC = #counter_config{name=Name, date_cohort=DateCohort},
+            true = ets:insert(?COUNTER_CONFIG, CC),
+            CC;
+
       [LookedUpConfig] -> LookedUpConfig
     end.
 
