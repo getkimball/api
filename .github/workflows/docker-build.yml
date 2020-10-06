@@ -113,7 +113,30 @@ jobs:
                 {"site", "kimball"},
                 {"cluster", "${CLUSTER}"}
               ]}
-          ]}].
+          ]},
+           {prometheus, [{vm_msacc_collector_metrics, []},
+                         {vm_system_info_collector_metrics,
+                           [
+                             ets_limit,
+                             logical_processors,
+                             logical_processors_available,
+                             logical_processors_online,
+                             port_count,
+                             port_limit,
+                             process_count,
+                             process_limit,
+                             schedulers,
+                             schedulers_online,
+                             smp_support,
+                             threads,
+                             thread_pool_size,
+                             time_correction,
+                             wordsize_bytes,
+                             atom_count,
+                             atom_limit
+                        ]}]
+           }
+          ].
           EOF
 
           helm repo add getkimball https://getkimball.github.io/charts/stable
