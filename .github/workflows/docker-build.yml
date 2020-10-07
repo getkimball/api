@@ -112,7 +112,8 @@ jobs:
               {default_labels, [
                 {"site", "kimball"},
                 {"cluster", "${CLUSTER}"},
-                {"mode", {env, "FEATURES_MODE"}}
+                {"mode", {env, "FEATURES_MODE"}},
+                {"pod", {env, "KUBERNETES_POD_NAME"}}
               ]}
           ]},
            {prometheus, [{vm_msacc_collector_metrics, []},
