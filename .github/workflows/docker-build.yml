@@ -111,7 +111,8 @@ jobs:
               {password, "${PROMETHEUS_PASSWORD}"},
               {default_labels, [
                 {"site", "kimball"},
-                {"cluster", "${CLUSTER}"}
+                {"cluster", "${CLUSTER}"},
+                {"mode", {env, "FEATURES_MODE"}}
               ]}
           ]},
            {prometheus, [{vm_msacc_collector_metrics, []},
