@@ -82,8 +82,18 @@ Example
 
 ## Metrics
 
+System metrics are available at `/metrics`
+
+Some important ones:
+
 * `kimball_counters` - The number of counters registered with the router. Equivalent to the number of events tracked.
 * `kimball_persist_counters_managed` - The number of counters the persistence manager triggered in the last run. Should track, but lag, `kimball_counters`.
+
+Metrics for each counter are available at `/metrics/counters`
+
+* `kimball_counter` - Event counters
+
+* `kimball_counter_weekly` - Per week counters if `date_cohort => weekly` is set.
 
 ## Releasing
 

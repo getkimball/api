@@ -5,6 +5,8 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
 
+-include("../include/counter_names.hrl").
+
 
 -define(MUT, features_counter).
 -define(STORE_LIB, fake_store_lib).
@@ -26,11 +28,14 @@ groups() -> [{test_count, [
                 dc_test_multiple_count_single_user_with_tags,
                 dd_test_multiple_count_single_user_with_different_tags,
                 de_test_with_multiple_tags_and_mismatched_ordering,
-                ea_test_includes_key
+                ea_test_includes_key,
+                fa_test_prometheus_counter_for_binary_name,
+                fb_test_prometheus_counter_for_weekly_name
               ]}
             ].
 
 init_meck(Config) ->
+    test_utils:meck_load_prometheus(),
     meck:new(features_count_router),
     meck:expect(features_count_router, register_counter, ['_', '_'], ok),
 
@@ -38,6 +43,7 @@ init_meck(Config) ->
     meck:new(features_store_lib),
     meck:expect(features_store_lib, init, ['_', '_'], StoreLibState),
     meck:expect(features_store_lib, store, ['_', '_'], {#{}, {ok, StoreLibState}}),
+    meck:expect(features_store_lib, get, ['_'], {#{}, StoreLibState}),
 
     Name = <<"test">>,
 
@@ -46,12 +52,10 @@ init_meck(Config) ->
 
 init_per_testcase(ca_test_storage_lib_loading_data, Config) ->
     init_meck(Config);
-
+init_per_testcase(fb_test_prometheus_counter_for_weekly_name, Config) ->
+    init_meck(Config);
 init_per_testcase(_, Config) ->
     NewConfig = init_meck(Config),
-    StoreLibState = ?config(store_lib_state, NewConfig),
-
-    meck:expect(features_store_lib, get, ['_'], {#{}, StoreLibState}),
     Name = ?config(name, NewConfig),
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
@@ -63,6 +67,7 @@ end_per_testcase(_, _Config) ->
 
     ?assert(meck:validate(features_count_router)),
     meck:unload(features_count_router),
+    test_utils:meck_unload_prometheus(),
     ok.
 
 aa_test_single_user(Config) ->
@@ -329,6 +334,73 @@ ea_test_includes_key(Config) ->
     ?assertEqual(true, IsIncluded1),
     Config.
 
+fa_test_prometheus_counter_for_binary_name(Config) ->
+    Name = ?config(name, Config),
+    Pid = ?config(pid, Config),
+
+    User = <<"user_id">>,
+
+    ?MUT:add(User, Pid),
+    Num = ?MUT:count(Pid),
+
+    io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
+    ?assertEqual(1, meck:num_calls(
+        prometheus_gauge,
+        declare,
+        [[{name, kimball_counter},
+          {help, "Value of event counters"},
+          {labels, [name]},
+          {registry, counters}]])),
+
+    io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
+    ?assertEqual(1, meck:num_calls(
+        prometheus_gauge,
+        set,
+        [counters,
+         kimball_counter,
+         [Name],
+         1])),
+
+    ?assertEqual(counts(#{count => 1,
+                          single_tag_counts => #{},
+                          tag_counts => #{[] => 1}}), Num),
+    Config.
+
+fb_test_prometheus_counter_for_weekly_name(Config) ->
+    NameBin = <<"test name">>,
+    Year = 2020,
+    Week = 1,
+    Name = #counter_name_weekly{name=NameBin, year=Year, week=Week},
+
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
+
+    User = <<"user_id">>,
+
+    ?MUT:add(User, Pid),
+    Num = ?MUT:count(Pid),
+
+    io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
+    ?assertEqual(1, meck:num_calls(
+        prometheus_gauge,
+        declare,
+        [[{name, kimball_counter_weekly},
+          {help, "Value of event counters"},
+          {labels, [name, year, week]},
+          {registry, counters}]])),
+
+    io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
+    ?assertEqual(1, meck:num_calls(
+        prometheus_gauge,
+        set,
+        [counters,
+         kimball_counter_weekly,
+         [NameBin, Year, Week],
+         1])),
+
+    ?assertEqual(counts(#{count => 1,
+                          single_tag_counts => #{},
+                          tag_counts => #{[] => 1}}), Num),
+    Config.
 
 counts(C) ->
     Default = #{count => 0,
