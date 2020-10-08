@@ -20,6 +20,7 @@ meck_load_prometheus() ->
     ok = meck:new(prometheus_gauge),
     meck:expect(prometheus_gauge, declare, ['_'], ok),
     meck:expect(prometheus_gauge, set, ['_', '_'], ok),
+    meck:expect(prometheus_gauge, set, ['_', '_', '_', '_'], ok),
 
     ok = meck:new(prometheus_summary),
     meck:expect(prometheus_summary, declare, ['_'], ok),

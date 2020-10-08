@@ -6,6 +6,7 @@
 %%%-------------------------------------------------------------------
 -module(features_counter).
 -include_lib("kernel/include/logger.hrl").
+-include("counter_names.hrl").
 
 -behaviour(gen_server).
 
@@ -32,6 +33,8 @@
                 tag_counts=#{},
                 single_tag_counts=#{},
                 bloom=undefined}).
+
+-define(PROM_COUNTER_REGISTRY, counters).
 
 %%%===================================================================
 %%% API functions
@@ -86,6 +89,8 @@ init([StoreLib, Name]) ->
                  name=>Name}),
     StoreLibState = features_store_lib:init(StoreLib, {"counter", Name}),
     gen_server:cast(self(), load_or_init),
+
+    declare_prometheus_gauge(Name),
     register_name(Name),
     {ok, #state{name=Name,
                 store_lib_state=StoreLibState,
@@ -165,6 +170,8 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
         true -> {increment_tag_count(SortedTags, TagCounts),
                   increment_single_tag_counts(SortedTags, STC)}
     end,
+
+    ok = set_prometheus_gauge(IsNewWrite, Name, NewSize),
 
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
                  name=>Name,
@@ -261,3 +268,26 @@ increment_single_tag_counts(Tags, TagCounts) ->
         AccIn#{T => Val + 1}
     end,
     lists:foldl(Incr, TagCounts, Tags).
+
+declare_prometheus_gauge(#counter_name_weekly{}) ->
+    prometheus_gauge:declare([{name, kimball_counter_weekly},
+                              {help, "Value of event counters"},
+                              {labels, [name, year, week]},
+                              {registry, ?PROM_COUNTER_REGISTRY}]);
+declare_prometheus_gauge(_Name) ->
+    prometheus_gauge:declare([{name, kimball_counter},
+                              {help, "Value of event counters"},
+                              {labels, [name]},
+                              {registry, ?PROM_COUNTER_REGISTRY}]).
+
+set_prometheus_gauge(false, _Name, _Size) ->
+    ok;
+set_prometheus_gauge(true,
+                     #counter_name_weekly{name=Name, year=Year, week=Week},
+                     Size) ->
+    prometheus_gauge:set(?PROM_COUNTER_REGISTRY,
+                         kimball_counter_weekly,
+                         [Name, Year, Week],
+                         Size);
+set_prometheus_gauge(true, Name, Size) ->
+    prometheus_gauge:set(?PROM_COUNTER_REGISTRY, kimball_counter, [Name], Size).
