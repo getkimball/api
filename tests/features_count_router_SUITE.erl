@@ -32,7 +32,8 @@ groups() -> [{test_count, [
                 db_test_existing_goal,
                 ea_test_triggering_a_goal,
                 eb_test_triggering_a_goal_registered_after_goal_added,
-                fa_test_event_no_persistence
+                fa_test_event_no_persistence,
+                ga_test_with_value
               ]}
             ].
 
@@ -41,6 +42,7 @@ init_meck(Config) ->
     meck:new(?COUNTER_MOD),
     meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
     meck:expect(?COUNTER_MOD, add, ['_', '_', '_'], ok),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_', '_'], ok),
     meck:expect(?COUNTER_MOD, count, ['_'], counts(#{count => -1})),
     meck:expect(?COUNTER_MOD, includes_key, ['_', '_'], false),
 
@@ -99,8 +101,7 @@ aa_test_new_counter(Config) ->
     Spec = spec_for_feature(Feature),
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
-    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, '_', Pid])),
 
     Config.
 
@@ -124,11 +125,7 @@ ab_test_existing_counter(Config) ->
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertError(not_found, meck:capture(2, supervisor, start_child, ['_', Spec], 2)),
 
-    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
-
-    ?assertEqual(User, meck:capture(2, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(Pid, meck:capture(2, ?COUNTER_MOD, add, '_', 2)),
+    ?assertEqual(4, meck:num_calls(?COUNTER_MOD, add, [User, '_', Pid])),
 
     Config.
 
@@ -145,7 +142,7 @@ ac_test_new_counter_as_goal(Config) ->
     ExpectedOtherCounters = [],
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
-    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, Pid])),
+    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, '_', Pid])),
 
     Config.
 
@@ -170,7 +167,7 @@ ad_test_existing_counter_as_goal(Config) ->
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertError(not_found, meck:capture(2, supervisor, start_child, ['_', Spec], 2)),
 
-    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, Pid])),
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, '_', Pid])),
 
     Config.
 
@@ -185,7 +182,7 @@ ae_test_new_counter_as_explictely_not_ensuring_goal(Config) ->
     Spec = spec_for_feature(Feature),
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
-    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, Pid])),
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, '_', Pid])),
 
     Config.
 
@@ -204,7 +201,7 @@ af_test_existing_counter_as_existing_goal(Config) ->
 
     ExpectedOtherCounters = [],
 
-    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, Pid])),
+    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, '_', Pid])),
 
     Config.
 
@@ -222,8 +219,7 @@ ag_test_counter_registration_race(Config) ->
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
 
-    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(Pid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, '_', Pid])),
     Config.
 
 ah_test_multiple_counts_added_at_once(Config) ->
@@ -237,9 +233,10 @@ ah_test_multiple_counts_added_at_once(Config) ->
 
     ?MUT:add(Adds),
 
-    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [<<"user_1">>, Pid])),
-    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [<<"user_2">>, Pid])),
-    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [<<"user_2">>, [], Pid])),
+    io:format("Calls ~p~n", [meck:history(?COUNTER_MOD)]),
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [<<"user_1">>, '_', Pid])),
+    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [<<"user_2">>, '_', Pid])),
+    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [<<"user_2">>, [], '_', Pid])),
 
     Config.
 
@@ -430,8 +427,8 @@ ea_test_triggering_a_goal(Config) ->
     ?MUT:add_goal(GoalFeature),
 
 
-    meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
-    meck:expect(?COUNTER_MOD, add, ['_', '_', GoalCounterPid], ok),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_'], ok),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], ok),
     meck:expect(?COUNTER_MOD, includes_key, [{['_', NonGoalCounterPid], true},
                                              {['_', GlobalCounterPid], true},
                                              {['_', GoalCounterPid], false}]),
@@ -448,9 +445,9 @@ ea_test_triggering_a_goal(Config) ->
     Counts = ?MUT:counts(),
 
     ExpectedEvents = [global_counter, NonGoalFeature],
-    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 1)),
-    ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 2)),
-    ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 3)),
+    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 1)),
+    ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2)),
+    ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),
 
     ExpectedCounts = [
         #{count => 1, name => NonGoalFeature, tag_counts => #{[] => 1}},
@@ -484,11 +481,11 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
 
     ?MUT:register_counter(GoalFeature, GoalCounterPid),
 
-    meck:expect(?COUNTER_MOD, add, ['_', '_'], ok),
-    meck:expect(?COUNTER_MOD, add, ['_', '_', GoalCounterPid], ok),
-    meck:expect(?COUNTER_MOD, includes_key, [{['_', NonGoalCounterPid], true},
-                                             {['_', GlobalCounterPid], true},
-                                             {['_', GoalCounterPid], false}]),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_', '_'], ok),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], ok),
+    meck:expect(?COUNTER_MOD, includes_key, [{['_',  NonGoalCounterPid], true},
+                                             {['_',  GlobalCounterPid], true},
+                                             {['_',  GoalCounterPid], false}]),
 
 
     meck:expect(?COUNTER_MOD, count, [{[NonGoalCounterPid], #{count=>1, tag_counts=>#{[] => 1}}},
@@ -505,8 +502,8 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
 
     ExpectedEvents = [global_counter, NonGoalFeature],
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 1)),
-    ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 2)),
-    ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 3)),
+    ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2)),
+    ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),
 
     ExpectedCounts = [
         #{count => 1, name => NonGoalFeature, tag_counts => #{[] => 1}},
@@ -540,10 +537,24 @@ fa_test_event_no_persistence(Config) ->
     Spec = spec_for_feature(Feature, undefined),
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
-    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, '_', 1)),
-    ?assertEqual(CounterPid, meck:capture(first, ?COUNTER_MOD, add, '_', 2)),
-
+    ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, '_', CounterPid])),
     Config1.
+
+ga_test_with_value(Config) ->
+    Feature = <<"feature_name">>,
+    Value = 1,
+    User = <<"user_id">>,
+
+    ?MUT:add(Feature, User, #{ensure_goal=>true, value=>Value}),
+
+    Spec = spec_for_feature(Feature),
+
+    ExpectedOtherCounters = [],
+
+    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
+    ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, Value, '_'])),
+
+    Config.
 
 expected_stored_data(Data) ->
     #{
