@@ -222,11 +222,11 @@ da_test_count_with_tags(Config) ->
 
     Counts = ?MUT:count(Pid),
 
-    ExpectedCounts = #{
+    ExpectedCounts = counts(#{
         count => 1,
         tag_counts => #{Tags => 1},
         single_tag_counts => #{Tag => 1}
-    },
+    }),
 
     ?assertEqual(ExpectedCounts, Counts),
     Config.
@@ -410,13 +410,14 @@ ga_test_single_user_with_value(Config) ->
     Pid = ?config(pid, Config),
 
     User = <<"user_id">>,
-    Value = 4,
+    Value = 1,
 
     ?MUT:add(User, Value, Pid),
 
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 1,
+                          value => #{sum => 1},
                           single_tag_counts => #{},
                           tag_counts => #{[] => 1}}), Num),
     Config.
@@ -425,8 +426,8 @@ gb_test_single_user_multiple_times_with_value(Config) ->
     Pid = ?config(pid, Config),
 
     User = <<"user_id">>,
-    Value1 = 4,
-    Value2 = 5,
+    Value1 = 2,
+    Value2 = 3,
 
     ?MUT:add(User, Value1, Pid),
     ?MUT:add(User, Value2, Pid),
@@ -434,6 +435,7 @@ gb_test_single_user_multiple_times_with_value(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 1,
+                          value => #{sum => 2},
                           single_tag_counts => #{},
                           tag_counts => #{[] => 1}}), Num),
     Config.
@@ -444,7 +446,7 @@ gc_test_single_user_with_value_int_user_id(Config) ->
     KeyBin = <<"42">>,
     KeyInt = 42,
 
-    Value = 4,
+    Value = 3,
 
     ?MUT:add(KeyBin, Value, Pid),
     ?MUT:add(KeyInt, Value, Pid),
@@ -452,6 +454,7 @@ gc_test_single_user_with_value_int_user_id(Config) ->
     Num = ?MUT:count(Pid),
 
     ?assertEqual(counts(#{count => 1,
+                          value => #{sum => 3},
                           single_tag_counts => #{},
                           tag_counts => #{[] => 1}}), Num),
     Config.
@@ -470,6 +473,7 @@ gd_test_user_with_value_and_tags(Config) ->
 
     ExpectedCounts = #{
         count => 1,
+        value => #{sum => 4},
         tag_counts => #{Tags => 1},
         single_tag_counts => #{Tag => 1}
     },
@@ -479,6 +483,7 @@ gd_test_user_with_value_and_tags(Config) ->
 
 counts(C) ->
     Default = #{count => 0,
+                value => #{},
                 single_tag_counts => #{},
                 tag_counts => #{}},
     maps:merge(Default, C).
