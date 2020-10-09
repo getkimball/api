@@ -23,6 +23,7 @@
 
 -export([add/2,
          add/3,
+         add/4,
          count/1,
          includes_key/2,
          persist/1]).
@@ -44,11 +45,23 @@ add(Key, Pid) when is_integer(Key) ->
     add(KeyBin, Pid);
 add(Key, Pid) when is_binary(Key), is_pid(Pid) ->
     Key2 = binary:copy(Key),
-    gen_server:cast(Pid, {add, Key2, []}).
+    Tags = [],
+    Value = undefined,
+    gen_server:cast(Pid, {add, Key2, Tags, Value}).
 
 add(Key, Tags, Pid) when is_binary(Key), is_list(Tags), is_pid(Pid) ->
     Key2 = binary:copy(Key),
-    gen_server:cast(Pid, {add, Key2, Tags}).
+    Value = undefined,
+    gen_server:cast(Pid, {add, Key2, Tags, Value});
+add(Key, Value, Pid) when is_integer(Key) ->
+    KeyBin = list_to_binary(integer_to_list(Key)),
+    add(KeyBin, Value, Pid);
+add(Key, Value, Pid) when is_binary(Key), is_pid(Pid) ->
+    Tags = [],
+    gen_server:cast(Pid, {add, Key, Tags, Value}).
+
+add(Key, Tags, Value, Pid) when is_binary(Key) ->
+    gen_server:cast(Pid, {add, Key, Tags, Value}).
 
 count(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, count).
@@ -151,11 +164,12 @@ handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({add, Key, Tags}, State=#state{name=Name,
-                                     bloom=Bloom,
-                                     single_tag_counts=STC,
-                                     tag_counts=TagCounts,
-                                     unpersisted_write=UnpersistedWrite}) ->
+handle_cast({add, Key, Tags, _Value},
+             State=#state{name=Name,
+                          bloom=Bloom,
+                          single_tag_counts=STC,
+                          tag_counts=TagCounts,
+                          unpersisted_write=UnpersistedWrite}) ->
     InitialSize = etbloom:size(Bloom),
     NewBloom = etbloom:add(Key, Bloom),
     NewSize = etbloom:size(NewBloom),
