@@ -107,24 +107,23 @@ aa_test_new_counter(Config) ->
 
 ab_test_existing_counter(Config) ->
     Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
     Pid = self(),
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
 
     User = <<"user_id">>,
 
     ?MUT:add(Feature, User),
-    ?MUT:register_counter(Feature, Pid),
+    ?MUT:register_counter(CounterID, Pid),
 
     ?MUT:goals(), % Used for syncronization / processing messages
 
     ?MUT:add(Feature, User),
 
-    Spec = #{id => {features_counter, Feature},
-             start => {features_counter, start_link, [?STORE_LIB, Feature]}},
+    Spec = #{id => {features_counter, CounterID},
+             start => {features_counter, start_link, [?STORE_LIB, CounterID]}},
 
-    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
-    ?assertError(not_found, meck:capture(2, supervisor, start_child, ['_', Spec], 2)),
-
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec])),
     ?assertEqual(4, meck:num_calls(?COUNTER_MOD, add, [User, '_', Pid])),
 
     Config.
@@ -148,25 +147,26 @@ ac_test_new_counter_as_goal(Config) ->
 
 ad_test_existing_counter_as_goal(Config) ->
     Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
     Pid = self(),
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
 
     User = <<"user_id">>,
 
     ?MUT:add(Feature, User, #{ensure_goal=>true}),
-    ?MUT:register_counter(Feature, Pid),
+    ?MUT:register_counter(CounterID, Pid),
 
     ?MUT:goals(), % Used for syncronization / processing messages
 
+    io:format("Calls ~p~n", [meck:history(?COUNTER_MOD)]),
     ?MUT:add(Feature, User),
 
-    Spec = #{id => {features_counter, Feature},
-             start => {features_counter, start_link, [?STORE_LIB, Feature]}},
+    Spec = #{id => {features_counter, CounterID},
+             start => {features_counter, start_link, [?STORE_LIB, CounterID]}},
     ExpectedOtherCounters = [],
 
-    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
-    ?assertError(not_found, meck:capture(2, supervisor, start_child, ['_', Spec], 2)),
-
+    io:format("Calls ~p~n", [meck:history(?COUNTER_MOD)]),
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec])),
     ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, '_', Pid])),
 
     Config.
@@ -188,13 +188,14 @@ ae_test_new_counter_as_explictely_not_ensuring_goal(Config) ->
 
 af_test_existing_counter_as_existing_goal(Config) ->
     Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
     Pid = self(),
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
 
     User = <<"user_id">>,
 
     ?MUT:add_goal(Feature),
-    ?MUT:register_counter(Feature, Pid),
+    ?MUT:register_counter(CounterID, Pid),
     ?MUT:goals(), % Used for syncronization / processing messages
     ?MUT:add(Feature, User, #{ensure_goal=>true}),
     ?MUT:goals(), % Used for syncronization / processing messages
@@ -242,26 +243,28 @@ ah_test_multiple_counts_added_at_once(Config) ->
 
 ba_test_counter_counts(Config) ->
     Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
     Pid = self(),
     Num = 1,
     Count = counts(#{count => Num}),
 
     meck:expect(features_counter, count, [Pid], Count),
 
-    ?MUT:register_counter(Feature, Pid),
+    ?MUT:register_counter(CounterID, Pid),
 
     ?MUT:goals(), % Run to synchronize/handle all messages
 
     Counts = ?MUT:counts(),
 
-    ?assertEqual([counts(#{name => Feature, count => Num})], Counts),
+    ?assertEqual([counts(#{id => CounterID, count => Num})], Counts),
     Config.
 
 bb_test_counter_pids(Config) ->
     Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
     Pid = self(),
 
-    ?MUT:register_counter(Feature, Pid),
+    ?MUT:register_counter(CounterID, Pid),
 
     ?MUT:goals(), % Run to synchronize/handle all messages
 
@@ -273,10 +276,11 @@ bb_test_counter_pids(Config) ->
 ca_test_start_with_existing_counters(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
     Num = 1,
     Count = #{count => Num},
-    Spec = spec_for_feature(Feature),
-    StoredData = #{counters => [Feature]},
+    Spec = spec_for_feature(CounterID),
+    StoredData = #{counters => [CounterID]},
 
     meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
     meck:expect(features_counter, count, ['_'], Count),
@@ -293,21 +297,22 @@ ca_test_start_with_existing_counters(Config) ->
 
 cb_test_counter_registration_persists(Config) ->
     Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
     Pid = self(),
     Num = 1,
     Count = counts(#{count => Num}),
 
     meck:expect(features_counter, count, [Pid], Count),
 
-    ?MUT:register_counter(Feature, Pid),
+    ?MUT:register_counter(CounterID, Pid),
     meck:wait(features_store_lib, store, '_', 1000),
 
-    ExpectedData = expected_stored_data(#{counters=>[Feature]}),
+    ExpectedData = expected_stored_data(#{counters=>[CounterID]}),
     ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Counts = ?MUT:counts(),
 
-    ?assertEqual([counts(#{name => Feature, count => Num})], Counts),
+    ?assertEqual([counts(#{id => CounterID, count => Num})], Counts),
 
     Config.
 
@@ -317,12 +322,12 @@ cc_test_weekly_cohort_counter_created(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     {Year, Week} = calendar:iso_week_number(),
     Name = <<"cc_feature">>,
-    Feature = #counter_name_weekly{name=Name, year=Year, week=Week},
+    WeeklyCounterID = features_counter_id:create(Name, weekly, {Year, Week}),
     Num = 1,
     Count = #{count => Num},
 
     Spec = spec_for_feature(Name),
-    WeeklySpec = spec_for_feature(Feature),
+    WeeklySpec = spec_for_feature(WeeklyCounterID),
     StoredData = #{},
 
     meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
@@ -346,12 +351,12 @@ cd_test_weekly_cohort_counter_created_and_added_again(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     {Year, Week} = calendar:iso_week_number(),
     Name = <<"cc_feature">>,
-    Feature = #counter_name_weekly{name=Name, year=Year, week=Week},
+    WeeklyCounterID = features_counter_id:create(Name, weekly, {Year, Week}),
     Num = 1,
     Count = #{count => Num},
 
     Spec = spec_for_feature(Name),
-    WeeklySpec = spec_for_feature(Feature),
+    WeeklySpec = spec_for_feature(WeeklyCounterID),
     StoredData = #{},
 
     meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
@@ -418,11 +423,15 @@ ea_test_triggering_a_goal(Config) ->
     NonGoalCounterPid = erlang:list_to_pid("<0.0.1>"),
     GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
 
+    GlobalCounterID = features_counter_id:create(<<"global_counter">>, internal),
+    NonGoalCounterID = features_counter_id:create(NonGoalFeature),
+    GoalCounterID = features_counter_id:create(GoalFeature),
+
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], meck:raise(error, should_not_hit_this)),
 
-    ?MUT:register_counter(global_counter, GlobalCounterPid),
-    ?MUT:register_counter(NonGoalFeature, NonGoalCounterPid),
-    ?MUT:register_counter(GoalFeature, GoalCounterPid),
+    ?MUT:register_counter(GlobalCounterID, GlobalCounterPid),
+    ?MUT:register_counter(NonGoalCounterID, NonGoalCounterPid),
+    ?MUT:register_counter(GoalCounterID, GoalCounterPid),
 
     ?MUT:add_goal(GoalFeature),
 
@@ -444,15 +453,15 @@ ea_test_triggering_a_goal(Config) ->
 
     Counts = ?MUT:counts(),
 
-    ExpectedEvents = [global_counter, NonGoalFeature],
+    ExpectedEvents = [GlobalCounterID, NonGoalCounterID],
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 1)),
     ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2)),
     ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),
 
     ExpectedCounts = [
-        #{count => 1, name => NonGoalFeature, tag_counts => #{[] => 1}},
-        #{count => 1, name => global_counter, tag_counts => #{[] => 1}},
-        #{count => 1, name => GoalFeature, tag_counts => #{[NonGoalFeature] => 1}}
+        #{count => 1, id => NonGoalCounterID, tag_counts => #{[] => 1}},
+        #{count => 1, id => GlobalCounterID, tag_counts => #{[] => 1}},
+        #{count => 1, id => GoalCounterID, tag_counts => #{[NonGoalFeature] => 1}}
     ],
 
     ?assertEqual(lists:sort(ExpectedCounts),
@@ -470,16 +479,20 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
     NonGoalCounterPid = erlang:list_to_pid("<0.0.1>"),
     GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
 
+    GlobalCounterID = features_counter_id:create(<<"global_counter">>, internal),
+    NonGoalCounterID = features_counter_id:create(NonGoalFeature),
+    GoalCounterID = features_counter_id:create(GoalFeature),
+
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], meck:raise(error, should_not_hit_this)),
 
-    ?MUT:register_counter(global_counter, GlobalCounterPid),
-    ?MUT:register_counter(NonGoalFeature, NonGoalCounterPid),
+    ?MUT:register_counter(GlobalCounterID, GlobalCounterPid),
+    ?MUT:register_counter(NonGoalCounterID, NonGoalCounterPid),
 
     ?MUT:add_goal(GoalFeature),
 
     _Goals0 = ?MUT:goals(), % synchronize call
 
-    ?MUT:register_counter(GoalFeature, GoalCounterPid),
+    ?MUT:register_counter(GoalCounterID, GoalCounterPid),
 
     meck:expect(?COUNTER_MOD, add, ['_', '_', '_', '_'], ok),
     meck:expect(?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], ok),
@@ -500,15 +513,15 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
 
     Counts = ?MUT:counts(),
 
-    ExpectedEvents = [global_counter, NonGoalFeature],
+    ExpectedEvents = [GlobalCounterID, NonGoalCounterID],
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 1)),
     ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2)),
     ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),
 
     ExpectedCounts = [
-        #{count => 1, name => NonGoalFeature, tag_counts => #{[] => 1}},
-        #{count => 1, name => global_counter, tag_counts => #{[] => 1}},
-        #{count => 1, name => GoalFeature, tag_counts => #{[NonGoalFeature] => 1}}
+        #{count => 1, id => NonGoalCounterID, tag_counts => #{[] => 1}},
+        #{count => 1, id => GlobalCounterID, tag_counts => #{[] => 1}},
+        #{count => 1, id => GoalCounterID, tag_counts => #{[NonGoalFeature] => 1}}
     ],
 
     ?assertEqual(lists:sort(ExpectedCounts),
@@ -520,6 +533,7 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
 fa_test_event_no_persistence(Config) ->
     Feature = <<"feature_name">>,
     CounterPid = self(),
+    CounterID = features_counter_id:create(Feature),
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, CounterPid}),
     User = <<"user_id">>,
 
@@ -534,7 +548,7 @@ fa_test_event_no_persistence(Config) ->
 
     ?MUT:add(Feature, User),
 
-    Spec = spec_for_feature(Feature, undefined),
+    Spec = spec_for_feature(CounterID, undefined),
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertEqual(2, meck:num_calls(?COUNTER_MOD, add, [User, '_', CounterPid])),
@@ -562,8 +576,11 @@ expected_stored_data(Data) ->
         goals => maps:get(goals, Data, [])
     }.
 
-spec_for_feature(Feature) ->
-    spec_for_feature(Feature, ?STORE_LIB).
+spec_for_feature(Feature) when is_binary(Feature) ->
+    ID = features_counter_id:create(Feature),
+    spec_for_feature(ID, ?STORE_LIB);
+spec_for_feature(ID) ->
+    spec_for_feature(ID, ?STORE_LIB).
 
 spec_for_feature(Feature, StoreLibMod) ->
     #{id => {features_counter, Feature},
