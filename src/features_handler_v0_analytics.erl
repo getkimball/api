@@ -183,7 +183,8 @@ post_req(_Response, _State) ->
 render_count_map(#{name:=#counter_name_weekly{name=Name, year=Year, week=Week},
                    count:=Count,
                    single_tag_counts:=STC,
-                   tag_counts:=TagCounts}) ->
+                   tag_counts:=TagCounts,
+                   value:=Value}) ->
     RenderedTagCounts = maps:fold(fun render_tag_count/3, [], TagCounts),
     RenderedSTC = maps:fold(fun render_single_tag_count/3, [], STC),
     YearBin = list_to_binary(integer_to_list(Year)),
@@ -197,20 +198,22 @@ render_count_map(#{name:=#counter_name_weekly{name=Name, year=Year, week=Week},
       year=>Year,
       week=>Week,
       count=>Count,
+      value=>Value,
       single_event_counts=>RenderedSTC,
       event_counts=>RenderedTagCounts};
 render_count_map(#{name:=Name,
                    count:=Count,
                    single_tag_counts:=STC,
-                   tag_counts:=TagCounts}) ->
+                   tag_counts:=TagCounts,
+                   value:=Value}) ->
     RenderedTagCounts = maps:fold(fun render_tag_count/3, [], TagCounts),
     RenderedSTC = maps:fold(fun render_single_tag_count/3, [], STC),
     #{name=>Name,
       type=> <<"default">>,
       count=>Count,
       single_event_counts=>RenderedSTC,
-      event_counts=>RenderedTagCounts}.
-
+      event_counts=>RenderedTagCounts,
+      value=>Value}.
 
 render_tag_count(Tags, Count, AccIn) ->
     [#{events => Tags,

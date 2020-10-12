@@ -50,12 +50,14 @@ get_basic_analytics_test() ->
     ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
                                                            count => Count,
                                                            single_tag_counts => #{},
+                                                           value => #{},
                                                            tag_counts => #{}}]),
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
                                       <<"type">> => <<"default">>,
+                                      <<"value">> => #{},
                                       <<"event_counts">> => []}]},
 
     Req = ?CTH:req(),
@@ -83,12 +85,14 @@ get_basic_tag_counts_analytics_test() ->
     ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
                                                            count => Count,
                                                            single_tag_counts => #{},
+                                                           value => #{},
                                                            tag_counts => TagCounts}]),
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
                                       <<"type">> => <<"default">>,
+                                      <<"value">> => #{},
                                       <<"event_counts">> => [#{<<"events">> => [],
                                                              <<"count">> => TagCount}]}]},
 
@@ -108,6 +112,7 @@ get_date_cohort_tag_counts_analytics_test() ->
     ok = meck:expect(features_count_router, counts, [], [#{name => Name,
                                                            count => Count,
                                                            single_tag_counts => #{},
+                                                           value => #{},
                                                            tag_counts => TagCounts}]),
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => <<"feature 20201">>,
@@ -116,6 +121,7 @@ get_date_cohort_tag_counts_analytics_test() ->
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
                                       <<"type">> => <<"weekly">>,
+                                      <<"value">> => #{},
                                       <<"event_counts">> => [#{<<"events">> => [],
                                                              <<"count">> => TagCount}]}]},
 
@@ -137,6 +143,7 @@ get_tag_counts_analytics_test() ->
     ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
                                                            count => Count,
                                                            single_tag_counts => STC,
+                                                           value => #{},
                                                            tag_counts => TagCounts}]),
 
     ExpectedTagCounts = [
@@ -153,6 +160,7 @@ get_tag_counts_analytics_test() ->
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => ExpectedSTC,
                                       <<"type">> => <<"default">>,
+                                      <<"value">> => #{},
                                       <<"event_counts">> => ExpectedTagCounts}]},
 
     Req = ?CTH:req(),
