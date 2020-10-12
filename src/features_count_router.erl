@@ -82,14 +82,15 @@ add(CounterName, Key, Opts=#{ensure_goal:=true}) ->
     ensure_goal(CounterName),
     Opts2 = maps:remove(ensure_goal, Opts),
     add(CounterName, Key, Opts2);
-add(CounterName, Key, _Opts) ->
+add(CounterName, Key, Opts) ->
     Start = erlang:monotonic_time(microsecond),
+    Value = maps:get(value, Opts, undefined),
     YearWeekNum = calendar:iso_week_number(),
 
     CounterConfig = counter_config_for_name(CounterName),
     Counters = counters_for_event(CounterName, CounterConfig, YearWeekNum),
     StartAndAdd = fun(CounterRegistration) ->
-        ensure_started_and_add(CounterRegistration, Key)
+        ensure_started_and_add(CounterRegistration, Key, Value)
     end,
     ok = lists:foreach(StartAndAdd, Counters),
 
@@ -357,16 +358,21 @@ ensure_child_started(CounterID) ->
     Pid.
 
 ensure_started_and_add(CR=#counter_registration{id=CounterID, pid=undefined},
-                       Key) ->
+                       Key,
+                       Value) ->
     Pid = ensure_child_started(CounterID),
     IsGoal = is_goal(CounterID),
     R = CR#counter_registration{pid=Pid, is_goal=IsGoal},
-    ensure_started_and_add(R, Key);
-ensure_started_and_add(#counter_registration{pid=Pid, is_goal=false}, Key) ->
-    ok = features_counter:add(Key, Pid);
-ensure_started_and_add(#counter_registration{pid=Pid, is_goal=true}, Key) ->
+    ensure_started_and_add(R, Key, Value);
+ensure_started_and_add(#counter_registration{pid=Pid, is_goal=false},
+                       Key,
+                       Value) ->
+    ok = features_counter:add(Key, Value, Pid);
+ensure_started_and_add(#counter_registration{pid=Pid, is_goal=true},
+                       Key,
+                       Value) ->
     OtherCounters = counters_for_key(Key),
-    ok = features_counter:add(Key, OtherCounters, Pid).
+    ok = features_counter:add(Key, OtherCounters, Value, Pid).
 
 get_registration(CounterID) ->
     case ets:lookup(?COUNTER_REGISTRY, CounterID) of

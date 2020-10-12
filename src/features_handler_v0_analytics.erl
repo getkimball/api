@@ -92,6 +92,10 @@ analytic_event_input_schema() ->
            user_id => #{
                type => string,
                description => <<"ID of the user">>
+           },
+           value => #{
+               type => number,
+               description => <<"Value of event for a price/sale/subscription">>
            }
         }
     },
@@ -179,7 +183,8 @@ post_req(_Response, _State) ->
 render_count_map(#{name:=#counter_name_weekly{name=Name, year=Year, week=Week},
                    count:=Count,
                    single_tag_counts:=STC,
-                   tag_counts:=TagCounts}) ->
+                   tag_counts:=TagCounts,
+                   value:=Value}) ->
     RenderedTagCounts = maps:fold(fun render_tag_count/3, [], TagCounts),
     RenderedSTC = maps:fold(fun render_single_tag_count/3, [], STC),
     YearBin = list_to_binary(integer_to_list(Year)),
@@ -193,20 +198,22 @@ render_count_map(#{name:=#counter_name_weekly{name=Name, year=Year, week=Week},
       year=>Year,
       week=>Week,
       count=>Count,
+      value=>Value,
       single_event_counts=>RenderedSTC,
       event_counts=>RenderedTagCounts};
 render_count_map(#{name:=Name,
                    count:=Count,
                    single_tag_counts:=STC,
-                   tag_counts:=TagCounts}) ->
+                   tag_counts:=TagCounts,
+                   value:=Value}) ->
     RenderedTagCounts = maps:fold(fun render_tag_count/3, [], TagCounts),
     RenderedSTC = maps:fold(fun render_single_tag_count/3, [], STC),
     #{name=>Name,
       type=> <<"default">>,
       count=>Count,
       single_event_counts=>RenderedSTC,
-      event_counts=>RenderedTagCounts}.
-
+      event_counts=>RenderedTagCounts,
+      value=>Value}.
 
 render_tag_count(Tags, Count, AccIn) ->
     [#{events => Tags,
@@ -218,13 +225,14 @@ render_single_tag_count(Tag, Count, AccIn) ->
 
 build_event_call(#{ensure_goal := EnsureGoalArg,
                    event_name := EventName,
-                   user_id := UserID}) ->
+                   user_id := UserID,
+                   value := Value}) ->
     EnsureGoal = case EnsureGoalArg of
         undefined -> false;
         Else -> Else
     end,
     Opts = #{
-      ensure_goal => EnsureGoal
+      ensure_goal => EnsureGoal,
+      value => Value
     },
     {EventName, UserID, Opts}.
-

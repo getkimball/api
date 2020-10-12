@@ -23,6 +23,7 @@
 
 -export([add/2,
          add/3,
+         add/4,
          count/1,
          includes_key/2,
          persist/1]).
@@ -32,7 +33,9 @@
                 unpersisted_write=false,
                 tag_counts=#{},
                 single_tag_counts=#{},
-                bloom=undefined}).
+                bloom=undefined,
+                value=#{}}).
+
 
 -define(PROM_COUNTER_REGISTRY, counters).
 
@@ -44,11 +47,23 @@ add(Key, Pid) when is_integer(Key) ->
     add(KeyBin, Pid);
 add(Key, Pid) when is_binary(Key), is_pid(Pid) ->
     Key2 = binary:copy(Key),
-    gen_server:cast(Pid, {add, Key2, []}).
+    Tags = [],
+    Value = undefined,
+    gen_server:cast(Pid, {add, Key2, Tags, Value}).
 
 add(Key, Tags, Pid) when is_binary(Key), is_list(Tags), is_pid(Pid) ->
     Key2 = binary:copy(Key),
-    gen_server:cast(Pid, {add, Key2, Tags}).
+    Value = undefined,
+    gen_server:cast(Pid, {add, Key2, Tags, Value});
+add(Key, Value, Pid) when is_integer(Key) ->
+    KeyBin = list_to_binary(integer_to_list(Key)),
+    add(KeyBin, Value, Pid);
+add(Key, Value, Pid) when is_binary(Key), is_pid(Pid) ->
+    Tags = [],
+    gen_server:cast(Pid, {add, Key, Tags, Value}).
+
+add(Key, Tags, Value, Pid) when is_binary(Key) ->
+    gen_server:cast(Pid, {add, Key, Tags, Value}).
 
 count(Pid) when is_pid(Pid) ->
     gen_server:call(Pid, count).
@@ -117,11 +132,13 @@ register_name(Name) ->
 %%--------------------------------------------------------------------
 handle_call(count, _From, State=#state{bloom=Bloom,
                                        single_tag_counts=STC,
-                                       tag_counts=TagCounts}) ->
+                                       tag_counts=TagCounts,
+                                       value=Value}) ->
     Size = etbloom:size(Bloom),
     Reply = #{count => Size,
               single_tag_counts => STC,
-              tag_counts => TagCounts},
+              tag_counts => TagCounts,
+              value => Value},
     {reply, Reply, State};
 handle_call({includes_key, Key}, _From, State=#state{bloom=Bloom}) ->
     Included=etbloom:member(Key, Bloom),
@@ -151,11 +168,13 @@ handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({add, Key, Tags}, State=#state{name=Name,
-                                     bloom=Bloom,
-                                     single_tag_counts=STC,
-                                     tag_counts=TagCounts,
-                                     unpersisted_write=UnpersistedWrite}) ->
+handle_cast({add, Key, Tags, AddValue},
+             State=#state{name=Name,
+                          bloom=Bloom,
+                          single_tag_counts=STC,
+                          tag_counts=TagCounts,
+                          value=Value,
+                          unpersisted_write=UnpersistedWrite}) ->
     InitialSize = etbloom:size(Bloom),
     NewBloom = etbloom:add(Key, Bloom),
     NewSize = etbloom:size(NewBloom),
@@ -164,6 +183,7 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
 
     IsNewWrite = InitialSize /= NewSize,
     ShouldPersist = UnpersistedWrite or IsNewWrite,
+    NewValue = update_value(IsNewWrite, AddValue, Value),
 
     {NewTagCounts, STC1} = case IsNewWrite of
         false -> {TagCounts, STC};
@@ -181,14 +201,17 @@ handle_cast({add, Key, Tags}, State=#state{name=Name,
                  is_new_write=>IsNewWrite,
                  initial_filter_size=>InitialSize,
                  new_filter_size=>NewSize,
+                 new_value=>NewValue,
                  key=>Key}),
     {noreply, State#state{bloom=NewBloom,
                           tag_counts=NewTagCounts,
                           single_tag_counts=STC1,
+                          value=NewValue,
                           unpersisted_write=ShouldPersist}};
 handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
                                        single_tag_counts=STC,
-                                       tag_counts=TagCounts}) ->
+                                       tag_counts=TagCounts,
+                                       value=Value}) ->
     {LoadedData, StoreLibState1} = features_store_lib:get(StoreLibState),
     Data = case LoadedData of
         not_supported -> #{};
@@ -198,11 +221,13 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
     Bloom = bloom_filter_from_data(Data, State),
     LoadedSTC = maps:get(single_tag_counts, Data, STC),
     LoadedTagCounts = maps:get(tag_counts, Data, TagCounts),
+    LoadedValue = maps:get(value, Data, Value),
 
     {noreply, State#state{bloom=Bloom,
                           single_tag_counts=LoadedSTC,
                           store_lib_state=StoreLibState1,
-                          tag_counts=LoadedTagCounts}}.
+                          tag_counts=LoadedTagCounts,
+                          value=LoadedValue}}.
 
 bloom_filter_from_data(#{bloom:=Bloom}, _State) ->
     Bloom;
@@ -211,10 +236,13 @@ bloom_filter_from_data(_Else, #state{name=Name}) ->
 
 store(StoreLibState, _State=#state{bloom=Bloom,
                                   single_tag_counts=STC,
-                                  tag_counts=TagCounts}) ->
+                                  tag_counts=TagCounts,
+                                  value=Value}) ->
+    % TODO: Store value
     Data = #{bloom => Bloom,
              single_tag_counts => STC,
-             tag_counts => TagCounts},
+             tag_counts => TagCounts,
+             value => Value},
     features_store_lib:store(Data, StoreLibState).
 %%--------------------------------------------------------------------
 %% @private
@@ -291,3 +319,12 @@ set_prometheus_gauge(true,
                          Size);
 set_prometheus_gauge(true, Name, Size) ->
     prometheus_gauge:set(?PROM_COUNTER_REGISTRY, kimball_counter, [Name], Size).
+
+update_value(false, _AddValue, Value) ->
+    Value;
+update_value(_, undefined, Value) ->
+    Value;
+update_value(true, AddValue, Value) ->
+    Sum = maps:get(sum, Value, 0),
+    NewSum = AddValue + Sum,
+    #{sum=>NewSum}.

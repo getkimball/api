@@ -30,7 +30,11 @@ groups() -> [{test_count, [
                 de_test_with_multiple_tags_and_mismatched_ordering,
                 ea_test_includes_key,
                 fa_test_prometheus_counter_for_binary_name,
-                fb_test_prometheus_counter_for_weekly_name
+                fb_test_prometheus_counter_for_weekly_name,
+                ga_test_single_user_with_value,
+                gb_test_single_user_multiple_times_with_value,
+                gc_test_single_user_with_value_int_user_id,
+                gd_test_user_with_value_and_tags
               ]}
             ].
 
@@ -218,11 +222,11 @@ da_test_count_with_tags(Config) ->
 
     Counts = ?MUT:count(Pid),
 
-    ExpectedCounts = #{
+    ExpectedCounts = counts(#{
         count => 1,
         tag_counts => #{Tags => 1},
         single_tag_counts => #{Tag => 1}
-    },
+    }),
 
     ?assertEqual(ExpectedCounts, Counts),
     Config.
@@ -402,8 +406,84 @@ fb_test_prometheus_counter_for_weekly_name(Config) ->
                           tag_counts => #{[] => 1}}), Num),
     Config.
 
+ga_test_single_user_with_value(Config) ->
+    Pid = ?config(pid, Config),
+
+    User = <<"user_id">>,
+    Value = 1,
+
+    ?MUT:add(User, Value, Pid),
+
+    Num = ?MUT:count(Pid),
+
+    ?assertEqual(counts(#{count => 1,
+                          value => #{sum => 1},
+                          single_tag_counts => #{},
+                          tag_counts => #{[] => 1}}), Num),
+    Config.
+
+gb_test_single_user_multiple_times_with_value(Config) ->
+    Pid = ?config(pid, Config),
+
+    User = <<"user_id">>,
+    Value1 = 2,
+    Value2 = 3,
+
+    ?MUT:add(User, Value1, Pid),
+    ?MUT:add(User, Value2, Pid),
+
+    Num = ?MUT:count(Pid),
+
+    ?assertEqual(counts(#{count => 1,
+                          value => #{sum => 2},
+                          single_tag_counts => #{},
+                          tag_counts => #{[] => 1}}), Num),
+    Config.
+
+gc_test_single_user_with_value_int_user_id(Config) ->
+    Pid = ?config(pid, Config),
+
+    KeyBin = <<"42">>,
+    KeyInt = 42,
+
+    Value = 3,
+
+    ?MUT:add(KeyBin, Value, Pid),
+    ?MUT:add(KeyInt, Value, Pid),
+
+    Num = ?MUT:count(Pid),
+
+    ?assertEqual(counts(#{count => 1,
+                          value => #{sum => 3},
+                          single_tag_counts => #{},
+                          tag_counts => #{[] => 1}}), Num),
+    Config.
+
+gd_test_user_with_value_and_tags(Config) ->
+    Pid = ?config(pid, Config),
+
+    User = <<"user_id">>,
+    Value = 4,
+    Tag = <<"foo">>,
+    Tags = [Tag],
+
+    ?MUT:add(User, Tags, Value, Pid),
+
+    Counts = ?MUT:count(Pid),
+
+    ExpectedCounts = #{
+        count => 1,
+        value => #{sum => 4},
+        tag_counts => #{Tags => 1},
+        single_tag_counts => #{Tag => 1}
+    },
+
+    ?assertEqual(ExpectedCounts, Counts),
+    Config.
+
 counts(C) ->
     Default = #{count => 0,
+                value => #{},
                 single_tag_counts => #{},
                 tag_counts => #{}},
     maps:merge(Default, C).

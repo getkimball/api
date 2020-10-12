@@ -233,6 +233,11 @@ validate_property_spec(Value, _Spec=#{type := integer}) ->
         true -> Value;
         false -> throw({incorrect_type, Value, integer})
     end;
+validate_property_spec(Value, _Spec=#{type := number}) ->
+    case erlang:is_number(Value) of
+        true -> Value;
+        false -> throw({incorrect_type, Value, number})
+    end;
 validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
     case is_binary(Value) of
         false -> throw({incorrect_type, Value, string});
