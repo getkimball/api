@@ -92,6 +92,10 @@ analytic_event_input_schema() ->
            user_id => #{
                type => string,
                description => <<"ID of the user">>
+           },
+           value => #{
+               type => number,
+               description => <<"Value of event for a price/sale/subscription">>
            }
         }
     },
@@ -218,13 +222,14 @@ render_single_tag_count(Tag, Count, AccIn) ->
 
 build_event_call(#{ensure_goal := EnsureGoalArg,
                    event_name := EventName,
-                   user_id := UserID}) ->
+                   user_id := UserID,
+                   value := Value}) ->
     EnsureGoal = case EnsureGoalArg of
         undefined -> false;
         Else -> Else
     end,
     Opts = #{
-      ensure_goal => EnsureGoal
+      ensure_goal => EnsureGoal,
+      value => Value
     },
     {EventName, UserID, Opts}.
-

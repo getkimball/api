@@ -19,6 +19,8 @@ load() ->
     ok = meck:expect(features_count_router, add, ['_', '_', '_'], ok),
 
     ok.
+unload(_) ->
+    unload().
 
 unload() ->
     ?assert(meck:validate(features_count_router)),
@@ -268,6 +270,75 @@ save_list_multiple_analytic_events_test() ->
 
     unload().
 
+value_test_() ->
+    {foreach,
+     fun load/0,
+     fun unload/1,
+     [fun save_analytic_event_int_value/0,
+      fun save_analytic_event_float_value/0,
+      fun save_analytic_event_not_number_value/0
+    ]}.
+
+save_analytic_event_int_value() ->
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Value = 1,
+    Doc = #{
+        event_name => EventName,
+        user_id => UserID,
+        value => Value
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+
+    assert_added(EventName, UserID, #{ensure_goal=> false, value=>Value}, 1).
+
+save_analytic_event_float_value() ->
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Value = 1.1,
+    Doc = #{
+        event_name => EventName,
+        user_id => UserID,
+        value => Value
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+
+    assert_added(EventName, UserID, #{ensure_goal=> false, value=>Value}, 1).
+
+save_analytic_event_not_number_value() ->
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Value = <<"foo">>,
+    Doc = #{
+        event_name => EventName,
+        user_id => UserID,
+        value => Value
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ExpectedErrObj = ?CTH:json_roundtrip(Doc),
+
+    ErrorMessage = <<"Object does not match any of the oneOf specifications">>,
+    State = #{analytics_event_mod=>features_count_router},
+    #{<<"error">> := #{<<"what">>:= ErrWhat,
+                       <<"object">>:= ErrObj,
+                       <<"why">>:= Whys}} = ?CTH:http_post(?MUT, State, PostReq, 400),
+
+    ExpectedError = [<<"incorrect_type">>, Value, <<"number">>],
+    ?assertEqual(ErrorMessage, ErrWhat),
+    ?assertEqual(ExpectedErrObj, ErrObj),
+
+    ?assert(lists:member(ExpectedError, Whys)),
+
+    ?assertEqual(0, meck:num_calls(features_count_router, add, '_')).
+
 invalid_combination_of_single_and_multiple_events_test() ->
     load(),
     EventName = <<"event_name">>,
@@ -325,3 +396,8 @@ non_matching_event_of_multiple_events_test() ->
     ?assert(lists:member(ExpectedError, Whys)),
 
     unload().
+
+assert_added(Event, UserID, Opts, Num) ->
+    io:format("features_count_router history: ~p~n", [meck:history(features_count_router)]),
+
+    ?assertEqual(Num, meck:num_calls(features_count_router, add, [Event, UserID, Opts])).
