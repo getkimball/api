@@ -43,7 +43,7 @@
 -record(counter_config, {name        :: counter_name(),
                          date_cohort :: date_cohort()}).
 
--record(counter_registration, {id               :: binary(),
+-record(counter_registration, {id               :: any(),
                                pid,
                                is_goal=false    :: boolean()}).
 
