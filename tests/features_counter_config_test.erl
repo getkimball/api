@@ -1,6 +1,5 @@
 -module(features_counter_config_test).
 -include_lib("eunit/include/eunit.hrl").
--include("../include/counter_names.hrl").
 
 -define(MUT, features_counter_config).
 

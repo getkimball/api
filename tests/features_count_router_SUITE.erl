@@ -4,8 +4,6 @@
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
--include("include/counter_names.hrl").
-
 
 -define(MUT, features_count_router).
 -define(COUNTER_MOD, features_counter).

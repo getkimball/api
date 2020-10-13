@@ -1,6 +1,5 @@
 -module(features_handler_v0_analytics).
 -include_lib("kernel/include/logger.hrl").
--include("counter_names.hrl").
 -export([trails/0]).
 -export([init/2]).
 

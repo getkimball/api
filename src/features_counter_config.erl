@@ -1,6 +1,5 @@
 -module(features_counter_config).
 -include_lib("kernel/include/logger.hrl").
--include("counter_names.hrl").
 
 -export([config_for_counter/2,
          create_bloom/1,

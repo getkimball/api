@@ -11,13 +11,13 @@
 
 init_test() ->
     load(),
-    _State = ?MUT:init("test"),
+    _State = ?MUT:init(<<"test">>),
     unload().
 
 read_test() ->
     load(),
-    Name = "test",
-    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ Name),
+    Name = <<"test">>,
+    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ binary_to_list(Name)),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     DataBin = erlang:term_to_binary(Data),
@@ -33,9 +33,9 @@ read_test() ->
 
 read_with_type_test() ->
     load(),
-    Name = "test",
+    Name = <<"test">>,
     Type = "type",
-    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ Type ++ "/" ++ Name),
+    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ Type ++ "/" ++ binary_to_list(Name)),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     DataBin = erlang:term_to_binary(Data),
@@ -49,11 +49,10 @@ read_with_type_test() ->
 
     unload().
 
-
 read_404_test() ->
     load(),
-    Name = "test",
-    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ Name),
+    Name = <<"test">>,
+    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ binary_to_list(Name)),
 
     ok = meck:expect(enenra, get_object_contents, ['_', '_', '_'], {error, not_found}),
 
@@ -68,7 +67,7 @@ read_404_test() ->
 
 read_unknown_error_test() ->
     load(),
-    Name = "test",
+    Name = <<"test">>,
 
     ok = meck:expect(enenra, get_object_contents, ['_', '_', '_'], {error, other}),
     Throw = {enenra, other},
@@ -79,8 +78,8 @@ read_unknown_error_test() ->
 
 store_test() ->
     load(),
-    Name = "test",
-    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ Name),
+    Name = <<"test">>,
+    ExpectedPath = binary:list_to_bin(?BASE_PATH ++ "/" ++ binary_to_list(Name)),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     EncodedData = erlang:term_to_binary(Data),
@@ -98,7 +97,7 @@ store_test() ->
       updated= <<"1970-01-01:00:00.00Z">>
     },
 
-    State = ?MUT:init("test"),
+    State = ?MUT:init(<<"test">>),
     {ok, _State} = ?MUT:store(Data, State),
 
     ?assertEqual(1, meck:num_calls(enenra, upload_data, [EncodedData, EnenraObj, ?ENENRA_CREDENTIALS])),

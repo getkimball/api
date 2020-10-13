@@ -8,7 +8,6 @@
 
 -module(features_count_router).
 -include_lib("kernel/include/logger.hrl").
--include("counter_names.hrl").
 -behaviour(gen_server).
 
 %% API functions
