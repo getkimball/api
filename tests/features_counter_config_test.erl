@@ -21,9 +21,7 @@ create_test_() ->
      [fun create_scalable_filter/0,
       fun create_filter_with_no_matching_config/0,
       fun create_scalable_filter_with_probability/0,
-      fun create_counter_name_weekly_scalable_filter_with_probability/0,
       fun create_fixed_filter/0,
-      fun create_fixed_filter_with_atom/0,
       fun create_fixed_filter_with_probability/0,
       fun create_fixed_filter_with_multiple_configs/0
       ]}.
@@ -64,21 +62,6 @@ create_scalable_filter_with_probability() ->
     BF = ?MUT:create_bloom(<<"foo">>),
     {sbf, Probability, _, _, Size, _} = BF.
 
-create_counter_name_weekly_scalable_filter_with_probability() ->
-    NumElements = 1000,
-    Probability = 0.1,
-    InitConfig = [
-      #{pattern => ".*",
-        type => bloom_scalable,
-        size => NumElements,
-        error_probability => Probability}],
-
-    set_filter_initial_config(InitConfig),
-
-    Size = 0,
-    BF = ?MUT:create_bloom(#counter_name_weekly{name= <<"foo">>}),
-    {sbf, Probability, _, _, Size, _} = BF.
-
 create_fixed_filter() ->
     NumElements = 10000,
     InitConfig = [
@@ -92,21 +75,6 @@ create_fixed_filter() ->
     MaxNumElements = 11395, % value gathered experimentally for the NumElements
     Size = 0,
     BF = ?MUT:create_bloom(<<"foo">>),
-    {bloom, Probability, MaxNumElements, _, Size, _} = BF.
-
-create_fixed_filter_with_atom() ->
-    NumElements = 10000,
-    InitConfig = [
-      #{pattern => ".*",
-        type => bloom_fixed_size,
-        size => NumElements}],
-
-    set_filter_initial_config(InitConfig),
-
-    Probability = 0.001,
-    MaxNumElements = 11395, % value gathered experimentally for the NumElements
-    Size = 0,
-    BF = ?MUT:create_bloom(foo),
     {bloom, Probability, MaxNumElements, _, Size, _} = BF.
 
 create_fixed_filter_with_probability() ->

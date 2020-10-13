@@ -55,11 +55,7 @@ match_config_for_name(Name,
     case re:run(Name, Pattern) of
         {match, _Captured} -> Config;
         nomatch -> match_config_for_name(Name, T)
-    end;
-match_config_for_name(#counter_name_weekly{name=Name}, Config) ->
-    match_config_for_name(Name, Config);
-match_config_for_name(Name, Config) when is_atom(Name) ->
-    match_config_for_name(erlang:atom_to_binary(Name, utf8), Config).
+    end.
 
 default_filter() ->
     etbloom:sbf(100000, 0.001).
