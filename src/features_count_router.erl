@@ -269,7 +269,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(start_global_counter, State) ->
-    ensure_child_started(?GLOBAL_COUNTER),
+    ensure_child_started(features_counter_id:create(?GLOBAL_COUNTER, internal)),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -381,7 +381,8 @@ counters_for_key(Key) ->
     Counters = ets:foldl(F, [], ?COUNTER_REGISTRY),
     Counters.
 
-counter_id_to_tag(Name) ->
+counter_id_to_tag(ID) ->
+    Name = features_counter_id:name(ID),
     Name.
 
 pid_from_child_start({_, Pid}) when is_pid(Pid) ->

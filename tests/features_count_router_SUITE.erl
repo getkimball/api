@@ -451,7 +451,7 @@ ea_test_triggering_a_goal(Config) ->
 
     Counts = ?MUT:counts(),
 
-    ExpectedEvents = [GlobalCounterID, NonGoalCounterID],
+    ExpectedEvents = [<<"global_counter">>, NonGoalFeature],
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 1)),
     ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2)),
     ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),
@@ -511,7 +511,7 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
 
     Counts = ?MUT:counts(),
 
-    ExpectedEvents = [GlobalCounterID, NonGoalCounterID],
+    ExpectedEvents = [<<"global_counter">>, NonGoalFeature],
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 1)),
     ?assertEqual(ExpectedEvents, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2)),
     ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),
