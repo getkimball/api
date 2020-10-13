@@ -6,7 +6,6 @@
 %%%-------------------------------------------------------------------
 -module(features_counter).
 -include_lib("kernel/include/logger.hrl").
--include("counter_names.hrl").
 
 -behaviour(gen_server).
 
@@ -111,8 +110,6 @@ init([StoreLib, Name]) ->
                 store_lib_state=StoreLibState,
                 bloom=undefined}}.
 
-register_name([]) ->
-    ok;
 register_name(Name) ->
     features_count_router:register_counter(Name, self()).
 
@@ -297,28 +294,20 @@ increment_single_tag_counts(Tags, TagCounts) ->
     end,
     lists:foldl(Incr, TagCounts, Tags).
 
-declare_prometheus_gauge(#counter_name_weekly{}) ->
-    prometheus_gauge:declare([{name, kimball_counter_weekly},
-                              {help, "Value of event counters"},
-                              {labels, [name, year, week]},
-                              {registry, ?PROM_COUNTER_REGISTRY}]);
-declare_prometheus_gauge(_Name) ->
-    prometheus_gauge:declare([{name, kimball_counter},
-                              {help, "Value of event counters"},
-                              {labels, [name]},
-                              {registry, ?PROM_COUNTER_REGISTRY}]).
+declare_prometheus_gauge(ID) ->
+    prometheus_gauge:declare([
+        {name, features_counter_id:to_prometheus_name(ID)},
+        {help, "Value of event counters"},
+        {labels, features_counter_id:to_prometheus_label_keys(ID)},
+        {registry, ?PROM_COUNTER_REGISTRY}]).
 
 set_prometheus_gauge(false, _Name, _Size) ->
     ok;
-set_prometheus_gauge(true,
-                     #counter_name_weekly{name=Name, year=Year, week=Week},
-                     Size) ->
+set_prometheus_gauge(true, ID, Size) ->
     prometheus_gauge:set(?PROM_COUNTER_REGISTRY,
-                         kimball_counter_weekly,
-                         [Name, Year, Week],
-                         Size);
-set_prometheus_gauge(true, Name, Size) ->
-    prometheus_gauge:set(?PROM_COUNTER_REGISTRY, kimball_counter, [Name], Size).
+                         features_counter_id:to_prometheus_name(ID),
+                         features_counter_id:to_prometheus_label_values(ID),
+                         Size).
 
 update_value(false, _AddValue, Value) ->
     Value;
