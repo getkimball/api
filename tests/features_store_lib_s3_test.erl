@@ -48,6 +48,27 @@ read_test() ->
 
     unload().
 
+read_counter_name_test() ->
+    load(),
+    Name = <<"test">>,
+    ID = features_counter_id:create(Name),
+    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name),
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    DataBin = erlang:term_to_binary(Data),
+    Obj = [{content, DataBin}],
+    ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], Obj),
+
+    State = ?MUT:init(ID),
+    {ReturnedData, State} = ?MUT:get_all(State),
+
+    ?assertEqual(?BUCKET, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 1)),
+    ?assertEqual(ExpectedPath, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 2)),
+
+    ?assertEqual(Data, ReturnedData),
+
+    unload().
+
 read_counter_name_weekly_test() ->
     load(),
     Name = <<"test">>,
