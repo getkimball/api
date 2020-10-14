@@ -6,7 +6,7 @@
 
 -type callback_state() :: any().
 -type lib_data() :: map().
--type name() :: string()| {string(), string()}.
+-type name() :: boolean()| {string(), boolean()}.
 -type counter_id() :: tuple().
 
 -callback init(name()|counter_id()) -> callback_state().

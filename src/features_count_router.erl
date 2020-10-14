@@ -164,7 +164,7 @@ init([StoreLib]) ->
                                {keypos, #counter_config.name}]),
     persistent_term:put(?STORE_LIB_MOD_PT_KEY, StoreLib),
     StoreLibState = features_store_lib:init(StoreLib,
-                                            "count_router"),
+                                            <<"count_router">>),
 
     prometheus_summary:declare([
       {name, ?PROM_ADD_DURATION},

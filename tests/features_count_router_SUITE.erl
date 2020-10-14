@@ -49,7 +49,7 @@ init_meck(Config) ->
 
     StoreLibState = {store_lib_state, make_ref()},
     meck:new(features_store_lib),
-    meck:expect(features_store_lib, init, ['_', "count_router"], StoreLibState),
+    meck:expect(features_store_lib, init, ['_', <<"count_router">>], StoreLibState),
     meck:expect(features_store_lib, get, ['_'], {#{}, StoreLibState}),
     meck:expect(features_store_lib, store, ['_', '_'], {ok, StoreLibState}),
 
