@@ -412,38 +412,46 @@ db_test_existing_goal(Config) ->
     Config1.
 
 ea_test_triggering_a_goal(Config) ->
+    CounterConfig = #{date_cohort => weekly},
     User = <<"user_id">>,
 
     NonGoalFeature = <<"non_goal">>,
     GoalFeature = <<"goal">>,
+    {Year, Week} = calendar:iso_week_number(),
+
+    meck:expect(features_counter_config, config_for_counter, [{[GoalFeature, init], CounterConfig},
+                                                              {['_', init], undefined}]),
 
     GlobalCounterPid = erlang:list_to_pid("<0.0.0>"),
     NonGoalCounterPid = erlang:list_to_pid("<0.0.1>"),
     GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
+    WeeklyGoalCounterPid = erlang:list_to_pid("<0.0.3>"),
 
     GlobalCounterID = features_counter_id:create(<<"global_counter">>, internal),
     NonGoalCounterID = features_counter_id:create(NonGoalFeature),
     GoalCounterID = features_counter_id:create(GoalFeature),
+    WeeklyGoalCounterID = features_counter_id:create(GoalFeature, weekly, {Year,Week}),
 
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], meck:raise(error, should_not_hit_this)),
 
     ?MUT:register_counter(GlobalCounterID, GlobalCounterPid),
     ?MUT:register_counter(NonGoalCounterID, NonGoalCounterPid),
     ?MUT:register_counter(GoalCounterID, GoalCounterPid),
+    ?MUT:register_counter(WeeklyGoalCounterID, WeeklyGoalCounterPid),
 
     ?MUT:add_goal(GoalFeature),
 
-
     meck:expect(?COUNTER_MOD, add, ['_', '_', '_'], ok),
-    meck:expect(?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], ok),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_', '_'], ok),
     meck:expect(?COUNTER_MOD, includes_key, [{['_', NonGoalCounterPid], true},
                                              {['_', GlobalCounterPid], true},
-                                             {['_', GoalCounterPid], false}]),
-
+                                             {['_', GoalCounterPid], false},
+                                             {['_', WeeklyGoalCounterPid], false}]),
 
     meck:expect(?COUNTER_MOD, count, [{[NonGoalCounterPid], #{count=>1, tag_counts=>#{[] => 1}}},
                                       {[GlobalCounterPid], #{count=>1, tag_counts=>#{[] => 1}}},
-                                      {[GoalCounterPid], #{count=>1, tag_counts=>#{[NonGoalFeature] => 1}}}]),
+                                      {[GoalCounterPid], #{count=>1, tag_counts=>#{[NonGoalFeature] => 1}}},
+                                      {[WeeklyGoalCounterPid], #{count=>1, tag_counts=>#{[NonGoalFeature] => 1}}}]),
     _Goals = ?MUT:goals(), % synchronize call
 
     ?MUT:add(NonGoalFeature, User),
@@ -451,15 +459,19 @@ ea_test_triggering_a_goal(Config) ->
 
     Counts = ?MUT:counts(),
 
+    io:format("Adds ~p~n", [meck:history(?COUNTER_MOD)]),
     ExpectedEvents = lists:sort([<<"global_counter">>, NonGoalFeature]),
-    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 1)),
-    ?assertEqual(ExpectedEvents, lists:sort(meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2))),
-    ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),
+    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], 1)),
+    ?assertEqual(ExpectedEvents, lists:sort(meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], 2))),
+
+    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', WeeklyGoalCounterPid], 1)),
+    ?assertEqual(ExpectedEvents, lists:sort(meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', WeeklyGoalCounterPid], 2))),
 
     ExpectedCounts = [
         #{count => 1, id => NonGoalCounterID, tag_counts => #{[] => 1}},
         #{count => 1, id => GlobalCounterID, tag_counts => #{[] => 1}},
-        #{count => 1, id => GoalCounterID, tag_counts => #{[NonGoalFeature] => 1}}
+        #{count => 1, id => GoalCounterID, tag_counts => #{[NonGoalFeature] => 1}},
+        #{count => 1, id => WeeklyGoalCounterID, tag_counts => #{[NonGoalFeature] => 1}}
     ],
 
     ?assertEqual(lists:sort(ExpectedCounts),

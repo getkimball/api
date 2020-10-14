@@ -6,6 +6,7 @@
          create/2,
          create/3,
          name/1,
+         pattern_matcher_name/1,
          to_file_path/1,
          to_full_name/1,
          to_prometheus_label_keys/1,
@@ -14,9 +15,9 @@
          type/1]).
 
 
--record(id, {name     :: binary(),
-             type     :: internal | named | weekly,
-             data     :: undefined | {integer(), integer()}
+-record(id, {name     :: binary() | '_',
+             type     :: internal | named | weekly | '_',
+             data     :: undefined | {integer(), integer()} | '_'
 }).
 
 create(Name) ->
@@ -32,6 +33,9 @@ create(Name, weekly, {Year, Month}) ->
 
 name(#id{name=Name}) ->
     Name.
+
+pattern_matcher_name(Name) ->
+    #id{name=Name, type='_', data='_'}.
 
 type(#id{type=Type}) ->
     Type.
