@@ -42,9 +42,9 @@
 -record(counter_config, {name        :: counter_name(),
                          date_cohort :: date_cohort()}).
 
--record(counter_registration, {id               :: any(),
+-record(counter_registration, {id               :: any() | '_',
                                pid,
-                               is_goal=false    :: boolean()}).
+                               is_goal=false    :: boolean() | '_'}).
 
 -define(COUNTER_CONFIG, feature_counter_config_table).
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
@@ -193,15 +193,16 @@ init([StoreLib]) ->
 %%--------------------------------------------------------------------
 handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
     % Ensure registration, if it exists, knows that this is a goal
-    % TODO: look up all needed counters for a particular goal, this only looks
-    % up the named version
-    CounterID = features_counter_id:create(Goal),
-    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterID),
-    case FeatureRegistration of
-        [] -> ok;
-        [CR] -> GoalRegistration = CR#counter_registration{is_goal=true},
-                true = ets:insert(?COUNTER_REGISTRY, GoalRegistration)
+    IDMatcher = features_counter_id:pattern_matcher_name(Goal),
+    Matcher = #counter_registration{id=IDMatcher, pid='_', is_goal='_'},
+    FeatureRegistrations = ets:match_object(?COUNTER_REGISTRY, Matcher),
+    SetGoalRegistration = fun(Registration) ->
+        NewRegistration = Registration#counter_registration{is_goal=true},
+        true = ets:insert(?COUNTER_REGISTRY, NewRegistration)
     end,
+
+    lists:foreach(SetGoalRegistration, FeatureRegistrations),
+
     % Include the goal in our internal list, then persist
     State1 = case lists:member(Goal, Goals) of
         true -> State;
