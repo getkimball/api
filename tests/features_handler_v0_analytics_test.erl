@@ -1,6 +1,5 @@
 -module(features_handler_v0_analytics_test).
 -include_lib("eunit/include/eunit.hrl").
--include("../include/counter_names.hrl").
 
 -define(MUT, features_handler_v0_analytics).
 -define(CTH, cowboy_test_helpers).
@@ -46,8 +45,9 @@ setup_test() ->
 get_basic_analytics_test() ->
     load(),
     Feature = <<"feature">>,
+    ID = features_counter_id:create(Feature),
     Count = 4,
-    ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
+    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
                                                            count => Count,
                                                            single_tag_counts => #{},
                                                            value => #{},
@@ -56,7 +56,7 @@ get_basic_analytics_test() ->
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
-                                      <<"type">> => <<"default">>,
+                                      <<"type">> => <<"named">>,
                                       <<"value">> => #{},
                                       <<"event_counts">> => []}]},
 
@@ -79,10 +79,11 @@ get_basic_analytics_in_sidecar_mode_404s_test() ->
 get_basic_tag_counts_analytics_test() ->
     load(),
     Feature = <<"feature">>,
+    ID = features_counter_id:create(Feature),
     Count = 4,
     TagCount = 1,
     TagCounts = #{[] => TagCount},
-    ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
+    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
                                                            count => Count,
                                                            single_tag_counts => #{},
                                                            value => #{},
@@ -91,7 +92,7 @@ get_basic_tag_counts_analytics_test() ->
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
-                                      <<"type">> => <<"default">>,
+                                      <<"type">> => <<"named">>,
                                       <<"value">> => #{},
                                       <<"event_counts">> => [#{<<"events">> => [],
                                                              <<"count">> => TagCount}]}]},
@@ -104,20 +105,18 @@ get_basic_tag_counts_analytics_test() ->
 
 get_date_cohort_tag_counts_analytics_test() ->
     load(),
-    BinName = <<"feature">>,
-    Name = #counter_name_weekly{name=BinName, year=2020, week=1},
+    Name = <<"feature">>,
+    ID = features_counter_id:create(Name, weekly, {2020, 1}),
     Count = 4,
     TagCount = 1,
     TagCounts = #{[] => TagCount},
-    ok = meck:expect(features_count_router, counts, [], [#{name => Name,
+    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
                                                            count => Count,
                                                            single_tag_counts => #{},
                                                            value => #{},
                                                            tag_counts => TagCounts}]),
 
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => <<"feature 20201">>,
-                                      <<"year">> => 2020,
-                                      <<"week">> => 1,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => [],
                                       <<"type">> => <<"weekly">>,
@@ -134,13 +133,14 @@ get_date_cohort_tag_counts_analytics_test() ->
 get_tag_counts_analytics_test() ->
     load(),
     Feature = <<"feature">>,
+    ID = features_counter_id:create(Feature),
     Count = 4,
     TagCounts = #{[] => 0,
                   [<<"1">>] => 1,
                   [<<"1">>, <<"2">>] => 2},
     STC = #{<<"1">> => 3,
             <<"2">> => 2},
-    ok = meck:expect(features_count_router, counts, [], [#{name => Feature,
+    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
                                                            count => Count,
                                                            single_tag_counts => STC,
                                                            value => #{},
@@ -159,7 +159,7 @@ get_tag_counts_analytics_test() ->
     ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
                                       <<"count">> => Count,
                                       <<"single_event_counts">> => ExpectedSTC,
-                                      <<"type">> => <<"default">>,
+                                      <<"type">> => <<"named">>,
                                       <<"value">> => #{},
                                       <<"event_counts">> => ExpectedTagCounts}]},
 

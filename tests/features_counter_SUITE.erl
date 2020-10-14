@@ -5,9 +5,6 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
 
--include("../include/counter_names.hrl").
-
-
 -define(MUT, features_counter).
 -define(STORE_LIB, fake_store_lib).
 
@@ -62,8 +59,9 @@ init_per_testcase(_, Config) ->
     NewConfig = init_meck(Config),
     Name = ?config(name, NewConfig),
 
-    {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
-    [{pid, Pid}|NewConfig].
+    ID = features_counter_id:create(Name),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB, ID),
+    [{pid, Pid}, {id, ID} |NewConfig].
 
 end_per_testcase(_, _Config) ->
     ?assert(meck:validate(features_store_lib)),
@@ -142,7 +140,8 @@ ca_test_storage_lib_loading_data(Config) ->
     BF = etbloom:sbf(1000000),
     Stored = #{bloom=>BF},
     meck:expect(features_store_lib, get, ['_'], {Stored, StoreLibState}),
-    {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
+    ID = features_counter_id:create(Name),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB, ID),
     meck:wait(features_store_lib, get, '_', 1000),
 
     Key = <<"42">>,
@@ -152,7 +151,7 @@ ca_test_storage_lib_loading_data(Config) ->
     Name = ?config(name, Config),
 
     ?assertEqual(?STORE_LIB, meck:capture(first, features_store_lib, init, '_', 1)),
-    ?assertEqual({"counter", Name}, meck:capture(first, features_store_lib, init, '_', 2)),
+    ?assertEqual({"counter", ID}, meck:capture(first, features_store_lib, init, '_', 2)),
 
 
     ?assertEqual(StoreLibState, meck:capture(first, features_store_lib, get, '_', 1)),
@@ -190,7 +189,8 @@ cd_test_store_with_unsupported_store_lib_operation(Config) ->
     Name = ?config(name, Config),
 
     meck:expect(features_store_lib, get, ['_'], {not_supported, StoreLibState}),
-    {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
+    ID = features_counter_id:create(Name),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB, ID),
     meck:wait(features_store_lib, get, '_', 1000),
 
     Key = <<"42">>,
@@ -200,7 +200,7 @@ cd_test_store_with_unsupported_store_lib_operation(Config) ->
     Name = ?config(name, Config),
 
     ?assertEqual(?STORE_LIB, meck:capture(first, features_store_lib, init, '_', 1)),
-    ?assertEqual({"counter", Name}, meck:capture(first, features_store_lib, init, '_', 2)),
+    ?assertEqual({"counter", ID}, meck:capture(first, features_store_lib, init, '_', 2)),
 
     ?assertEqual(StoreLibState, meck:capture(first, features_store_lib, get, '_', 1)),
 
@@ -374,9 +374,9 @@ fb_test_prometheus_counter_for_weekly_name(Config) ->
     NameBin = <<"test name">>,
     Year = 2020,
     Week = 1,
-    Name = #counter_name_weekly{name=NameBin, year=Year, week=Week},
+    ID = features_counter_id:create(NameBin, weekly, {Year, Week}),
 
-    {ok, Pid} = ?MUT:start_link(?STORE_LIB, Name),
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB, ID),
 
     User = <<"user_id">>,
 

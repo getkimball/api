@@ -8,7 +8,6 @@
 
 -module(features_count_router).
 -include_lib("kernel/include/logger.hrl").
--include("counter_names.hrl").
 -behaviour(gen_server).
 
 %% API functions
@@ -43,7 +42,7 @@
 -record(counter_config, {name        :: counter_name(),
                          date_cohort :: date_cohort()}).
 
--record(counter_registration, {id               :: binary(),
+-record(counter_registration, {id               :: any(),
                                pid,
                                is_goal=false    :: boolean()}).
 
@@ -51,7 +50,7 @@
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
 -define(PROM_COUNTER_NAME, kimball_counters).
 -define(PROM_ADD_DURATION, kimball_event_add_duration_microseconds).
--define(GLOBAL_COUNTER, global_counter).
+-define(GLOBAL_COUNTER, <<"global_counter">>).
 -define(STORE_LIB_MOD, features_store_lib_s3).
 -define(STORE_LIB_MOD_PT_KEY, features_count_router_store_lib_mod).
 %%%===================================================================
@@ -122,7 +121,7 @@ register_counter(CounterID, Pid) ->
 counts() ->
     CountFun = fun(#counter_registration{id=CounterID, pid=Pid}, Acc0) ->
         Counts = features_counter:count(Pid),
-        M = Counts#{name => CounterID},
+        M = Counts#{id => CounterID},
         [M | Acc0]
     end,
     ets:foldl(CountFun, [], ?COUNTER_REGISTRY).
@@ -165,7 +164,7 @@ init([StoreLib]) ->
                                {keypos, #counter_config.name}]),
     persistent_term:put(?STORE_LIB_MOD_PT_KEY, StoreLib),
     StoreLibState = features_store_lib:init(StoreLib,
-                                            "count_router"),
+                                            <<"count_router">>),
 
     prometheus_summary:declare([
       {name, ?PROM_ADD_DURATION},
@@ -194,8 +193,10 @@ init([StoreLib]) ->
 %%--------------------------------------------------------------------
 handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
     % Ensure registration, if it exists, knows that this is a goal
-    %
-    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, Goal),
+    % TODO: look up all needed counters for a particular goal, this only looks
+    % up the named version
+    CounterID = features_counter_id:create(Goal),
+    FeatureRegistration = ets:lookup(?COUNTER_REGISTRY, CounterID),
     case FeatureRegistration of
         [] -> ok;
         [CR] -> GoalRegistration = CR#counter_registration{is_goal=true},
@@ -209,19 +210,9 @@ handle_call({add_goal, Goal}, _From, State=#state{goals=Goals}) ->
     end,
     Reply = ok,
     {reply, Reply, State1};
-handle_call({is_goal, Goal}, _From, State=#state{goals=Goals})
-                      when is_binary(Goal) ->
-    Reply = lists:member(Goal, Goals),
-    {reply, Reply, State};
-handle_call({is_goal, Goal}, _From, State=#state{goals=Goals})
-                      when is_atom(Goal) ->
-    Reply = lists:member(Goal, Goals),
-    {reply, Reply, State};
-handle_call({is_goal,
-            #counter_name_weekly{name=Goal}},
-            _From,
-            State=#state{goals=Goals}) ->
-    Reply = lists:member(Goal, Goals),
+handle_call({is_goal, CounterID}, _From, State=#state{goals=Goals}) ->
+    Name = features_counter_id:name(CounterID),
+    Reply = lists:member(Name, Goals),
     {reply, Reply, State};
 handle_call(goals, _From, State=#state{goals=Goals}) ->
     Reply = Goals,
@@ -251,8 +242,8 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState}) ->
 handle_cast({register_counter, CounterID, Pid},
             State=#state{counters=Counters,
                          goals=Goals}) ->
-
-    IsGoal = lists:member(CounterID, Goals),
+    Name = features_counter_id:name(CounterID),
+    IsGoal = lists:member(Name, Goals),
     CR = #counter_registration{id=CounterID,
                                pid=Pid,
                                is_goal=IsGoal},
@@ -278,7 +269,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(start_global_counter, State) ->
-    ensure_child_started(?GLOBAL_COUNTER),
+    ensure_child_started(features_counter_id:create(?GLOBAL_COUNTER, internal)),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -312,15 +303,15 @@ code_change(_OldVsn, State, _Extra) ->
 counters_for_event(CounterName,
                    #counter_config{date_cohort=DateCohort},
                    {Year, WeekNum}) ->
-    GlobalRegistration = get_registration(?GLOBAL_COUNTER),
-    FeatureRegistration = get_registration(CounterName),
+    GlobalRegistration = get_registration(
+        features_counter_id:create(?GLOBAL_COUNTER, internal)),
+    FeatureRegistration = get_registration(
+        features_counter_id:create(CounterName)),
 
+    WeekID = features_counter_id:create(CounterName, weekly, {Year, WeekNum}),
     DateCohortRegistrations = case DateCohort of
         undefined -> [];
-        weekly ->   [get_registration(
-                                #counter_name_weekly{name=CounterName,
-                                                     year=Year,
-                                                     week=WeekNum})]
+        weekly ->    [get_registration(WeekID)]
     end,
     [GlobalRegistration, FeatureRegistration] ++ DateCohortRegistrations.
 
@@ -390,7 +381,8 @@ counters_for_key(Key) ->
     Counters = ets:foldl(F, [], ?COUNTER_REGISTRY),
     Counters.
 
-counter_id_to_tag(Name) ->
+counter_id_to_tag(ID) ->
+    Name = features_counter_id:name(ID),
     Name.
 
 pid_from_child_start({_, Pid}) when is_pid(Pid) ->

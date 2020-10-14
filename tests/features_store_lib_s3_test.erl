@@ -1,7 +1,6 @@
 -module(features_store_lib_s3_test).
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("erlcloud/include/erlcloud_aws.hrl").
--include("../include/counter_names.hrl").
 
 -define(MUT, features_store_lib_s3).
 -define(BUCKET, "test_bucket").
@@ -16,7 +15,7 @@ init_test_() ->
       fun init_custom_s3/0]}.
 
 basic_init() ->
-    _State = ?MUT:init("test").
+    _State = ?MUT:init(<<"test">>).
 
 init_custom_s3() ->
     CustomS3Host = "test.host.example.com",
@@ -24,15 +23,15 @@ init_custom_s3() ->
                                             {[features, s3_base_path], {ok, ?BASE_PATH}},
                                             {[features, s3_host], {ok, CustomS3Host}}]),
 
-    State = ?MUT:init("test"),
+    State = ?MUT:init(<<"test">>),
     AWSConfig = ?MUT:aws_config(State),
     io:format("record ~p~n", [State]),
     ?assertEqual(CustomS3Host, AWSConfig#aws_config.s3_host).
 
 read_test() ->
     load(),
-    Name = "test",
-    ExpectedPath = ?BASE_PATH ++ "/" ++ Name,
+    Name = <<"test">>,
+    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     DataBin = erlang:term_to_binary(Data),
@@ -49,18 +48,39 @@ read_test() ->
 
     unload().
 
-read_counter_name_weekly_test() ->
+read_counter_name_test() ->
     load(),
-    Name = "test",
-    CNW = #counter_name_weekly{name=Name, year=2020, week=1},
-    ExpectedPath = ?BASE_PATH ++ "/" ++ Name ++ "/2020/1",
+    Name = <<"test">>,
+    ID = features_counter_id:create(Name),
+    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     DataBin = erlang:term_to_binary(Data),
     Obj = [{content, DataBin}],
     ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], Obj),
 
-    State = ?MUT:init(CNW),
+    State = ?MUT:init(ID),
+    {ReturnedData, State} = ?MUT:get_all(State),
+
+    ?assertEqual(?BUCKET, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 1)),
+    ?assertEqual(ExpectedPath, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 2)),
+
+    ?assertEqual(Data, ReturnedData),
+
+    unload().
+
+read_counter_name_weekly_test() ->
+    load(),
+    Name = <<"test">>,
+    ID = features_counter_id:create(Name, weekly, {2020, 1}),
+    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name) ++ "/2020/1",
+
+    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    DataBin = erlang:term_to_binary(Data),
+    Obj = [{content, DataBin}],
+    ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], Obj),
+
+    State = ?MUT:init(ID),
     {ReturnedData, State} = ?MUT:get_all(State),
 
     ?assertEqual(?BUCKET, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 1)),
@@ -72,9 +92,9 @@ read_counter_name_weekly_test() ->
 
 read_with_type_test() ->
     load(),
-    Name = "test",
+    Name = <<"test">>,
     Type = "type",
-    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/" ++ Name,
+    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/" ++ binary_to_list(Name),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     DataBin = erlang:term_to_binary(Data),
@@ -93,17 +113,17 @@ read_with_type_test() ->
 
 read_counter_name_weekly_with_type_test() ->
     load(),
-    Name = "test",
+    Name = <<"test">>,
     Type = "type",
-    CNW = #counter_name_weekly{name=Name, year=2020, week=1},
-    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/" ++ Name ++ "/2020/1",
+    ID = features_counter_id:create(Name, weekly, {2020, 1}),
+    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/" ++ binary_to_list(Name) ++ "/2020/1",
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     DataBin = erlang:term_to_binary(Data),
     Obj = [{content, DataBin}],
     ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], Obj),
 
-    State = ?MUT:init({Type, CNW}),
+    State = ?MUT:init({Type, ID}),
     {ReturnedData, State} = ?MUT:get_all(State),
 
     ?assertEqual(?BUCKET, meck:capture(first, erlcloud_s3, get_object, ['_', '_', '_'], 1)),
@@ -115,8 +135,8 @@ read_counter_name_weekly_with_type_test() ->
 
 read_404_test() ->
     load(),
-    Name = "test",
-    ExpectedPath = ?BASE_PATH ++ "/" ++ Name,
+    Name = <<"test">>,
+    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name),
 
     Error = {aws_error, {http_error, 404, "TestMSG", "TestDoc"}},
     ok = meck:expect(erlcloud_s3, get_object, ['_', '_', '_'], meck:raise(error, Error)),
@@ -133,14 +153,14 @@ read_404_test() ->
 
 store_test() ->
     load(),
-    Name = "test",
-    ExpectedPath = ?BASE_PATH ++ "/" ++ Name,
+    Name = <<"test">>,
+    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name),
 
     Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
     ok = meck:expect(erlcloud_s3, put_object,  ['_', '_', '_', '_'], {}),
 
     % API = make_ref(),
-    State = ?MUT:init("test"),
+    State = ?MUT:init(<<"test">>),
 
     {ok, _State} = ?MUT:store(Data, State),
 

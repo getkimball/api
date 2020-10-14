@@ -6,7 +6,6 @@
 %%%-------------------------------------------------------------------
 -module(features_counter).
 -include_lib("kernel/include/logger.hrl").
--include("counter_names.hrl").
 
 -behaviour(gen_server).
 
@@ -28,7 +27,7 @@
          includes_key/2,
          persist/1]).
 
--record(state, {name=undefined,
+-record(state, {id=undefined,
                 store_lib_state=undefined,
                 unpersisted_write=false,
                 tag_counts=#{},
@@ -81,8 +80,8 @@ persist(Pid) when is_pid(Pid) ->
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(StoreLib, Name) ->
-    gen_server:start_link(?MODULE, [StoreLib, Name], []).
+start_link(StoreLib, ID) ->
+    gen_server:start_link(?MODULE, [StoreLib, ID], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -99,22 +98,20 @@ start_link(StoreLib, Name) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([StoreLib, Name]) ->
+init([StoreLib, ID]) ->
     ?LOG_DEBUG(#{what=><<"features_counter starting">>,
-                 name=>Name}),
-    StoreLibState = features_store_lib:init(StoreLib, {"counter", Name}),
+                 id=>ID}),
+    StoreLibState = features_store_lib:init(StoreLib, {"counter", ID}),
     gen_server:cast(self(), load_or_init),
 
-    declare_prometheus_gauge(Name),
-    register_name(Name),
-    {ok, #state{name=Name,
+    declare_prometheus_gauge(ID),
+    register_id(ID),
+    {ok, #state{id=ID,
                 store_lib_state=StoreLibState,
                 bloom=undefined}}.
 
-register_name([]) ->
-    ok;
-register_name(Name) ->
-    features_count_router:register_counter(Name, self()).
+register_id(ID) ->
+    features_count_router:register_counter(ID, self()).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -143,16 +140,16 @@ handle_call(count, _From, State=#state{bloom=Bloom,
 handle_call({includes_key, Key}, _From, State=#state{bloom=Bloom}) ->
     Included=etbloom:member(Key, Bloom),
     {reply, Included, State};
-handle_call(persist, _From, State=#state{name=Name, unpersisted_write=false}) ->
+handle_call(persist, _From, State=#state{id=ID, unpersisted_write=false}) ->
     ?LOG_DEBUG(#{what=><<"features_counter persist">>,
                  needs_to_persist=>false,
-                 name=>Name}),
+                 id=>ID}),
     {reply, ok, State};
 handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
-                                         name=Name}) ->
+                                         id=ID}) ->
     ?LOG_DEBUG(#{what=><<"features_counter persist">>,
                  needs_to_persist=>true,
-                 name=>Name}),
+                 id=>ID}),
     {Status, StoreLibState1} = store(StoreLibState, State),
     Reply = Status,
     {reply, Reply, State#state{store_lib_state=StoreLibState1,
@@ -169,7 +166,7 @@ handle_call(persist, _From, State=#state{store_lib_state=StoreLibState,
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({add, Key, Tags, AddValue},
-             State=#state{name=Name,
+             State=#state{id=ID,
                           bloom=Bloom,
                           single_tag_counts=STC,
                           tag_counts=TagCounts,
@@ -191,10 +188,10 @@ handle_cast({add, Key, Tags, AddValue},
                   increment_single_tag_counts(SortedTags, STC)}
     end,
 
-    ok = set_prometheus_gauge(IsNewWrite, Name, NewSize),
+    ok = set_prometheus_gauge(IsNewWrite, ID, NewSize),
 
     ?LOG_DEBUG(#{what=><<"features_counter add">>,
-                 name=>Name,
+                 id=>ID,
                  size=>NewSize,
                  tags=>SortedTags,
                  should_persist=>ShouldPersist,
@@ -231,14 +228,14 @@ handle_cast(load_or_init, State=#state{store_lib_state=StoreLibState,
 
 bloom_filter_from_data(#{bloom:=Bloom}, _State) ->
     Bloom;
-bloom_filter_from_data(_Else, #state{name=Name}) ->
+bloom_filter_from_data(_Else, #state{id=ID}) ->
+    Name = features_counter_id:name(ID),
     features_counter_config:create_bloom(Name).
 
 store(StoreLibState, _State=#state{bloom=Bloom,
                                   single_tag_counts=STC,
                                   tag_counts=TagCounts,
                                   value=Value}) ->
-    % TODO: Store value
     Data = #{bloom => Bloom,
              single_tag_counts => STC,
              tag_counts => TagCounts,
@@ -297,28 +294,20 @@ increment_single_tag_counts(Tags, TagCounts) ->
     end,
     lists:foldl(Incr, TagCounts, Tags).
 
-declare_prometheus_gauge(#counter_name_weekly{}) ->
-    prometheus_gauge:declare([{name, kimball_counter_weekly},
-                              {help, "Value of event counters"},
-                              {labels, [name, year, week]},
-                              {registry, ?PROM_COUNTER_REGISTRY}]);
-declare_prometheus_gauge(_Name) ->
-    prometheus_gauge:declare([{name, kimball_counter},
-                              {help, "Value of event counters"},
-                              {labels, [name]},
-                              {registry, ?PROM_COUNTER_REGISTRY}]).
+declare_prometheus_gauge(ID) ->
+    prometheus_gauge:declare([
+        {name, features_counter_id:to_prometheus_name(ID)},
+        {help, "Value of event counters"},
+        {labels, features_counter_id:to_prometheus_label_keys(ID)},
+        {registry, ?PROM_COUNTER_REGISTRY}]).
 
-set_prometheus_gauge(false, _Name, _Size) ->
+set_prometheus_gauge(false, _ID, _Size) ->
     ok;
-set_prometheus_gauge(true,
-                     #counter_name_weekly{name=Name, year=Year, week=Week},
-                     Size) ->
+set_prometheus_gauge(true, ID, Size) ->
     prometheus_gauge:set(?PROM_COUNTER_REGISTRY,
-                         kimball_counter_weekly,
-                         [Name, Year, Week],
-                         Size);
-set_prometheus_gauge(true, Name, Size) ->
-    prometheus_gauge:set(?PROM_COUNTER_REGISTRY, kimball_counter, [Name], Size).
+                         features_counter_id:to_prometheus_name(ID),
+                         features_counter_id:to_prometheus_label_values(ID),
+                         Size).
 
 update_value(false, _AddValue, Value) ->
     Value;
