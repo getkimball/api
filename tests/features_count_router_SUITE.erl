@@ -460,7 +460,7 @@ ea_test_triggering_a_goal(Config) ->
     Counts = ?MUT:counts(),
 
     io:format("Adds ~p~n", [meck:history(?COUNTER_MOD)]),
-    ExpectedEvents = lists:sort([<<"global_counter">>, NonGoalFeature]),
+    ExpectedEvents = lists:sort([NonGoalFeature]),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], 1)),
     ?assertEqual(ExpectedEvents, lists:sort(meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], 2))),
 
@@ -523,7 +523,7 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
 
     Counts = ?MUT:counts(),
 
-    ExpectedEvents = lists:sort([<<"global_counter">>, NonGoalFeature]),
+    ExpectedEvents = lists:sort([NonGoalFeature]),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 1)),
     ?assertEqual(ExpectedEvents, lists:sort(meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 2))),
     ?assertEqual(GoalCounterPid, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', '_'], 4)),

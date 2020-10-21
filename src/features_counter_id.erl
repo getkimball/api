@@ -7,6 +7,7 @@
          create/3,
          name/1,
          pattern_matcher_name/1,
+         pattern_matcher_type/1,
          to_file_path/1,
          to_full_name/1,
          to_prometheus_label_keys/1,
@@ -36,6 +37,9 @@ name(#id{name=Name}) ->
 
 pattern_matcher_name(Name) ->
     #id{name=Name, type='_', data='_'}.
+
+pattern_matcher_type(Type) ->
+    #id{name='_', type=Type, data='_'}.
 
 type(#id{type=Type}) ->
     Type.

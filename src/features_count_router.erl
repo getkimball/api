@@ -363,7 +363,7 @@ ensure_started_and_add(#counter_registration{pid=Pid, is_goal=false},
 ensure_started_and_add(#counter_registration{pid=Pid, is_goal=true},
                        Key,
                        Value) ->
-    OtherCounters = counters_for_key(Key),
+    OtherCounters = named_counters_for_key(Key),
     ok = features_counter:add(Key, OtherCounters, Value, Pid).
 
 get_registration(CounterID) ->
@@ -372,15 +372,19 @@ get_registration(CounterID) ->
       [R] -> R
     end.
 
-counters_for_key(Key) ->
+named_counters_for_key(Key) ->
     F = fun(#counter_registration{id=CounterID, pid=Pid}, AccIn) ->
             case features_counter:includes_key(Key, Pid) of
                 true -> [counter_id_to_tag(CounterID)| AccIn];
                 false -> AccIn
             end
     end,
-    Counters = ets:foldl(F, [], ?COUNTER_REGISTRY),
-    Counters.
+    IDMatcher = features_counter_id:pattern_matcher_type(named),
+    Matcher = #counter_registration{id=IDMatcher, pid='_', is_goal='_'},
+    InternalCounters = ets:match_object(?COUNTER_REGISTRY, Matcher),
+
+    CountersForKey = lists:foldl(F, [], InternalCounters),
+    CountersForKey.
 
 counter_id_to_tag(ID) ->
     Name = features_counter_id:name(ID),
