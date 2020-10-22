@@ -5,6 +5,7 @@
 -export([create/1,
          create/2,
          create/3,
+         global_counter_id/0,
          name/1,
          pattern_matcher_name/1,
          pattern_matcher_type/1,
@@ -31,6 +32,9 @@ create(Name, named) ->
 
 create(Name, weekly, {Year, Month}) ->
     #id{name=Name, type=weekly, data={Year, Month}}.
+
+global_counter_id() ->
+    create(<<"global_counter">>, internal).
 
 name(#id{name=Name}) ->
     Name.
