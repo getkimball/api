@@ -22,6 +22,7 @@ groups() -> [{test_count, [
                 ah_test_multiple_counts_added_at_once,
                 ba_test_counter_counts,
                 bb_test_counter_pids,
+                bc_test_counter_count_map,
                 ca_test_start_with_existing_counters,
                 cb_test_counter_registration_persists,
                 cc_test_weekly_cohort_counter_created,
@@ -270,6 +271,25 @@ bb_test_counter_pids(Config) ->
 
     ?assertEqual([Pid], Pids),
     Config.
+
+bc_test_counter_count_map(Config) ->
+    Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Feature),
+    Pid = self(),
+    Num = 1,
+    Count = counts(#{count => Num}),
+
+    meck:expect(features_counter, count, [Pid], Count),
+
+    ?MUT:register_counter(CounterID, Pid),
+
+    ?MUT:goals(), % Run to synchronize/handle all messages
+
+    Counts = ?MUT:count_map(),
+
+    ?assertEqual(#{CounterID => Count}, Counts),
+    Config.
+
 
 ca_test_start_with_existing_counters(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
