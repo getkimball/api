@@ -14,6 +14,8 @@
     onMount(async () => {
         const res = await fetch(`v0/analytics`);
         const json = await res.json();
+        const prediction_res = await fetch(`v0/predictions`);
+        const prediction_json = await prediction_res.json();
         analytics = json.counts.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase())
 
         goals = analytics.filter(obj => obj.single_event_counts.length > 0);
@@ -32,8 +34,8 @@
           predictions[goal.name] = {};
           for (event of goal.single_event_counts) {
 
-            probability = ((event.count / goal.count) * (goal.count / global_count)) / (analyticLookup[event.event] / global_count);
-            predictions[goal.name][event.event] = probability;
+            console.log(prediction_json["goals"][goal.name]["events"]);
+            predictions[goal.name][event.event] = prediction_json["goals"][goal.name]["events"][event.event]["bayes"];
           }
 
         }
