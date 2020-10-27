@@ -76,7 +76,7 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v1
 
     - name: Helm install
-      uses: getkimball/deploy-action@trunk
+      uses: getkimball/deploy-action@1.2
       env:
         DOCKER_TAG: ${{ needs.build_docker.outputs.docker_tag }}
         ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.DOCKER_REPOSITORY }}
