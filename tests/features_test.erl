@@ -1,4 +1,5 @@
 -module(features_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features).
@@ -8,10 +9,12 @@ collapse_to_boolean_with_boolean_test() ->
     Name = <<"example_name">>,
     FalseSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => false}),
+        #{boolean => false}
+    ),
     TrueSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => true}),
+        #{boolean => true}
+    ),
 
     ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(FalseSpec, #{}, 0, 0)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(TrueSpec, #{}, 0, 0)),
@@ -27,31 +30,46 @@ collapse_to_boolean_with_rollout_test() ->
     % Before the start of the rollout
     BeforeSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{rollout_start => Now + 10,
-          rollout_end => Now + 60}),
+        #{
+            rollout_start => Now + 10,
+            rollout_end => Now + 60
+        }
+    ),
     BeforeSpecWithTrueBoolean = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => true,
-          rollout_start => Now + 10,
-          rollout_end => Now + 60}),
+        #{
+            boolean => true,
+            rollout_start => Now + 10,
+            rollout_end => Now + 60
+        }
+    ),
 
     % Not yet passed 50% of the rollout
     NotReachedSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{rollout_start => Now -5,
-          rollout_end => Now + 10}),
+        #{
+            rollout_start => Now - 5,
+            rollout_end => Now + 10
+        }
+    ),
 
     % Passed 50% of the rollout
     ReachedSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{rollout_start => Now - 10,
-          rollout_end => Now - 5}),
+        #{
+            rollout_start => Now - 10,
+            rollout_end => Now - 5
+        }
+    ),
 
     % After the end of the rollout
     AfterSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{rollout_start => Now - 60,
-          rollout_end => Now - 10}),
+        #{
+            rollout_start => Now - 60,
+            rollout_end => Now - 10
+        }
+    ),
 
     ?assertEqual({Name, false}, ?MUT:collapse_to_boolean(BeforeSpec, #{}, Now, Rand)),
     ?assertEqual({Name, true}, ?MUT:collapse_to_boolean(BeforeSpecWithTrueBoolean, #{}, Now, Rand)),
@@ -66,26 +84,45 @@ collapse_to_boolean_with_user_id_test() ->
     Name = <<"example_name">>,
     TrueSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => false,
-          user => [[<<"user_id">>, '=', 42]]}),
+        #{
+            boolean => false,
+            user => [[<<"user_id">>, '=', 42]]
+        }
+    ),
     FalseSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => false,
-          user => [[<<"user_id">>, '=', 24]]}),
+        #{
+            boolean => false,
+            user => [[<<"user_id">>, '=', 24]]
+        }
+    ),
     FalseUserSpecWithTrueBoolean = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => true,
-          user => [[<<"user_id">>, '=', 24]]}),
+        #{
+            boolean => true,
+            user => [[<<"user_id">>, '=', 24]]
+        }
+    ),
     LongTrueSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => false,
-          user => [ [<<"user_id">>, '=', 24],
-                   [<<"user_id">>, '=', 42]]}),
+        #{
+            boolean => false,
+            user => [
+                [<<"user_id">>, '=', 24],
+                [<<"user_id">>, '=', 42]
+            ]
+        }
+    ),
     LongFalseSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => false,
-          user => [ [<<"user_id">>, '=', 1],
-                   [<<"user_id">>, '=', 2]]}),
+        #{
+            boolean => false,
+            user => [
+                [<<"user_id">>, '=', 1],
+                [<<"user_id">>, '=', 2]
+            ]
+        }
+    ),
 
     User = #{<<"user_id">> => 42},
 
@@ -102,12 +139,18 @@ collapse_to_boolean_with_user_id_membership_test() ->
     Name = <<"example_name">>,
     TrueSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => false,
-          user => [[<<"user_id">>, 'in', [41, 42, 43]]]}),
+        #{
+            boolean => false,
+            user => [[<<"user_id">>, 'in', [41, 42, 43]]]
+        }
+    ),
     FalseSpec = test_utils:defaulted_feature_spec(
         Name,
-        #{boolean => false,
-          user => [[<<"user_id">>, 'in', [0, 1, 2]]]}),
+        #{
+            boolean => false,
+            user => [[<<"user_id">>, 'in', [0, 1, 2]]]
+        }
+    ),
 
     User = #{<<"user_id">> => 42},
 
@@ -120,10 +163,12 @@ collapse_features_to_map_test() ->
     load(),
     FalseSpec = test_utils:defaulted_feature_spec(
         <<"false">>,
-        #{boolean => false}),
+        #{boolean => false}
+    ),
     TrueSpec = test_utils:defaulted_feature_spec(
         <<"true">>,
-        #{boolean => true}),
+        #{boolean => true}
+    ),
 
     Spec = [FalseSpec, TrueSpec],
 
@@ -137,7 +182,6 @@ collapse_features_to_map_test() ->
     ?assertEqual(Expected, Value),
 
     unload().
-
 
 load() ->
     meck:new(rand, [unstick]),

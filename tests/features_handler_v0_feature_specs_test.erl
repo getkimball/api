@@ -1,4 +1,5 @@
 -module(features_handler_v0_feature_specs_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_handler_v0_feature_specs).
@@ -35,10 +36,13 @@ create_feature_invalid_content_type_test() ->
 
     PostReq = cowboy_test_helpers:req(post, raw, RequestOpts),
     Msg = <<"The content-type is invalid">>,
-    Expected = #{<<"error">> => #{
-                    <<"what">> => Msg,
-                    <<"expected_types">> => [<<"application/json">>],
-                    <<"type">> => ContentType}},
+    Expected = #{
+        <<"error">> => #{
+            <<"what">> => Msg,
+            <<"expected_types">> => [<<"application/json">>],
+            <<"type">> => ContentType
+        }
+    },
     http_post(PostReq, 400, Expected),
 
     unload().
@@ -49,9 +53,12 @@ create_feature_invalid_json_test() ->
 
     PostReq = cowboy_test_helpers:req(post, binary, Data),
     Msg = <<"The object is not valid JSON">>,
-    Expected = #{<<"error">> => #{
-                    <<"what">> => Msg,
-                    <<"object">> => <<"post_body">>}},
+    Expected = #{
+        <<"error">> => #{
+            <<"what">> => Msg,
+            <<"object">> => <<"post_body">>
+        }
+    },
     http_post(PostReq, 400, Expected),
 
     unload().
@@ -65,9 +72,12 @@ create_feature_missing_required_name_test() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    Expected = #{<<"error">> => #{
-                        <<"key">> => <<"name">>,
-                        <<"what">> => <<"Missing required element">>}},
+    Expected = #{
+        <<"error">> => #{
+            <<"key">> => <<"name">>,
+            <<"what">> => <<"Missing required element">>
+        }
+    },
     http_post(PostReq, 400, Expected),
 
     unload().
@@ -89,6 +99,7 @@ create_feature_set_feature_not_supported_test() ->
     ok = ?CTH:http_post(?MUT, PostReq, 405, Expected),
 
     unload().
+
 %%%%
 %   Boolean Tests
 %%%%
@@ -103,7 +114,7 @@ create_feature_boolean_test() ->
     },
 
     ok = meck:expect(features_store, get_features, fun() ->
-            [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean})]
+        [test_utils:defaulted_feature_spec(Name, #{boolean => Boolean})]
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     Opts = [],
@@ -120,14 +131,19 @@ get_feature_boolean_test() ->
     load(),
     Name = <<"feature_name">>,
     Boolean = true,
-    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean}),
+    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean => Boolean}),
     ok = meck:expect(features_store, get_features, [], [FeatureSpec]),
     Req = cowboy_test_helpers:req(),
 
-    Expected = ?CTH:json_roundtrip(#{<<"featureSpecs">> => [
-        #{<<"name">> => Name,
-          <<"boolean">> => Boolean,
-          <<"user">> => []}]}),
+    Expected = ?CTH:json_roundtrip(#{
+        <<"featureSpecs">> => [
+            #{
+                <<"name">> => Name,
+                <<"boolean">> => Boolean,
+                <<"user">> => []
+            }
+        ]
+    }),
 
     ok = ?CTH:http_get(?MUT, Req, 200, Expected),
 
@@ -144,10 +160,13 @@ create_feature_incorrect_boolean_type_test() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    ExpectedResponse = #{<<"error">> =>
-                           #{<<"type_expected">> => <<"boolean">>,
-                             <<"value">> => <<"true">>,
-                             <<"what">> => <<"Incorrect type">>}},
+    ExpectedResponse = #{
+        <<"error">> => #{
+            <<"type_expected">> => <<"boolean">>,
+            <<"value">> => <<"true">>,
+            <<"what">> => <<"Incorrect type">>
+        }
+    },
     http_post(PostReq, 400, ExpectedResponse),
 
     unload().
@@ -163,10 +182,13 @@ create_feature_incorrect_string_type_test() ->
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    ExpectedResponse = #{<<"error">> =>
-                           #{<<"type_expected">> => <<"string">>,
-                             <<"value">> => 4,
-                             <<"what">> => <<"Incorrect type">>}},
+    ExpectedResponse = #{
+        <<"error">> => #{
+            <<"type_expected">> => <<"string">>,
+            <<"value">> => 4,
+            <<"what">> => <<"Incorrect type">>
+        }
+    },
     http_post(PostReq, 400, ExpectedResponse),
 
     unload().
@@ -187,15 +209,23 @@ create_feature_rollout_test() ->
     },
 
     ok = meck:expect(features_store, get_features, fun() ->
-            [test_utils:defaulted_feature_spec(Name,
-                #{rollout_start => Now,
-                  rollout_end => Later})]
+        [
+            test_utils:defaulted_feature_spec(
+                Name,
+                #{
+                    rollout_start => Now,
+                    rollout_end => Later
+                }
+            )
+        ]
     end),
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
     ok = http_post(PostReq, 204),
-    ?assertEqual({rollout, Now, Later},
-                 meck:capture(first, features_store, set_feature, '_', 3)),
+    ?assertEqual(
+        {rollout, Now, Later},
+        meck:capture(first, features_store, set_feature, '_', 3)
+    ),
 
     unload().
 
@@ -208,12 +238,16 @@ get_feature_rollout_test() ->
     RolloutStart = binary:list_to_bin(calendar:system_time_to_rfc3339(Now, [{offset, "z"}])),
     RolloutEnd = binary:list_to_bin(calendar:system_time_to_rfc3339(Later, [{offset, "z"}])),
 
-    InternalFeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
-                                                                    rollout_start=>Now,
-                                                                    rollout_end=>Later}),
-    ExternalFeatureSpec = test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
-                                                                    rollout_start=>RolloutStart,
-                                                                    rollout_end=>RolloutEnd}),
+    InternalFeatureSpec = test_utils:defaulted_feature_spec(Name, #{
+        boolean => Boolean,
+        rollout_start => Now,
+        rollout_end => Later
+    }),
+    ExternalFeatureSpec = test_utils:defaulted_feature_spec(Name, #{
+        boolean => Boolean,
+        rollout_start => RolloutStart,
+        rollout_end => RolloutEnd
+    }),
     ok = meck:expect(features_store, get_features, [], [InternalFeatureSpec]),
     Req = cowboy_test_helpers:req(),
 
@@ -233,14 +267,21 @@ create_feature_rollout_missing_end_test() ->
     },
     ErrorMessage = <<"Rollout start requires a rollout end">>,
 
-    ok = meck:expect(features_store, set_feature, ['_', '_', '_', '_'],
-                     meck:raise(throw, {invalid_feature, ErrorMessage})),
+    ok = meck:expect(
+        features_store,
+        set_feature,
+        ['_', '_', '_', '_'],
+        meck:raise(throw, {invalid_feature, ErrorMessage})
+    ),
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    ExpectedResponse = #{<<"error">> =>
-                           #{<<"what">> => <<"Invalid feature">>,
-                             <<"description">> => ErrorMessage}},
+    ExpectedResponse = #{
+        <<"error">> => #{
+            <<"what">> => <<"Invalid feature">>,
+            <<"description">> => ErrorMessage
+        }
+    },
     http_post(PostReq, 400, ExpectedResponse),
     unload().
 
@@ -254,9 +295,12 @@ create_feature_rollout_invalid_date_format_test() ->
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
     ErrorMessage = <<"Date doesn't appear to be the right format">>,
-    ExpectedResponse = #{<<"error">> =>
-                           #{<<"what">> => ErrorMessage,
-                             <<"value">> => <<"2020">>}},
+    ExpectedResponse = #{
+        <<"error">> => #{
+            <<"what">> => ErrorMessage,
+            <<"value">> => <<"2020">>
+        }
+    },
     http_post(PostReq, 400, ExpectedResponse),
     unload().
 
@@ -275,19 +319,29 @@ create_feature_user_multiple_conditions_test() ->
 
     Doc = #{
         name => Name,
-        user => [#{property => UserProp,
-                   comparator => Comparator,
-                   value => Value1},
-                 #{property => UserProp,
-                   comparator => Comparator,
-                   value => Value2}]
+        user => [
+            #{
+                property => UserProp,
+                comparator => Comparator,
+                value => Value1
+            },
+            #{
+                property => UserProp,
+                comparator => Comparator,
+                value => Value2
+            }
+        ]
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     ok = http_post(PostReq, 204),
-    ?assertEqual({user, [[UserProp, '=', Value1],
-                         [UserProp, '=', Value2]]},
-                 meck:capture(first, features_store, set_feature, '_', 4)),
+    ?assertEqual(
+        {user, [
+            [UserProp, '=', Value1],
+            [UserProp, '=', Value2]
+        ]},
+        meck:capture(first, features_store, set_feature, '_', 4)
+    ),
 
     unload().
 
@@ -301,15 +355,21 @@ create_feature_user_string_test() ->
 
     Doc = #{
         name => Name,
-        user => [#{property => UserProp,
-                   comparator => Comparator,
-                   value => Value}]
+        user => [
+            #{
+                property => UserProp,
+                comparator => Comparator,
+                value => Value
+            }
+        ]
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     ok = http_post(PostReq, 204),
-    ?assertEqual({user, [[UserProp, '=', Value]]},
-                 meck:capture(first, features_store, set_feature, '_', 4)),
+    ?assertEqual(
+        {user, [[UserProp, '=', Value]]},
+        meck:capture(first, features_store, set_feature, '_', 4)
+    ),
 
     unload().
 
@@ -322,20 +382,27 @@ get_feature_user_string_test() ->
 
     UserSpec = [[UserProp, Comparator, Value]],
 
-    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{user=>UserSpec}),
+    FeatureSpec = test_utils:defaulted_feature_spec(Name, #{user => UserSpec}),
     ok = meck:expect(features_store, get_features, [], [FeatureSpec]),
     Req = cowboy_test_helpers:req(),
 
-    ExpectedUserSpec = [#{
-        <<"property">> => UserProp,
-        <<"comparator">> => <<"=">>,
-        <<"value">> => Value
-    }],
+    ExpectedUserSpec = [
+        #{
+            <<"property">> => UserProp,
+            <<"comparator">> => <<"=">>,
+            <<"value">> => Value
+        }
+    ],
 
-    Expected = ?CTH:json_roundtrip(#{<<"featureSpecs">> => [#{
-        <<"name">> => Name,
-        <<"boolean">> => false,
-        <<"user">> => ExpectedUserSpec}]}),
+    Expected = ?CTH:json_roundtrip(#{
+        <<"featureSpecs">> => [
+            #{
+                <<"name">> => Name,
+                <<"boolean">> => false,
+                <<"user">> => ExpectedUserSpec
+            }
+        ]
+    }),
 
     ok = ?CTH:http_get(?MUT, Req, 200, Expected),
 
@@ -351,15 +418,21 @@ create_feature_user_integer_test() ->
 
     Doc = #{
         name => Name,
-        user => [#{property => UserProp,
-                   comparator => Comparator,
-                   value => Value}]
+        user => [
+            #{
+                property => UserProp,
+                comparator => Comparator,
+                value => Value
+            }
+        ]
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     ok = http_post(PostReq, 204),
-    ?assertEqual({user, [[UserProp, '=', Value]]},
-                 meck:capture(first, features_store, set_feature, '_', 4)),
+    ?assertEqual(
+        {user, [[UserProp, '=', Value]]},
+        meck:capture(first, features_store, set_feature, '_', 4)
+    ),
 
     unload().
 
@@ -373,16 +446,24 @@ create_feature_user_missing_required_property_test() ->
 
     Doc = #{
         name => Name,
-        user => [#{property=> UserProp,
-                   comparator => Comparator,
-                   value => Value}]
+        user => [
+            #{
+                property => UserProp,
+                comparator => Comparator,
+                value => Value
+            }
+        ]
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-    #{<<"error">> := #{<<"what">>:= _What,
-                       <<"object">>:= _Obj,
-                       <<"why">>:= Whys}} = http_post(PostReq, 400),
+    #{
+        <<"error">> := #{
+            <<"what">> := _What,
+            <<"object">> := _Obj,
+            <<"why">> := Whys
+        }
+    } = http_post(PostReq, 400),
 
     ExpectedError = [<<"invalid_enum">>, Comparator, [<<"=">>]],
     ?assert(lists:member(ExpectedError, Whys)),
@@ -397,15 +478,23 @@ create_feature_user_value_not_in_enum_test() ->
 
     Doc = #{
         name => Name,
-        user => [#{comparator => Comparator,
-                   value => Value}]
+        user => [
+            #{
+                comparator => Comparator,
+                value => Value
+            }
+        ]
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
 
-     #{<<"error">> := #{<<"what">>:= _What,
-                        <<"object">>:= _Obj,
-                        <<"why">>:= Whys}} =
+    #{
+        <<"error">> := #{
+            <<"what">> := _What,
+            <<"object">> := _Obj,
+            <<"why">> := Whys
+        }
+    } =
         http_post(PostReq, 400),
     ExpectedError = [<<"missing_required_key">>, <<"property">>],
     ?assert(lists:member(ExpectedError, Whys)),
@@ -421,15 +510,21 @@ create_feature_user_membership_integer_test() ->
 
     Doc = #{
         name => Name,
-        user => [#{property => UserProp,
-                   comparator => Comparator,
-                   value => Value}]
+        user => [
+            #{
+                property => UserProp,
+                comparator => Comparator,
+                value => Value
+            }
+        ]
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     ok = http_post(PostReq, 204),
-    ?assertEqual({user, [[UserProp, 'in', Value]]},
-                 meck:capture(first, features_store, set_feature, '_', 4)),
+    ?assertEqual(
+        {user, [[UserProp, 'in', Value]]},
+        meck:capture(first, features_store, set_feature, '_', 4)
+    ),
 
     unload().
 
@@ -443,15 +538,21 @@ create_feature_user_membership_string_test() ->
 
     Doc = #{
         name => Name,
-        user => [#{property => UserProp,
-                   comparator => Comparator,
-                   value => Value}]
+        user => [
+            #{
+                property => UserProp,
+                comparator => Comparator,
+                value => Value
+            }
+        ]
     },
 
     PostReq = cowboy_test_helpers:req(post, json, Doc),
     ok = http_post(PostReq, 204),
-    ?assertEqual({user, [[UserProp, 'in', Value]]},
-                 meck:capture(first, features_store, set_feature, '_', 4)),
+    ?assertEqual(
+        {user, [[UserProp, 'in', Value]]},
+        meck:capture(first, features_store, set_feature, '_', 4)
+    ),
 
     unload().
 
@@ -472,10 +573,11 @@ http_post(Req, ExpectedCode) ->
 http_post(Req, ExpectedCode, ExpectedBody) ->
     CowPostResp = cowboy_test_helpers:init(?MUT, Req, []),
     {response, PostCode, _PostHeaders, PostBody} = cowboy_test_helpers:read_reply(CowPostResp),
-    Data = case PostBody of
-        <<"">> -> no_body;
-        Content -> jsx:decode(Content, [return_maps])
-    end,
+    Data =
+        case PostBody of
+            <<"">> -> no_body;
+            Content -> jsx:decode(Content, [return_maps])
+        end,
 
     ?assertEqual({ExpectedCode, ExpectedBody}, {PostCode, Data}),
     ok.

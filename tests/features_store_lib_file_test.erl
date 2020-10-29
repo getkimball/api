@@ -1,8 +1,8 @@
 -module(features_store_lib_file_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_store_lib_file).
-
 
 init_test() ->
     load(),
@@ -24,7 +24,7 @@ read_test() ->
     Name = "test",
     ok = meck:expect(application, get_env, [features, file_store_path], {ok, RootPath}),
 
-    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     DataBin = base64:encode(erlang:term_to_binary(Data)),
     ok = meck:expect(file, read_file, ['_'], {ok, DataBin}),
 
@@ -45,7 +45,7 @@ store_test() ->
     load(),
     ok = meck:expect(application, get_env, [features, file_store_path], {ok, []}),
 
-    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     DataBin = base64:encode(erlang:term_to_binary(Data)),
     ok = meck:expect(file, read_file, ['_'], {ok, DataBin}),
 

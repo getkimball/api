@@ -11,16 +11,20 @@
 -behaviour(gen_server).
 
 %% API functions
--export([start_link/1,
-         tick/0]).
+-export([
+    start_link/1,
+    tick/0
+]).
 
 %% gen_server callbacks
--export([init/1,
-         handle_call/3,
-         handle_cast/2,
-         handle_info/2,
-         terminate/2,
-         code_change/3]).
+-export([
+    init/1,
+    handle_call/3,
+    handle_cast/2,
+    handle_info/2,
+    terminate/2,
+    code_change/3
+]).
 
 -record(state, {memory_limit}).
 
@@ -62,12 +66,13 @@ init([Opts]) when is_map(Opts) ->
     MemoryLimit = maps:get(memory_limit, Opts, 0),
 
     prometheus_gauge:declare([
-      {name, ?PROM_MEM_REMAINING},
-      {help, "Bytes of memory remaining as viewed by the Erlang VM"}]),
+        {name, ?PROM_MEM_REMAINING},
+        {help, "Bytes of memory remaining as viewed by the Erlang VM"}
+    ]),
 
     {ok, _TRef} = timer:apply_interval(15000, ?MODULE, tick, []),
     ?MODULE:tick(),
-    {ok, #state{memory_limit=MemoryLimit}}.
+    {ok, #state{memory_limit = MemoryLimit}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -97,7 +102,7 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(tick, State=#state{memory_limit=MemLimit}) ->
+handle_cast(tick, State = #state{memory_limit = MemLimit}) ->
     MemInfo = erlang:memory(),
     TotalMem = proplists:get_value(total, MemInfo),
     MemRemaining = MemLimit - TotalMem,

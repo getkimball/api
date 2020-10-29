@@ -5,16 +5,17 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
 
-
 -define(MUT, metrics_server).
 
 all() -> [{group, all}].
 
-groups() -> [{all, [
-                aa_test_timer_is_setup,
-                ab_test_mem_remaning
-              ]}
-            ].
+groups() ->
+    [
+        {all, [
+            aa_test_timer_is_setup,
+            ab_test_mem_remaning
+        ]}
+    ].
 
 init_meck(Config) ->
     test_utils:meck_load_prometheus(),
@@ -32,8 +33,11 @@ init_per_testcase(_, Config) ->
     Opts = #{memory_limit => Memory},
 
     {ok, Pid} = ?MUT:start_link(Opts),
-    [{pid, Pid},
-     {memory, Memory} |NewConfig].
+    [
+        {pid, Pid},
+        {memory, Memory}
+        | NewConfig
+    ].
 
 end_per_testcase(_, Config) ->
     Pid = ?config(pid, Config),

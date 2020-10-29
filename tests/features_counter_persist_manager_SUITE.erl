@@ -5,16 +5,17 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
 
-
 -define(MUT, features_counter_persist_manager).
 
 all() -> [{group, all}].
 
-groups() -> [{all, [
-                aa_test_timer_is_setup,
-                ab_test_single_counter_is_persisted
-              ]}
-            ].
+groups() ->
+    [
+        {all, [
+            aa_test_timer_is_setup,
+            ab_test_single_counter_is_persisted
+        ]}
+    ].
 
 init_meck(Config) ->
     test_utils:meck_load_prometheus(),
@@ -32,7 +33,7 @@ init_per_testcase(_, Config) ->
     NewConfig = init_meck(Config),
 
     {ok, Pid} = ?MUT:start_link(),
-    [{pid, Pid}|NewConfig].
+    [{pid, Pid} | NewConfig].
 
 end_per_testcase(_, _Config) ->
     test_utils:meck_unload_prometheus(),

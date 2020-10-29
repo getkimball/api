@@ -1,119 +1,192 @@
 -module(swagger_specified_handler).
+
 -include_lib("kernel/include/logger.hrl").
+
 -export([upgrade/4]).
 
--export([method_metadata/2,
-         response_spec/2,
-         response_spec/3]).
-
+-export([
+    method_metadata/2,
+    response_spec/2,
+    response_spec/3
+]).
 
 -callback handle_req(cowboy_req:req(), any()) ->
-                {cowboy_req:req(),
-                 integer(),
-                 any(),
-                 cowboy_http:opts()}.
+    {cowboy_req:req(), integer(), any(), cowboy_http:opts()}.
 
-upgrade(Req=#{method := Method}, _Env, Handler, HandlerState) ->
-    Response = try Spec = method_metadata(Handler, Method),
-                   handle_req(Req, Spec, Handler, HandlerState) of
-        {Req1, Code, Data, State} ->
-            respond(Req1, Code, Data, State)
-    catch
-        {missing_required_key, Key} ->
-            respond(Req,
+upgrade(Req = #{method := Method}, _Env, Handler, HandlerState) ->
+    Response =
+        try
+            Spec = method_metadata(Handler, Method),
+            handle_req(Req, Spec, Handler, HandlerState)
+        of
+            {Req1, Code, Data, State} ->
+                respond(Req1, Code, Data, State)
+        catch
+            {missing_required_key, Key} ->
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=><<"Missing required element">>,
-                                 key=>Key}},
-                    []);
-        {method_not_defined, ErrorMethod} ->
-            respond(Req,
+                    #{
+                        error => #{
+                            what => <<"Missing required element">>,
+                            key => Key
+                        }
+                    },
+                    []
+                );
+            {method_not_defined, ErrorMethod} ->
+                respond(
+                    Req,
                     405,
-                    #{error => #{what=><<"Method not allowed">>,
-                                 method=>ErrorMethod}},
-                    []);
-        {invalid_feature, Message} ->
-            respond(Req,
+                    #{
+                        error => #{
+                            what => <<"Method not allowed">>,
+                            method => ErrorMethod
+                        }
+                    },
+                    []
+                );
+            {invalid_feature, Message} ->
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=><<"Invalid feature">>,
-                                 description=>ensure_binary(Message)}},
-                    []);
-        {invalid_date, Value} ->
-            Msg = <<"Date doesn't appear to be the right format">>,
-            respond(Req,
+                    #{
+                        error => #{
+                            what => <<"Invalid feature">>,
+                            description => ensure_binary(Message)
+                        }
+                    },
+                    []
+                );
+            {invalid_date, Value} ->
+                Msg = <<"Date doesn't appear to be the right format">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg,
-                                 value=>ensure_binary(Value)}},
-                    []);
-        {invalid_enum, Value, Enum} ->
-            Msg = <<"Value not in enum">>,
-            respond(Req,
+                    #{
+                        error => #{
+                            what => Msg,
+                            value => ensure_binary(Value)
+                        }
+                    },
+                    []
+                );
+            {invalid_enum, Value, Enum} ->
+                Msg = <<"Value not in enum">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg,
-                                 choices=>Enum,
-                                 value=>ensure_binary(Value)}},
-                    []);
-        {invalid_json, Object} ->
-            Msg = <<"The object is not valid JSON">>,
-            respond(Req,
+                    #{
+                        error => #{
+                            what => Msg,
+                            choices => Enum,
+                            value => ensure_binary(Value)
+                        }
+                    },
+                    []
+                );
+            {invalid_json, Object} ->
+                Msg = <<"The object is not valid JSON">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg,
-                                 object=>Object}},
-                    []);
-        {invalid_contenttype, Type, Types} ->
-            Msg = <<"The content-type is invalid">>,
-            respond(Req,
+                    #{
+                        error => #{
+                            what => Msg,
+                            object => Object
+                        }
+                    },
+                    []
+                );
+            {invalid_contenttype, Type, Types} ->
+                Msg = <<"The content-type is invalid">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg,
-                                 type=>Type,
-                                 expected_types=>Types}},
-                    []);
-        {invalid_base64, Object} ->
-            Msg = <<"The object cannot be base64 decoded">>,
-            respond(Req,
+                    #{
+                        error => #{
+                            what => Msg,
+                            type => Type,
+                            expected_types => Types
+                        }
+                    },
+                    []
+                );
+            {invalid_base64, Object} ->
+                Msg = <<"The object cannot be base64 decoded">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg,
-                                 object=>Object}},
-                    []);
-        {incorrect_type, Value, Type} ->
-            respond(Req,
+                    #{
+                        error => #{
+                            what => Msg,
+                            object => Object
+                        }
+                    },
+                    []
+                );
+            {incorrect_type, Value, Type} ->
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=><<"Incorrect type">>,
-                                 type_expected=>Type,
-                                 value=>Value}},
-                    []);
-        {matches_more_than_oneOf, Object} ->
-            Msg = <<"Object matches more than oneOf specifications">>,
-            respond(Req,
+                    #{
+                        error => #{
+                            what => <<"Incorrect type">>,
+                            type_expected => Type,
+                            value => Value
+                        }
+                    },
+                    []
+                );
+            {matches_more_than_oneOf, Object} ->
+                Msg = <<"Object matches more than oneOf specifications">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg, object=>Object}},
-                    []);
-        {not_any_oneOf, Object, Whys} ->
-            Msg = <<"Object does not match any of the oneOf specifications">>,
-            respond(Req,
+                    #{error => #{what => Msg, object => Object}},
+                    []
+                );
+            {not_any_oneOf, Object, Whys} ->
+                Msg = <<"Object does not match any of the oneOf specifications">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg,
-                                 object=>Object,
-                                 why=>tuples_to_lists(Whys)}},
-                    []);
-        {not_any_of, Object, Whys} ->
-            Msg = <<"The object did not match anyOf">>,
-            respond(Req,
+                    #{
+                        error => #{
+                            what => Msg,
+                            object => Object,
+                            why => tuples_to_lists(Whys)
+                        }
+                    },
+                    []
+                );
+            {not_any_of, Object, Whys} ->
+                Msg = <<"The object did not match anyOf">>,
+                respond(
+                    Req,
                     400,
-                    #{error => #{what=>Msg,
-                                 object=>Object,
-                                 why=>tuples_to_lists(Whys)}},
-                    [])
-    end,
+                    #{
+                        error => #{
+                            what => Msg,
+                            object => Object,
+                            why => tuples_to_lists(Whys)
+                        }
+                    },
+                    []
+                )
+        end,
     {ok, RespReq, NewHandlerState} = Response,
-
 
     try Handler:post_req(RespReq, NewHandlerState) of
         _ -> ok
-    catch ErrorType:Any:Stacktrace ->
-        ?LOG_ERROR(#{what => post_req_error,
-                     type => ErrorType,
-                     stack => Stacktrace,
-                     error => Any})
+    catch
+        ErrorType:Any:Stacktrace ->
+            ?LOG_ERROR(#{
+                what => post_req_error,
+                type => ErrorType,
+                stack => Stacktrace,
+                error => Any
+            })
     end,
 
     Response.
@@ -122,22 +195,28 @@ handle_req(Req, Spec, Handler, HandlerState) ->
     Params = params_from_request(Req, Spec),
     {Req1, BodyData} = body_from_request(Req, Spec),
     {HandlerReq, Code, Data, State} = Handler:handle_req(
-                                                Req1,
-                                                Params,
-                                                BodyData,
-                                                HandlerState),
+        Req1,
+        Params,
+        BodyData,
+        HandlerState
+    ),
     _ResponseSpec = response_spec(Spec, Code),
     {HandlerReq, Code, Data, State}.
 
-respond(Req, Code=204, _Value, Opts) ->
+respond(Req, Code = 204, _Value, Opts) ->
     % 204 can't have a body, do this to avoid trying to jsx encode
     Req1 = cowboy_req:reply(Code, #{}, <<"">>, Req),
     {ok, Req1, Opts};
 respond(Req, Code, Value, Opts) ->
     Data = jsx:encode(Value),
-    Req1 = cowboy_req:reply(Code, #{
-        <<"content-type">> => <<"application/json">>
-    }, Data, Req),
+    Req1 = cowboy_req:reply(
+        Code,
+        #{
+            <<"content-type">> => <<"application/json">>
+        },
+        Data,
+        Req
+    ),
     {ok, Req1, Opts}.
 
 %%%%
@@ -146,10 +225,12 @@ respond(Req, Code, Value, Opts) ->
 
 assert_has_keys([], _Map) ->
     ok;
-assert_has_keys([H|T], Map) ->
-    ?LOG_DEBUG(#{what=> <<"assert has keys">>,
-                 key => H,
-                 map => Map}),
+assert_has_keys([H | T], Map) ->
+    ?LOG_DEBUG(#{
+        what => <<"assert has keys">>,
+        key => H,
+        map => Map
+    }),
     case maps:get(H, Map, undefined) of
         undefined -> throw({missing_required_key, H});
         _ -> ok
@@ -157,19 +238,27 @@ assert_has_keys([H|T], Map) ->
     assert_has_keys(T, Map),
     ok.
 
-match_params(_Params=[], _Req) ->
+match_params(_Params = [], _Req) ->
     [];
-match_params(_Params=[_Spec=#{name:=Name,
-                             in:=query,
-                             required:=false,
-                             schema:=#{
-                                type:=string}=Schema}|T],
-             Req) ->
+match_params(
+    _Params = [
+        _Spec = #{
+            name := Name,
+            in := query,
+            required := false,
+            schema := #{
+                type := string
+            } = Schema
+        }
+        | T
+    ],
+    Req
+) ->
     #{Name := Value} = cowboy_req:match_qs([{Name, [], undefined}], Req),
     Param = validate_property_spec(Value, Schema),
     [{Name, Param} | match_params(T, Req)].
 
-match_schema(_Schema=#{oneOf:=OneOfs}, Data) ->
+match_schema(_Schema = #{oneOf := OneOfs}, Data) ->
     %  Match each of the OneOfs
     MapOfs = fun(O) ->
         try match_schema(O, Data) of
@@ -189,19 +278,21 @@ match_schema(_Schema=#{oneOf:=OneOfs}, Data) ->
         [] -> throw({not_any_oneOf, Data, Errored});
         _ -> throw({matches_more_than_oneOf, Data})
     end;
-match_schema(_Schema=#{items:=ItemSpec}, Data) when is_list(Data) ->
+match_schema(_Schema = #{items := ItemSpec}, Data) when is_list(Data) ->
     MatchItem = fun(Item) ->
         match_schema(ItemSpec, Item)
     end,
     lists:map(MatchItem, Data);
-match_schema(_Schema=#{items:=_Properties}, Data) ->
+match_schema(_Schema = #{items := _Properties}, Data) ->
     % items means this is an array, but the data should have matched above
     % with is_list
     throw({incorrect_type, Data, array});
-match_schema(Schema=#{properties:=Properties}, Data) when is_map(Data) ->
-    ?LOG_DEBUG(#{what=> <<"Match schema">>,
-                 schema=> Schema,
-                 data=> Data}),
+match_schema(Schema = #{properties := Properties}, Data) when is_map(Data) ->
+    ?LOG_DEBUG(#{
+        what => <<"Match schema">>,
+        schema => Schema,
+        data => Data
+    }),
     Required = maps:get(required, Schema, []),
     Fun = fun(K, PropSpec, AccIn) ->
         % Data in from jsx will be binaries, not atoms
@@ -215,71 +306,81 @@ match_schema(Schema=#{properties:=Properties}, Data) when is_map(Data) ->
     Params = maps:fold(Fun, #{}, Properties),
     assert_has_keys(Required, Params),
     Params;
-match_schema(_Schema=#{properties:=_Properties}, Data) ->
+match_schema(_Schema = #{properties := _Properties}, Data) ->
     % properties means this is an object, but the data should have matched
     % above with is_map
     throw({incorrect_type, Data, object}).
 
 validate_property_spec(undefined, _Spec) ->
     undefined;
-validate_property_spec(Value, _Spec=#{type := boolean}) ->
+validate_property_spec(Value, _Spec = #{type := boolean}) ->
     case Value of
         true -> Value;
         false -> Value;
         _ -> throw({incorrect_type, Value, boolean})
     end;
-validate_property_spec(Value, _Spec=#{type := integer}) ->
+validate_property_spec(Value, _Spec = #{type := integer}) ->
     case erlang:is_integer(Value) of
         true -> Value;
         false -> throw({incorrect_type, Value, integer})
     end;
-validate_property_spec(Value, _Spec=#{type := number}) ->
+validate_property_spec(Value, _Spec = #{type := number}) ->
     case erlang:is_number(Value) of
         true -> Value;
         false -> throw({incorrect_type, Value, number})
     end;
-validate_property_spec(Value, _Spec=#{type := string, format := 'date-time'}) ->
+validate_property_spec(Value, _Spec = #{type := string, format := 'date-time'}) ->
     case is_binary(Value) of
-        false -> throw({incorrect_type, Value, string});
-        _ -> StringValue = binary:bin_to_list(Value),
-             try calendar:rfc3339_to_system_time(StringValue) of
+        false ->
+            throw({incorrect_type, Value, string});
+        _ ->
+            StringValue = binary:bin_to_list(Value),
+            try calendar:rfc3339_to_system_time(StringValue) of
                 Date -> Date
-             catch
+            catch
                 error:{badmatch, _DateValue} ->
                     throw({invalid_date, Value})
-             end
-
+            end
     end;
-validate_property_spec(Value, _Spec=#{type := string, format := byte}) ->
+validate_property_spec(Value, _Spec = #{type := string, format := byte}) ->
     case is_binary(Value) of
-        true -> try base64:decode(Value) of
-                  Decoded -> Decoded
-                catch
-                  error:badarg ->
-                      throw({invalid_base64, Value})
-                end;
-        false -> throw({incorrect_type, Value, string})
+        true ->
+            try base64:decode(Value) of
+                Decoded -> Decoded
+            catch
+                error:badarg ->
+                    throw({invalid_base64, Value})
+            end;
+        false ->
+            throw({incorrect_type, Value, string})
     end;
-validate_property_spec(Value, _Spec=#{type := string}) ->
+validate_property_spec(Value, _Spec = #{type := string}) ->
     is_type_or_throw(Value, fun is_binary/1, string);
-
 % Item list with anyOf definition
-validate_property_spec(Value, _Spec=#{type :=array,
-                                      items := #{anyOf :=AnyOf}}) ->
-
+validate_property_spec(
+    Value,
+    _Spec = #{
+        type := array,
+        items := #{anyOf := AnyOf}
+    }
+) ->
     is_type_or_throw(Value, fun is_list/1, array),
     validate_any_of(Value, AnyOf);
-
 % Item list with object definition
-validate_property_spec(Value, _Spec=#{type := array,
-                                      items := ItemSpec}) ->
+validate_property_spec(
+    Value,
+    _Spec = #{
+        type := array,
+        items := ItemSpec
+    }
+) ->
     is_type_or_throw(Value, fun is_list/1, array),
     case maps:get(type, ItemSpec) of
         object -> [match_schema(ItemSpec, V) || V <- Value];
         _ -> [validate_property_spec(V, ItemSpec) || V <- Value]
     end.
 
-validate_enum(Value, #{enum := Enum} ) ->
+validate_enum(Value, #{enum := Enum}) ->
     case lists:member(Value, Enum) of
         true -> ok;
         false -> throw({invalid_enum, Value, Enum})
@@ -294,20 +395,23 @@ validate_any_of(Items, AnyOfs) ->
 validate_any_of([], _Any, _Errors) ->
     [];
 % anyOf list exhausted, this isn't anyOf
-validate_any_of([Hv|_Tv], [], Errors) ->
+validate_any_of([Hv | _Tv], [], Errors) ->
     throw({not_any_of, Hv, Errors});
 % Iterate values and compare to possible anyOfs
-validate_any_of([Hv|Tv], [Ha=#{type:=object}|Ta], Errors) ->
-    Validated = try match_schema(Ha, Hv) of
-        TryValidated -> TryValidated
-    catch
-        ValidationError ->
-            [NextIsValid] = validate_any_of([Hv],
-                                            Ta,
-                                            [ValidationError|Errors]),
-            NextIsValid
-    end,
-    [Validated | validate_any_of(Tv, [Ha|Ta], [])].
+validate_any_of([Hv | Tv], [Ha = #{type := object} | Ta], Errors) ->
+    Validated =
+        try match_schema(Ha, Hv) of
+            TryValidated -> TryValidated
+        catch
+            ValidationError ->
+                [NextIsValid] = validate_any_of(
+                    [Hv],
+                    Ta,
+                    [ValidationError | Errors]
+                ),
+                NextIsValid
+        end,
+    [Validated | validate_any_of(Tv, [Ha | Ta], [])].
 
 method_metadata(Handler, Method) ->
     LowerMethod = string:lowercase(Method),
@@ -318,31 +422,36 @@ method_metadata(Handler, Method) ->
         true -> maps:get(LowerMethod, Metadata)
     end.
 
-params_from_request(Req=#{}, Spec) ->
+params_from_request(Req = #{}, Spec) ->
     SpecParams = maps:get(parameters, Spec, []),
     Params = match_params(SpecParams, Req),
     Params.
 
-body_from_request(_Req=#{has_body:=false},
-                  _Spec=#{requestBody:=#{required:=true}}) ->
+body_from_request(
+    _Req = #{has_body := false},
+    _Spec = #{requestBody := #{required := true}}
+) ->
     throw(body_required);
-body_from_request(Req=#{has_body:=false}, _Spec) ->
+body_from_request(Req = #{has_body := false}, _Spec) ->
     {Req, undefined};
-body_from_request(Req=#{has_body:=true}, Spec) ->
+body_from_request(Req = #{has_body := true}, Spec) ->
     SpecBody = maps:get(requestBody, Spec),
     SpecContent = maps:get(content, SpecBody),
     ContentType = cowboy_req:header(<<"content-type">>, Req),
     ContentTypeAtom = erlang:binary_to_atom(ContentType, utf8),
 
-    ContentSpec = case maps:is_key(ContentTypeAtom, SpecContent) of
-        false -> Types = maps:keys(SpecContent),
-                 throw({invalid_contenttype, ContentTypeAtom, Types});
-        true -> maps:get(ContentTypeAtom, SpecContent)
-    end,
+    ContentSpec =
+        case maps:is_key(ContentTypeAtom, SpecContent) of
+            false ->
+                Types = maps:keys(SpecContent),
+                throw({invalid_contenttype, ContentTypeAtom, Types});
+            true ->
+                maps:get(ContentTypeAtom, SpecContent)
+        end,
 
     {ok, Body, Req1} = cowboy_req:read_body(Req),
     Data = features_json:decode_or_throw(Body, {invalid_json, post_body}),
-    #{schema:=Schema} = ContentSpec,
+    #{schema := Schema} = ContentSpec,
     ParsedData = match_schema(Schema, Data),
 
     {Req1, ParsedData}.
@@ -355,7 +464,6 @@ response_spec(Spec, Code) ->
 response_spec(Handler, Method, Code) ->
     Spec = method_metadata(Handler, Method),
     response_spec(Spec, Code).
-
 
 ensure_binary(Bin) when is_binary(Bin) ->
     Bin;
@@ -370,6 +478,6 @@ is_type_or_throw(Value, Predicate, Type) ->
 
 tuples_to_lists([]) ->
     [];
-tuples_to_lists([H|T]) when is_tuple(H) ->
+tuples_to_lists([H | T]) when is_tuple(H) ->
     NewH = [element(I, H) || I <- lists:seq(1, tuple_size(H))],
     [NewH | tuples_to_lists(T)].

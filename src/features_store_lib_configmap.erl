@@ -1,13 +1,20 @@
 -module(features_store_lib_configmap).
--include_lib("kernel/include/logger.hrl").
--behaviour(features_store_lib).
--export([init/1,
-         get_all/1,
-         store/2]).
 
--record(state, {api=defined,
-                configmap_ref=undefined,
-                additional_namespaces=undefined}).
+-include_lib("kernel/include/logger.hrl").
+
+-behaviour(features_store_lib).
+
+-export([
+    init/1,
+    get_all/1,
+    store/2
+]).
+
+-record(state, {
+    api = defined,
+    configmap_ref = undefined,
+    additional_namespaces = undefined
+}).
 
 %%%%
 %   features_store api
@@ -16,8 +23,10 @@
 init(_Name) ->
     % TODO: actually use this name
     {ok, Namespace} = application:get_env(features, namespace),
-    ConfigmapRef = #{namespace=>Namespace,
-                     name=><<"features-state-store">>},
+    ConfigmapRef = #{
+        namespace => Namespace,
+        name => <<"features-state-store">>
+    },
     Operations = [
         <<"createCoreV1NamespacedConfigMap">>,
         <<"readCoreV1NamespacedConfigMap">>,
@@ -26,38 +35,54 @@ init(_Name) ->
     API = kuberlnetes:load([{operations, Operations}]),
     Ops = swaggerl:operations(API),
     {ok, Namespaces} = application:get_env(features, namespaces),
-    AdditionalNamespaces = [{NS, <<"getkimball-features">>} ||
-                                 NS <- Namespaces],
-    ?LOG_DEBUG(#{what=><<"Additional namespaces">>,
-                 namespaces=>Namespaces,
-                 tuples=>AdditionalNamespaces}),
+    AdditionalNamespaces = [
+        {NS, <<"getkimball-features">>}
+        || NS <- Namespaces
+    ],
+    ?LOG_DEBUG(#{
+        what => <<"Additional namespaces">>,
+        namespaces => Namespaces,
+        tuples => AdditionalNamespaces
+    }),
 
-    ?LOG_DEBUG(#{what=><<"Kubernetes operations">>,
-                 ops=>Ops}),
-    #state{api=API,
-           configmap_ref=ConfigmapRef,
-           additional_namespaces=AdditionalNamespaces}.
+    ?LOG_DEBUG(#{
+        what => <<"Kubernetes operations">>,
+        ops => Ops
+    }),
+    #state{
+        api = API,
+        configmap_ref = ConfigmapRef,
+        additional_namespaces = AdditionalNamespaces
+    }.
 
-get_all(State=#state{configmap_ref=#{namespace:=NS, name:=Name}}) ->
+get_all(State = #state{configmap_ref = #{namespace := NS, name := Name}}) ->
     {Code, ConfigMapResp} = get_configmap(State, NS, Name),
-    Data = case Code of
-      404 -> ConfigMap = configmap(Name, []),
-             create_configmap(State, NS, Name, ConfigMap),
-             #{};
-      200 -> data_from_configmap_doc(ConfigMapResp)
-    end,
+    Data =
+        case Code of
+            404 ->
+                ConfigMap = configmap(Name, []),
+                create_configmap(State, NS, Name, ConfigMap),
+                #{};
+            200 ->
+                data_from_configmap_doc(ConfigMapResp)
+        end,
 
     {Data, State}.
 
-store(Data, State=#state{configmap_ref=#{namespace:=NS, name:=Name},
-                         additional_namespaces=ANS}) ->
+store(
+    Data,
+    State = #state{
+        configmap_ref = #{namespace := NS, name := Name},
+        additional_namespaces = ANS
+    }
+) ->
     ToWrite = [{NS, Name} | ANS],
     ok = write_configmap_to_namespaces(State, ToWrite, Data),
     {ok, State}.
 
 write_configmap_to_namespaces(_State, [], _Data) ->
     ok;
-write_configmap_to_namespaces(State, [{NS, Name}|T], Data) ->
+write_configmap_to_namespaces(State, [{NS, Name} | T], Data) ->
     ok = write_configmap(State, NS, Name, Data),
     write_configmap_to_namespaces(State, T, Data).
 
@@ -65,73 +90,79 @@ write_configmap_to_namespaces(State, [{NS, Name}|T], Data) ->
 %   Internal
 %%%%
 
-get_configmap(#state{api=API}, NS, Name) ->
+get_configmap(#state{api = API}, NS, Name) ->
     Fields = [
         {<<"name">>, Name},
         {<<"namespace">>, NS}
     ],
     ConfigMapResp = swaggerl:op(API, "readCoreV1NamespacedConfigMap", Fields),
-    ?LOG_DEBUG(#{what=><<"Get Configmap">>,
-                 namespace=>NS,
-                 value=>ConfigMapResp,
-                 name=>Name}),
+    ?LOG_DEBUG(#{
+        what => <<"Get Configmap">>,
+        namespace => NS,
+        value => ConfigMapResp,
+        name => Name
+    }),
     Code = maps:get(<<"code">>, ConfigMapResp, 200),
     {Code, ConfigMapResp}.
-
-
 
 data_from_configmap_doc(#{<<"data">> := #{<<"data">> := Data}}) ->
     B64Decoded = base64:decode(Data),
     erlang:binary_to_term(B64Decoded).
 
-create_configmap(#state{api=API}, NS, Name, Doc) ->
+create_configmap(#state{api = API}, NS, Name, Doc) ->
     Fields = configmap_request_fields(NS, Name, Doc),
     Resp = swaggerl:op(API, "createCoreV1NamespacedConfigMap", Fields),
-    ?LOG_INFO(#{what=><<"Create Configmap">>,
-                 response=>Resp,
-                 namespace=>NS,
-                 configmap=>Doc,
-                 name=>Name}),
+    ?LOG_INFO(#{
+        what => <<"Create Configmap">>,
+        response => Resp,
+        namespace => NS,
+        configmap => Doc,
+        name => Name
+    }),
     Code = maps:get(<<"code">>, Resp, 200),
     Code.
 
-replace_configmap(#state{api=API}, NS, Name, Doc) ->
+replace_configmap(#state{api = API}, NS, Name, Doc) ->
     Fields = configmap_request_fields(NS, Name, Doc),
     Resp = swaggerl:op(API, "replaceCoreV1NamespacedConfigMap", Fields),
-    ?LOG_DEBUG(#{what=><<"Replace Configmap">>,
-                 response=>Resp,
-                 namespace=>NS,
-                 configmap=>Doc,
-                 name=>Name}),
+    ?LOG_DEBUG(#{
+        what => <<"Replace Configmap">>,
+        response => Resp,
+        namespace => NS,
+        configmap => Doc,
+        name => Name
+    }),
     Code = maps:get(<<"code">>, Resp, 200),
     Code.
 
-
-write_configmap(State=#state{}, NS, Name, Data) ->
+write_configmap(State = #state{}, NS, Name, Data) ->
     ConfigMapDoc = configmap(Name, Data),
 
-    ?LOG_DEBUG(#{what=><<"Write Configmap">>,
-                 namespace=>NS,
-                 configmap=>ConfigMapDoc,
-                 name=>Name}),
+    ?LOG_DEBUG(#{
+        what => <<"Write Configmap">>,
+        namespace => NS,
+        configmap => ConfigMapDoc,
+        name => Name
+    }),
     Code = replace_configmap(State, NS, Name, ConfigMapDoc),
-    200 = case Code of
-      200 -> 200;
-      404 -> create_configmap(State, NS, Name, ConfigMapDoc)
-    end,
+    200 =
+        case Code of
+            200 -> 200;
+            404 -> create_configmap(State, NS, Name, ConfigMapDoc)
+        end,
     ok.
-
 
 configmap(Name, Data) ->
     Serialized = base64:encode(erlang:term_to_binary(Data)),
-    #{<<"apiVersion">> => <<"v1">>,
-      <<"kind">> => <<"ConfigMap">>,
-      <<"metadata">> => #{
-          <<"name">> => Name
-      },
-      <<"data">> => #{
-          <<"data">> => Serialized
-      }
+    #{
+        <<"apiVersion">> => <<"v1">>,
+        <<"kind">> => <<"ConfigMap">>,
+        <<"metadata">> => #{
+            <<"name">> => Name
+        },
+        <<"data">> => #{
+            <<"data">> => Serialized
+        }
     }.
 
 configmap_request_fields(NS, Name, Doc) ->

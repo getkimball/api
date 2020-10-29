@@ -9,7 +9,8 @@ name_to_path(Base, {Type, CounterID}) ->
     filename:join([
         Base,
         Type,
-        CounterPath]);
+        CounterPath
+    ]);
 name_to_path(Base, Name) when is_binary(Name) ->
     filename:join(Base, Name);
 name_to_path(Base, CounterID) ->

@@ -8,32 +8,33 @@
 -define(MUT, features_counter).
 -define(STORE_LIB, fake_store_lib).
 
-
 all() -> [{group, test_count}].
 
-groups() -> [{test_count, [
-                aa_test_single_user,
-                ab_test_single_user_multiple_times,
-                ac_test_multiple_users,
-                ba_test_different_key_types,
-                ca_test_storage_lib_loading_data,
-                cb_test_storing_with_storage_lib,
-                cc_test_store_with_no_new_data,
-                cd_test_store_with_unsupported_store_lib_operation,
-                da_test_count_with_tags,
-                db_test_multiple_count_with_tags,
-                dc_test_multiple_count_single_user_with_tags,
-                dd_test_multiple_count_single_user_with_different_tags,
-                de_test_with_multiple_tags_and_mismatched_ordering,
-                ea_test_includes_key,
-                fa_test_prometheus_counter_for_binary_name,
-                fb_test_prometheus_counter_for_weekly_name,
-                ga_test_single_user_with_value,
-                gb_test_single_user_multiple_times_with_value,
-                gc_test_single_user_with_value_int_user_id,
-                gd_test_user_with_value_and_tags
-              ]}
-            ].
+groups() ->
+    [
+        {test_count, [
+            aa_test_single_user,
+            ab_test_single_user_multiple_times,
+            ac_test_multiple_users,
+            ba_test_different_key_types,
+            ca_test_storage_lib_loading_data,
+            cb_test_storing_with_storage_lib,
+            cc_test_store_with_no_new_data,
+            cd_test_store_with_unsupported_store_lib_operation,
+            da_test_count_with_tags,
+            db_test_multiple_count_with_tags,
+            dc_test_multiple_count_single_user_with_tags,
+            dd_test_multiple_count_single_user_with_different_tags,
+            de_test_with_multiple_tags_and_mismatched_ordering,
+            ea_test_includes_key,
+            fa_test_prometheus_counter_for_binary_name,
+            fb_test_prometheus_counter_for_weekly_name,
+            ga_test_single_user_with_value,
+            gb_test_single_user_multiple_times_with_value,
+            gc_test_single_user_with_value_int_user_id,
+            gd_test_user_with_value_and_tags
+        ]}
+    ].
 
 init_meck(Config) ->
     test_utils:meck_load_prometheus(),
@@ -48,8 +49,11 @@ init_meck(Config) ->
 
     Name = <<"test">>,
 
-    [{store_lib_state, StoreLibState},
-     {name, Name}|Config].
+    [
+        {store_lib_state, StoreLibState},
+        {name, Name}
+        | Config
+    ].
 
 init_per_testcase(ca_test_storage_lib_loading_data, Config) ->
     init_meck(Config);
@@ -61,7 +65,7 @@ init_per_testcase(_, Config) ->
 
     ID = features_counter_id:create(Name),
     {ok, Pid} = ?MUT:start_link(?STORE_LIB, ID),
-    [{pid, Pid}, {id, ID} |NewConfig].
+    [{pid, Pid}, {id, ID} | NewConfig].
 
 end_per_testcase(_, _Config) ->
     ?assert(meck:validate(features_store_lib)),
@@ -81,9 +85,14 @@ aa_test_single_user(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 ab_test_single_user_multiple_times(Config) ->
@@ -96,9 +105,14 @@ ab_test_single_user_multiple_times(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 ac_test_multiple_users(Config) ->
@@ -112,9 +126,14 @@ ac_test_multiple_users(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 2,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 2}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 2,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 2}
+        }),
+        Num
+    ),
     Config.
 
 ba_test_different_key_types(Config) ->
@@ -128,9 +147,14 @@ ba_test_different_key_types(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 ca_test_storage_lib_loading_data(Config) ->
@@ -138,7 +162,7 @@ ca_test_storage_lib_loading_data(Config) ->
     Name = ?config(name, Config),
 
     BF = etbloom:sbf(1000000),
-    Stored = #{bloom=>BF},
+    Stored = #{bloom => BF},
     meck:expect(features_store_lib, get, ['_'], {Stored, StoreLibState}),
     ID = features_counter_id:create(Name),
     {ok, Pid} = ?MUT:start_link(?STORE_LIB, ID),
@@ -153,15 +177,19 @@ ca_test_storage_lib_loading_data(Config) ->
     ?assertEqual(?STORE_LIB, meck:capture(first, features_store_lib, init, '_', 1)),
     ?assertEqual({"counter", ID}, meck:capture(first, features_store_lib, init, '_', 2)),
 
-
     ?assertEqual(StoreLibState, meck:capture(first, features_store_lib, get, '_', 1)),
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
-    [{pid, Pid}|Config].
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
+    [{pid, Pid} | Config].
 
 cb_test_storing_with_storage_lib(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
@@ -206,10 +234,15 @@ cd_test_store_with_unsupported_store_lib_operation(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
-    [{pid, Pid}|Config].
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
+    [{pid, Pid} | Config].
 
 da_test_count_with_tags(Config) ->
     Pid = ?config(pid, Config),
@@ -348,26 +381,45 @@ fa_test_prometheus_counter_for_binary_name(Config) ->
     Num = ?MUT:count(Pid),
 
     io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
-    ?assertEqual(1, meck:num_calls(
-        prometheus_gauge,
-        declare,
-        [[{name, kimball_counter},
-          {help, "Value of event counters"},
-          {labels, [name]},
-          {registry, counters}]])),
+    ?assertEqual(
+        1,
+        meck:num_calls(
+            prometheus_gauge,
+            declare,
+            [
+                [
+                    {name, kimball_counter},
+                    {help, "Value of event counters"},
+                    {labels, [name]},
+                    {registry, counters}
+                ]
+            ]
+        )
+    ),
 
     io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
-    ?assertEqual(1, meck:num_calls(
-        prometheus_gauge,
-        set,
-        [counters,
-         kimball_counter,
-         [Name],
-         1])),
+    ?assertEqual(
+        1,
+        meck:num_calls(
+            prometheus_gauge,
+            set,
+            [
+                counters,
+                kimball_counter,
+                [Name],
+                1
+            ]
+        )
+    ),
 
-    ?assertEqual(counts(#{count => 1,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 fb_test_prometheus_counter_for_weekly_name(Config) ->
@@ -384,26 +436,45 @@ fb_test_prometheus_counter_for_weekly_name(Config) ->
     Num = ?MUT:count(Pid),
 
     io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
-    ?assertEqual(1, meck:num_calls(
-        prometheus_gauge,
-        declare,
-        [[{name, kimball_counter_weekly},
-          {help, "Value of event counters"},
-          {labels, [name, year, week]},
-          {registry, counters}]])),
+    ?assertEqual(
+        1,
+        meck:num_calls(
+            prometheus_gauge,
+            declare,
+            [
+                [
+                    {name, kimball_counter_weekly},
+                    {help, "Value of event counters"},
+                    {labels, [name, year, week]},
+                    {registry, counters}
+                ]
+            ]
+        )
+    ),
 
     io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
-    ?assertEqual(1, meck:num_calls(
-        prometheus_gauge,
-        set,
-        [counters,
-         kimball_counter_weekly,
-         [NameBin, Year, Week],
-         1])),
+    ?assertEqual(
+        1,
+        meck:num_calls(
+            prometheus_gauge,
+            set,
+            [
+                counters,
+                kimball_counter_weekly,
+                [NameBin, Year, Week],
+                1
+            ]
+        )
+    ),
 
-    ?assertEqual(counts(#{count => 1,
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 ga_test_single_user_with_value(Config) ->
@@ -416,10 +487,15 @@ ga_test_single_user_with_value(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          value => #{sum => 1},
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            value => #{sum => 1},
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 gb_test_single_user_multiple_times_with_value(Config) ->
@@ -434,10 +510,15 @@ gb_test_single_user_multiple_times_with_value(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          value => #{sum => 2},
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            value => #{sum => 2},
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 gc_test_single_user_with_value_int_user_id(Config) ->
@@ -453,10 +534,15 @@ gc_test_single_user_with_value_int_user_id(Config) ->
 
     Num = ?MUT:count(Pid),
 
-    ?assertEqual(counts(#{count => 1,
-                          value => #{sum => 3},
-                          single_tag_counts => #{},
-                          tag_counts => #{[] => 1}}), Num),
+    ?assertEqual(
+        counts(#{
+            count => 1,
+            value => #{sum => 3},
+            single_tag_counts => #{},
+            tag_counts => #{[] => 1}
+        }),
+        Num
+    ),
     Config.
 
 gd_test_user_with_value_and_tags(Config) ->
@@ -482,8 +568,10 @@ gd_test_user_with_value_and_tags(Config) ->
     Config.
 
 counts(C) ->
-    Default = #{count => 0,
-                value => #{},
-                single_tag_counts => #{},
-                tag_counts => #{}},
+    Default = #{
+        count => 0,
+        value => #{},
+        single_tag_counts => #{},
+        tag_counts => #{}
+    },
     maps:merge(Default, C).

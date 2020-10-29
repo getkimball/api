@@ -5,25 +5,25 @@
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("common_test/include/ct.hrl").
 
-
 -define(MUT, features_store).
 -define(STORE_LIB, fake_store_lib).
 
-
 all() -> [{group, test_ets}].
 
-groups() -> [{test_ets, [
-                aa_write_read,
-                ab_invalid_feature_missing_rollout_end,
-                ac_invalid_feature_before_after_end,
-                ad_user_spec_write_read,
-                ae_user_spec_write_read_binary,
-                ba_external_store_init,
-                bb_external_store_store_data,
-                bc_external_store_not_supporting_store,
-                ca_write_read_rollout
-              ]}
-            ].
+groups() ->
+    [
+        {test_ets, [
+            aa_write_read,
+            ab_invalid_feature_missing_rollout_end,
+            ac_invalid_feature_before_after_end,
+            ad_user_spec_write_read,
+            ae_user_spec_write_read_binary,
+            ba_external_store_init,
+            bb_external_store_store_data,
+            bc_external_store_not_supporting_store,
+            ca_write_read_rollout
+        ]}
+    ].
 
 init_per_testcase(ba_external_store_init, Config) ->
     StoreLibState = make_ref(),
@@ -41,8 +41,7 @@ init_per_testcase(ba_external_store_init, Config) ->
         {ok, Ref}
     end),
 
-    [{store_lib_state, StoreLibState}|Config];
-
+    [{store_lib_state, StoreLibState} | Config];
 init_per_testcase(_, Config) ->
     StoreLibState = make_ref(),
 
@@ -61,8 +60,11 @@ init_per_testcase(_, Config) ->
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
 
-    [{store_lib_state, StoreLibState},
-     {pid, Pid} |Config].
+    [
+        {store_lib_state, StoreLibState},
+        {pid, Pid}
+        | Config
+    ].
 
 end_per_testcase(_, _Config) ->
     ?assert(meck:validate(features_store_lib)),
@@ -73,16 +75,23 @@ aa_write_read(Config) ->
     Name = <<"feature">>,
     Boolean = true,
 
-    ok = features_store:set_feature(Name, {boolean, Boolean},
-                                          {rollout, undefined, undefined},
-                                          {user, undefined}),
+    ok = features_store:set_feature(
+        Name,
+        {boolean, Boolean},
+        {rollout, undefined, undefined},
+        {user, undefined}
+    ),
     Resp = features_store:get_features(),
 
     ExpectedStore = #{feature_maps => []},
     ?assertEqual(ExpectedStore, meck:capture(first, features_store_lib, store, '_', 1)),
 
-    Expected = [test_utils:defaulted_feature_spec(Name,
-      #{boolean => Boolean})],
+    Expected = [
+        test_utils:defaulted_feature_spec(
+            Name,
+            #{boolean => Boolean}
+        )
+    ],
     ?assertEqual(Expected, Resp),
 
     Config.
@@ -112,14 +121,23 @@ ad_user_spec_write_read(Config) ->
     Boolean = true,
     UserSpec = [[<<"user_id">>, '=', 42]],
 
-    ok = features_store:set_feature(Name, {boolean, Boolean},
-                                          {rollout, undefined, undefined},
-                                          {user, UserSpec}),
+    ok = features_store:set_feature(
+        Name,
+        {boolean, Boolean},
+        {rollout, undefined, undefined},
+        {user, UserSpec}
+    ),
     Resp = features_store:get_features(),
 
-    Expected = [test_utils:defaulted_feature_spec(Name,
-      #{boolean => Boolean,
-        user => UserSpec})],
+    Expected = [
+        test_utils:defaulted_feature_spec(
+            Name,
+            #{
+                boolean => Boolean,
+                user => UserSpec
+            }
+        )
+    ],
     ?assertEqual(Expected, Resp),
 
     Config.
@@ -130,14 +148,23 @@ ae_user_spec_write_read_binary(Config) ->
     UserSpec = [[<<"user_id">>, <<"=">>, 42]],
     ExpectedUserSpec = [[<<"user_id">>, '=', 42]],
 
-    ok = features_store:set_feature(Name, {boolean, Boolean},
-                                          {rollout, undefined, undefined},
-                                          {user, UserSpec}),
+    ok = features_store:set_feature(
+        Name,
+        {boolean, Boolean},
+        {rollout, undefined, undefined},
+        {user, UserSpec}
+    ),
     Resp = features_store:get_features(),
 
-    Expected = [test_utils:defaulted_feature_spec(Name,
-      #{boolean => Boolean,
-        user => ExpectedUserSpec})],
+    Expected = [
+        test_utils:defaulted_feature_spec(
+            Name,
+            #{
+                boolean => Boolean,
+                user => ExpectedUserSpec
+            }
+        )
+    ],
     ?assertEqual(Expected, Resp),
 
     Config.
@@ -151,10 +178,14 @@ ba_external_store_init(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
 
     All = [
-      test_utils:defaulted_feature_spec(NameA, #{boolean=>BooleanA}),
-      replace_keys_with_binary(test_utils:defaulted_feature_spec(NameB, #{boolean=>BooleanB,
-                                                                          rollout_start=><<"undefined">>,
-                                                                          rollout_end=>1}))
+        test_utils:defaulted_feature_spec(NameA, #{boolean => BooleanA}),
+        replace_keys_with_binary(
+            test_utils:defaulted_feature_spec(NameB, #{
+                boolean => BooleanB,
+                rollout_start => <<"undefined">>,
+                rollout_end => 1
+            })
+        )
     ],
     Data = #{feature_maps => All},
     ok = meck:expect(features_store_lib, get, fun(Ref) ->
@@ -172,14 +203,18 @@ ba_external_store_init(Config) ->
     timer:sleep(100),
     Resp = features_store:get_features(),
 
-    Expected = [test_utils:defaulted_feature_spec(NameA, #{boolean => BooleanA}),
-                test_utils:defaulted_feature_spec(NameB, #{boolean => BooleanB,
-                                                           rollout_end => 1})],
+    Expected = [
+        test_utils:defaulted_feature_spec(NameA, #{boolean => BooleanA}),
+        test_utils:defaulted_feature_spec(NameB, #{
+            boolean => BooleanB,
+            rollout_end => 1
+        })
+    ],
 
     ?assertEqual(?STORE_LIB, meck:capture(first, features_store_lib, init, '_', 1)),
     ?assertEqual(Expected, Resp),
 
-    [{pid, Pid}|Config].
+    [{pid, Pid} | Config].
 
 bb_external_store_store_data(Config) ->
     Name = <<"feature">>,
@@ -193,13 +228,20 @@ bb_external_store_store_data(Config) ->
         {ok, Ref}
     end),
 
-    ok = features_store:set_feature(Name, {boolean, Boolean},
-                                          {rollout, undefined, undefined},
-                                          {user, UserSpecs}),
+    ok = features_store:set_feature(
+        Name,
+        {boolean, Boolean},
+        {rollout, undefined, undefined},
+        {user, UserSpecs}
+    ),
 
-    Expected = #{feature_maps=>
-                  [test_utils:defaulted_feature_spec(Name, #{boolean=>Boolean,
-                                                             user=>UserSpecs})]
+    Expected = #{
+        feature_maps => [
+            test_utils:defaulted_feature_spec(Name, #{
+                boolean => Boolean,
+                user => UserSpecs
+            })
+        ]
     },
 
     ?assertEqual(Expected, meck:capture(2, features_store_lib, store, '_', 1)),
@@ -214,33 +256,41 @@ bc_external_store_not_supporting_store(Config) ->
 
     ok = meck:expect(features_store_lib, store, ['_', '_'], {not_supported, StoreLibState}),
 
-
-    Resp = features_store:set_feature(Name, {boolean, Status},
-                                            {rollout, undefined, undefined},
-                                            {user, []}),
+    Resp = features_store:set_feature(
+        Name,
+        {boolean, Status},
+        {rollout, undefined, undefined},
+        {user, []}
+    ),
     ?assertEqual(not_supported, Resp),
 
     Config.
-
 
 ca_write_read_rollout(Config) ->
     Name = <<"feature">>,
     Start = erlang:system_time(seconds),
     End = erlang:system_time(seconds) + 100,
 
-    ok = features_store:set_feature(Name, {boolean, false},
-                                          {rollout, Start, End},
-                                          {user, []}),
+    ok = features_store:set_feature(
+        Name,
+        {boolean, false},
+        {rollout, Start, End},
+        {user, []}
+    ),
     Resp = features_store:get_features(),
 
-    Expected = [test_utils:defaulted_feature_spec(Name,
-      #{rollout_start=>Start, rollout_end=>End})],
+    Expected = [
+        test_utils:defaulted_feature_spec(
+            Name,
+            #{rollout_start => Start, rollout_end => End}
+        )
+    ],
     ?assertEqual(Expected, Resp),
 
     Config.
 
 replace_keys_with_binary(Map) ->
-    Fun = fun(K,V, AccIn) ->
+    Fun = fun(K, V, AccIn) ->
         Kb = erlang:atom_to_binary(K, utf8),
         maps:put(Kb, V, AccIn)
     end,
