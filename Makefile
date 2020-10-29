@@ -21,7 +21,7 @@ DEPS = \
 	swaggerl \
 	trails
 
-BUILD_DEPS = elvis_mk version.mk sync
+BUILD_DEPS = version.mk sync erlfmt
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
@@ -30,8 +30,8 @@ DIALYZER_DIRS = --src src tests
 dep_cortex_remote_write = git https://github.com/getkimball/cortex_remote_write 0.1.4
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.8.0
 dep_cowboy_swagger = hex 2.2.0
-dep_elvis_mk = git https://github.com/inaka/elvis.mk.git 1.0.0
 dep_enenra = git https://github.com/nlfiedler/enenra.git 0.4.1
+dep_erlfmt = git https://github.com/WhatsApp/erlfmt.git v0.8.0
 dep_eraven = git https://github.com/getkimball/eraven.git 2020-05-20
 dep_erlcloud = git https://github.com/erlcloud/erlcloud.git 3.3.3
 dep_etbloom = git https://github.com/getkimball/etbloom.git 1.0.1
@@ -55,12 +55,18 @@ dep_sync = git https://github.com/rustyio/sync.git master
 dep_trails = hex 2.0.0
 dep_version.mk = git https://github.com/manifest/version.mk.git v0.2.0
 
-DEP_PLUGINS = elvis_mk version.mk
+DEP_PLUGINS = version.mk
 
 SHELL_OPTS = -eval 'application:ensure_all_started(features), sync:go().' -config sys +S2
 
 .PHONY: live-js
 live-js:
 	npm run dev
+
+erlfmt:
+	$(gen_verbose) $(SHELL_ERL) -pa $(SHELL_PATHS) -eval 'erlfmt_cli:do("erlfmt", [write, {files, ["src/*.erl", "tests/*.erl"]} ]), halt(0)'
+
+erlfmt_check:
+	$(gen_verbose) $(SHELL_ERL) -pa $(SHELL_PATHS) -eval 'erlfmt_cli:do("erlfmt", [check, {files, ["src/*.erl", "tests/*.erl"]} ]), halt(0)'
 
 include erlang.mk
