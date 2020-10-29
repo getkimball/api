@@ -174,6 +174,14 @@ additional_namespaces_to_list(List) ->
     List.
 
 setup_sentry() ->
+    DeploySite = application:get_env(features, site, "Unknown site"),
+    DeployCluster = application:get_env(features, cluster, "Unknown cluster"),
+
+    % Sentry has environment and server as first-class tags, in our case we'll
+    % use the "site" as the environment, then the "cluster" as the server.
+    Server = DeployCluster,
+    Environment = DeploySite,
+
     {ok, VSN} = application:get_key(features, vsn),
     VSNBin = binary:list_to_bin(VSN),
     Version = << <<"features-">>/binary, VSNBin/binary >>,
@@ -191,8 +199,8 @@ setup_sentry() ->
                     dsn => ActualDSN
         }}),
         ok = eraven:set_environment_context(eraven,
-                                       <<"server">>,
-                                       <<"environment">>,
+                                       Server,
+                                       Environment,
                                        Version)
     end,
     ok.

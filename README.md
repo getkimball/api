@@ -36,6 +36,18 @@ make live-js
 
 An Erlang configuration file will be loaded from `/kimball/app.config` as part of the Release/Dockerfile. A user configuration file can be placed there to provide more complex configuration described below.
 
+#### Deployment information
+
+Information can be included about the deployment to help in future diagnosis of
+problems. Right now this is the "site" and "cluster" information.
+
+```
+[{features, [
+    {site, "Site name"},
+    {cluster, "Cluster name"}
+]}].
+```
+
 #### Counter Configuration
 
 The initial bloom filter type, size, and error probability can be configured for counters. This is configured as a list with a regular expression matching the name of the filter.
