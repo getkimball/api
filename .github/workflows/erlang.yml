@@ -52,8 +52,8 @@ jobs:
       env:
         GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
 
-    - name: elvis
-      run: make elvis
+    - name: erlfmt check
+      run: make erlfmt_check
 
     - name: Dialyze
       run: make dialyze

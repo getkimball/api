@@ -1,4 +1,5 @@
 -module(features_handler_v0_analytics_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_handler_v0_analytics).
@@ -8,9 +9,12 @@ load() ->
     ok = ?CTH:setup(),
 
     ok = meck:new(application, [unstick]),
-    ok = meck:expect(application, get_env,
-                     [features, analytics_event_mod],
-                     {ok, features_count_router}),
+    ok = meck:expect(
+        application,
+        get_env,
+        [features, analytics_event_mod],
+        {ok, features_count_router}
+    ),
 
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
@@ -18,6 +22,7 @@ load() ->
     ok = meck:expect(features_count_router, add, ['_', '_', '_'], ok),
 
     ok.
+
 unload(_) ->
     unload().
 
@@ -47,18 +52,28 @@ get_basic_analytics_test() ->
     Feature = <<"feature">>,
     ID = features_counter_id:create(Feature),
     Count = 4,
-    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
-                                                           count => Count,
-                                                           single_tag_counts => #{},
-                                                           value => #{},
-                                                           tag_counts => #{}}]),
+    ok = meck:expect(features_count_router, counts, [], [
+        #{
+            id => ID,
+            count => Count,
+            single_tag_counts => #{},
+            value => #{},
+            tag_counts => #{}
+        }
+    ]),
 
-    ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
-                                      <<"count">> => Count,
-                                      <<"single_event_counts">> => [],
-                                      <<"type">> => <<"named">>,
-                                      <<"value">> => #{},
-                                      <<"event_counts">> => []}]},
+    ExpectedData = #{
+        <<"counts">> => [
+            #{
+                <<"name">> => Feature,
+                <<"count">> => Count,
+                <<"single_event_counts">> => [],
+                <<"type">> => <<"named">>,
+                <<"value">> => #{},
+                <<"event_counts">> => []
+            }
+        ]
+    },
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
@@ -70,7 +85,7 @@ get_basic_analytics_in_sidecar_mode_404s_test() ->
     load(),
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_relay},
-    ExpectedData = #{<<"error">>=>#{<<"what">> => <<"Daemonset cannot GET analytics">>}},
+    ExpectedData = #{<<"error">> => #{<<"what">> => <<"Daemonset cannot GET analytics">>}},
 
     ?CTH:http_get(?MUT, State, Req, 404, ExpectedData),
 
@@ -83,19 +98,33 @@ get_basic_tag_counts_analytics_test() ->
     Count = 4,
     TagCount = 1,
     TagCounts = #{[] => TagCount},
-    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
-                                                           count => Count,
-                                                           single_tag_counts => #{},
-                                                           value => #{},
-                                                           tag_counts => TagCounts}]),
+    ok = meck:expect(features_count_router, counts, [], [
+        #{
+            id => ID,
+            count => Count,
+            single_tag_counts => #{},
+            value => #{},
+            tag_counts => TagCounts
+        }
+    ]),
 
-    ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
-                                      <<"count">> => Count,
-                                      <<"single_event_counts">> => [],
-                                      <<"type">> => <<"named">>,
-                                      <<"value">> => #{},
-                                      <<"event_counts">> => [#{<<"events">> => [],
-                                                             <<"count">> => TagCount}]}]},
+    ExpectedData = #{
+        <<"counts">> => [
+            #{
+                <<"name">> => Feature,
+                <<"count">> => Count,
+                <<"single_event_counts">> => [],
+                <<"type">> => <<"named">>,
+                <<"value">> => #{},
+                <<"event_counts">> => [
+                    #{
+                        <<"events">> => [],
+                        <<"count">> => TagCount
+                    }
+                ]
+            }
+        ]
+    },
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
@@ -110,19 +139,33 @@ get_date_cohort_tag_counts_analytics_test() ->
     Count = 4,
     TagCount = 1,
     TagCounts = #{[] => TagCount},
-    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
-                                                           count => Count,
-                                                           single_tag_counts => #{},
-                                                           value => #{},
-                                                           tag_counts => TagCounts}]),
+    ok = meck:expect(features_count_router, counts, [], [
+        #{
+            id => ID,
+            count => Count,
+            single_tag_counts => #{},
+            value => #{},
+            tag_counts => TagCounts
+        }
+    ]),
 
-    ExpectedData = #{<<"counts">>=>[#{<<"name">> => <<"feature 20201">>,
-                                      <<"count">> => Count,
-                                      <<"single_event_counts">> => [],
-                                      <<"type">> => <<"weekly">>,
-                                      <<"value">> => #{},
-                                      <<"event_counts">> => [#{<<"events">> => [],
-                                                             <<"count">> => TagCount}]}]},
+    ExpectedData = #{
+        <<"counts">> => [
+            #{
+                <<"name">> => <<"feature 20201">>,
+                <<"count">> => Count,
+                <<"single_event_counts">> => [],
+                <<"type">> => <<"weekly">>,
+                <<"value">> => #{},
+                <<"event_counts">> => [
+                    #{
+                        <<"events">> => [],
+                        <<"count">> => TagCount
+                    }
+                ]
+            }
+        ]
+    },
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
@@ -135,16 +178,24 @@ get_tag_counts_analytics_test() ->
     Feature = <<"feature">>,
     ID = features_counter_id:create(Feature),
     Count = 4,
-    TagCounts = #{[] => 0,
-                  [<<"1">>] => 1,
-                  [<<"1">>, <<"2">>] => 2},
-    STC = #{<<"1">> => 3,
-            <<"2">> => 2},
-    ok = meck:expect(features_count_router, counts, [], [#{id => ID,
-                                                           count => Count,
-                                                           single_tag_counts => STC,
-                                                           value => #{},
-                                                           tag_counts => TagCounts}]),
+    TagCounts = #{
+        [] => 0,
+        [<<"1">>] => 1,
+        [<<"1">>, <<"2">>] => 2
+    },
+    STC = #{
+        <<"1">> => 3,
+        <<"2">> => 2
+    },
+    ok = meck:expect(features_count_router, counts, [], [
+        #{
+            id => ID,
+            count => Count,
+            single_tag_counts => STC,
+            value => #{},
+            tag_counts => TagCounts
+        }
+    ]),
 
     ExpectedTagCounts = [
         #{<<"count">> => 2, <<"events">> => [<<"1">>, <<"2">>]},
@@ -156,12 +207,18 @@ get_tag_counts_analytics_test() ->
         #{<<"count">> => 3, <<"event">> => <<"1">>}
     ],
 
-    ExpectedData = #{<<"counts">>=>[#{<<"name">> => Feature,
-                                      <<"count">> => Count,
-                                      <<"single_event_counts">> => ExpectedSTC,
-                                      <<"type">> => <<"named">>,
-                                      <<"value">> => #{},
-                                      <<"event_counts">> => ExpectedTagCounts}]},
+    ExpectedData = #{
+        <<"counts">> => [
+            #{
+                <<"name">> => Feature,
+                <<"count">> => Count,
+                <<"single_event_counts">> => ExpectedSTC,
+                <<"type">> => <<"named">>,
+                <<"value">> => #{},
+                <<"event_counts">> => ExpectedTagCounts
+            }
+        ]
+    },
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
@@ -184,11 +241,14 @@ save_analytic_event_test() ->
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
     % features_count_router:add(feature, userid);
 
-    ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>false}])),
+    ?assertEqual(
+        1,
+        meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal => false}])
+    ),
 
     unload().
 
@@ -204,9 +264,12 @@ save_analytic_event_dont_ensure_goal_test() ->
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
-    ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>false}])),
+    ?assertEqual(
+        1,
+        meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal => false}])
+    ),
 
     unload().
 
@@ -222,9 +285,12 @@ save_analytic_event_ensure_goal_test() ->
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
-    ?assertEqual(1, meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal=>true}])),
+    ?assertEqual(
+        1,
+        meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal => true}])
+    ),
 
     unload().
 
@@ -234,20 +300,20 @@ save_multiple_analytic_events_test() ->
     UserID = <<"user_id">>,
     Doc = #{
         events => [
-          #{event_name => EventName, user_id => UserID},
-          #{event_name => EventName, user_id => UserID, ensure_goal => false},
-          #{event_name => EventName, user_id => UserID, ensure_goal => true}
+            #{event_name => EventName, user_id => UserID},
+            #{event_name => EventName, user_id => UserID, ensure_goal => false},
+            #{event_name => EventName, user_id => UserID, ensure_goal => true}
         ]
     },
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
     Expected = [
-      {EventName, UserID, #{ensure_goal => false}},
-      {EventName, UserID, #{ensure_goal => false}},
-      {EventName, UserID, #{ensure_goal => true}}
+        {EventName, UserID, #{ensure_goal => false}},
+        {EventName, UserID, #{ensure_goal => false}},
+        {EventName, UserID, #{ensure_goal => true}}
     ],
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
@@ -259,19 +325,19 @@ save_list_multiple_analytic_events_test() ->
     EventName = <<"event_name">>,
     UserID = <<"user_id">>,
     Doc = [
-          #{event_name => EventName, user_id => UserID},
-          #{event_name => EventName, user_id => UserID, ensure_goal => false},
-          #{event_name => EventName, user_id => UserID, ensure_goal => true}
+        #{event_name => EventName, user_id => UserID},
+        #{event_name => EventName, user_id => UserID, ensure_goal => false},
+        #{event_name => EventName, user_id => UserID, ensure_goal => true}
     ],
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
     Expected = [
-      {EventName, UserID, #{ensure_goal => false}},
-      {EventName, UserID, #{ensure_goal => false}},
-      {EventName, UserID, #{ensure_goal => true}}
+        {EventName, UserID, #{ensure_goal => false}},
+        {EventName, UserID, #{ensure_goal => false}},
+        {EventName, UserID, #{ensure_goal => true}}
     ],
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
@@ -279,12 +345,10 @@ save_list_multiple_analytic_events_test() ->
     unload().
 
 value_test_() ->
-    {foreach,
-     fun load/0,
-     fun unload/1,
-     [fun save_analytic_event_int_value/0,
-      fun save_analytic_event_float_value/0,
-      fun save_analytic_event_not_number_value/0
+    {foreach, fun load/0, fun unload/1, [
+        fun save_analytic_event_int_value/0,
+        fun save_analytic_event_float_value/0,
+        fun save_analytic_event_not_number_value/0
     ]}.
 
 save_analytic_event_int_value() ->
@@ -299,9 +363,9 @@ save_analytic_event_int_value() ->
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
-    assert_added(EventName, UserID, #{ensure_goal=> false, value=>Value}, 1).
+    assert_added(EventName, UserID, #{ensure_goal => false, value => Value}, 1).
 
 save_analytic_event_float_value() ->
     EventName = <<"event_name">>,
@@ -315,9 +379,9 @@ save_analytic_event_float_value() ->
 
     PostReq = ?CTH:req(post, json, Doc),
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 204, no_body),
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
-    assert_added(EventName, UserID, #{ensure_goal=> false, value=>Value}, 1).
+    assert_added(EventName, UserID, #{ensure_goal => false, value => Value}, 1).
 
 save_analytic_event_not_number_value() ->
     EventName = <<"event_name">>,
@@ -334,10 +398,14 @@ save_analytic_event_not_number_value() ->
     ExpectedErrObj = ?CTH:json_roundtrip(Doc),
 
     ErrorMessage = <<"Object does not match any of the oneOf specifications">>,
-    State = #{analytics_event_mod=>features_count_router},
-    #{<<"error">> := #{<<"what">>:= ErrWhat,
-                       <<"object">>:= ErrObj,
-                       <<"why">>:= Whys}} = ?CTH:http_post(?MUT, State, PostReq, 400),
+    State = #{analytics_event_mod => features_count_router},
+    #{
+        <<"error">> := #{
+            <<"what">> := ErrWhat,
+            <<"object">> := ErrObj,
+            <<"why">> := Whys
+        }
+    } = ?CTH:http_post(?MUT, State, PostReq, 400),
 
     ExpectedError = [<<"incorrect_type">>, Value, <<"number">>],
     ?assertEqual(ErrorMessage, ErrWhat),
@@ -355,7 +423,7 @@ invalid_combination_of_single_and_multiple_events_test() ->
         event_name => EventName,
         user_id => UserID,
         events => [
-          #{event_name => EventName, user_id => UserID}
+            #{event_name => EventName, user_id => UserID}
         ]
     },
 
@@ -364,11 +432,20 @@ invalid_combination_of_single_and_multiple_events_test() ->
     ErrObj = ?CTH:json_roundtrip(Doc),
 
     ErrorMessage = <<"Object matches more than oneOf specifications">>,
-    ExpectedResponse = #{<<"error">> =>
-                           #{<<"what">> => ErrorMessage,
-                             <<"object">> => ErrObj}},
+    ExpectedResponse = #{
+        <<"error">> => #{
+            <<"what">> => ErrorMessage,
+            <<"object">> => ErrObj
+        }
+    },
 
-    ?CTH:http_post(?MUT, #{analytics_event_mod=>features_count_router}, PostReq, 400, ExpectedResponse),
+    ?CTH:http_post(
+        ?MUT,
+        #{analytics_event_mod => features_count_router},
+        PostReq,
+        400,
+        ExpectedResponse
+    ),
 
     ?assertEqual(0, meck:num_calls(features_count_router, add, '_')),
 
@@ -380,8 +457,8 @@ non_matching_event_of_multiple_events_test() ->
     UserID = <<"user_id">>,
     Doc = #{
         events => [
-          #{event_name => EventName, user_id => UserID},
-          #{event => EventName, user_id => UserID}
+            #{event_name => EventName, user_id => UserID},
+            #{event => EventName, user_id => UserID}
         ]
     },
 
@@ -391,14 +468,17 @@ non_matching_event_of_multiple_events_test() ->
 
     ErrorMessage = <<"Object does not match any of the oneOf specifications">>,
 
-    State = #{analytics_event_mod=>features_count_router},
+    State = #{analytics_event_mod => features_count_router},
 
-    #{<<"error">> := #{<<"what">>:= ErrWhat,
-                       <<"object">>:= ErrObj,
-                       <<"why">>:= Whys}} = ?CTH:http_post(?MUT, State, PostReq, 400),
+    #{
+        <<"error">> := #{
+            <<"what">> := ErrWhat,
+            <<"object">> := ErrObj,
+            <<"why">> := Whys
+        }
+    } = ?CTH:http_post(?MUT, State, PostReq, 400),
 
-
-    ExpectedError = [<<"missing_required_key">>,<<"event_name">>],
+    ExpectedError = [<<"missing_required_key">>, <<"event_name">>],
     ?assertEqual(ErrorMessage, ErrWhat),
     ?assertEqual(ExpectedErrObj, ErrObj),
     ?assert(lists:member(ExpectedError, Whys)),

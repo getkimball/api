@@ -1,9 +1,9 @@
 -module(features_store_lib_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_store_lib).
 -define(LIB_MOD, fake_store_lib_mod).
-
 
 init_test() ->
     load(),

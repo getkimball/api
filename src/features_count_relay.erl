@@ -6,19 +6,22 @@
 %%%-------------------------------------------------------------------
 
 -module(features_count_relay).
+
 -include_lib("kernel/include/logger.hrl").
 
--export([add/1,
-         add/2,
-         add/3,
-         send/2]).
+-export([
+    add/1,
+    add/2,
+    add/3,
+    send/2
+]).
 
 add(Items) when is_list(Items) ->
     AnalyticsURL = persistent_term:get({features, analytics_url}),
     send_events(AnalyticsURL, Items),
     ok.
 
-add(EventName, Key)  ->
+add(EventName, Key) ->
     add(EventName, Key, #{}).
 
 add(EventName, Key, Opts) when is_binary(EventName), is_integer(Key) ->
@@ -39,9 +42,9 @@ send_event(undefined, EventName, Key, Opts) ->
     ok;
 send_event(URL, EventName, Key, Opts) ->
     Data = #{
-      <<"event_name">> => EventName,
-      <<"user_id">> => Key,
-      <<"ensure_goal">> => maps:get(ensure_goal, Opts, false)
+        <<"event_name">> => EventName,
+        <<"user_id">> => Key,
+        <<"ensure_goal">> => maps:get(ensure_goal, Opts, false)
     },
     ReqBody = jsx:encode(Data),
     ?LOG_INFO(#{
@@ -62,7 +65,7 @@ send_events(undefined, Items) ->
 send_events(URL, Items) ->
     Events = lists:map(fun event_add_to_api_event/1, Items),
     Data = #{
-      <<"events">> => Events
+        <<"events">> => Events
     },
     ReqBody = jsx:encode(Data),
     ?LOG_INFO(#{
@@ -80,29 +83,35 @@ send(URL, ReqBody) ->
     Method = post,
     RequestOpts = [{timeout, 1000}],
 
-    ?LOG_DEBUG(#{what => <<"features_count_relay 1.1">>,
-                 b=>ReqBody,
-                 method=>Method,
-                 url=>URL,
-                 headers=>ReqHeaders,
-                 opts=>RequestOpts}),
-    {ok, Code, _RespHeaders, ClientRef} = hackney:request(Method,
-                                                          URL,
-                                                          ReqHeaders,
-                                                          ReqBody,
-                                                          RequestOpts),
+    ?LOG_DEBUG(#{
+        what => <<"features_count_relay 1.1">>,
+        b => ReqBody,
+        method => Method,
+        url => URL,
+        headers => ReqHeaders,
+        opts => RequestOpts
+    }),
+    {ok, Code, _RespHeaders, ClientRef} = hackney:request(
+        Method,
+        URL,
+        ReqHeaders,
+        ReqBody,
+        RequestOpts
+    ),
     {ok, Body} = hackney:body(ClientRef),
 
     ?LOG_DEBUG(#{
-      what => <<"features_count_relay request response">>,
-      req_body => ReqBody,
-      resp_body => Body,
-      code => Code
+        what => <<"features_count_relay request response">>,
+        req_body => ReqBody,
+        resp_body => Body,
+        code => Code
     }),
 
     ok.
 
 event_add_to_api_event({Event, User, Opts}) ->
-    #{<<"event_name">> => Event,
-      <<"user_id">> => User,
-      <<"ensure_goal">> => maps:get(ensure_goal, Opts)}.
+    #{
+        <<"event_name">> => Event,
+        <<"user_id">> => User,
+        <<"ensure_goal">> => maps:get(ensure_goal, Opts)
+    }.

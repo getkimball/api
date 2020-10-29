@@ -1,4 +1,5 @@
 -module(features_handler_ok_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_handler_ok).

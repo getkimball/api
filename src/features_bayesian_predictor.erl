@@ -1,20 +1,27 @@
 -module(features_bayesian_predictor).
 
--export([bayes/3,
-         for_goal_counts/0]).
+-export([
+    bayes/3,
+    for_goal_counts/0
+]).
 
 bayes(BGivenA, A, B) ->
     (BGivenA * A) / B.
-
 
 for_goal_counts() ->
     CountMap = features_count_router:count_map(),
     GoalCounts = maps:filter(fun filter_goals_with_tagged_events/2, CountMap),
     GlobalCounterId = features_counter_id:global_counter_id(),
-    #{GlobalCounterId:= #{count := GlobalCount}} = CountMap,
+    #{GlobalCounterId := #{count := GlobalCount}} = CountMap,
 
-    CalcFun = fun(GoalID, #{count:= GoalCount,
-                            single_tag_counts:= STC}, GoalAccIn) ->
+    CalcFun = fun(
+        GoalID,
+        #{
+            count := GoalCount,
+            single_tag_counts := STC
+        },
+        GoalAccIn
+    ) ->
         GoalName = features_counter_id:name(GoalID),
 
         TagMapFun = fun(Tag, GoalTagCount) ->
@@ -31,7 +38,6 @@ for_goal_counts() ->
 
     Predictions.
 
-
 bayes_for_counts(GlobalCount, GoalCount, TagCount, GoalTagCount) ->
     BGivenA = GoalTagCount / GoalCount,
     A = GoalCount / GlobalCount,
@@ -39,10 +45,7 @@ bayes_for_counts(GlobalCount, GoalCount, TagCount, GoalTagCount) ->
 
     bayes(BGivenA, A, B).
 
-
-filter_goals_with_tagged_events(_ID, #{single_tag_counts := Counts})
-                                when map_size(Counts) == 0->
+filter_goals_with_tagged_events(_ID, #{single_tag_counts := Counts}) when map_size(Counts) == 0 ->
     false;
 filter_goals_with_tagged_events(_ID, _Counts) ->
     true.
-

@@ -1,4 +1,5 @@
 -module(features_handler_v0_goals_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_handler_v0_goals).
@@ -8,9 +9,12 @@ load() ->
     ok = ?CTH:setup(),
 
     ok = meck:new(application, [unstick]),
-    ok = meck:expect(application, get_env,
-                     [features, analytics_event_mod],
-                     {ok, features_count_router}),
+    ok = meck:expect(
+        application,
+        get_env,
+        [features, analytics_event_mod],
+        {ok, features_count_router}
+    ),
 
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
@@ -45,7 +49,7 @@ get_goals_test() ->
     Goal = <<"test_goal">>,
     ok = meck:expect(features_count_router, goals, [], [Goal]),
 
-    ExpectedData = #{<<"goals">>=>[Goal]},
+    ExpectedData = #{<<"goals">> => [Goal]},
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
@@ -58,7 +62,7 @@ get_basic_analytics_in_sidecar_mode_404s_test() ->
     load(),
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_relay},
-    ExpectedData = #{<<"error">>=>#{<<"what">> => <<"Daemonset cannot GET goals">>}},
+    ExpectedData = #{<<"error">> => #{<<"what">> => <<"Daemonset cannot GET goals">>}},
 
     ?CTH:http_get(?MUT, State, Req, 404, ExpectedData),
 

@@ -1,5 +1,7 @@
 -module(features_app).
+
 -behaviour(application).
+
 -include_lib("kernel/include/logger.hrl").
 
 -export([start/2]).
@@ -12,8 +14,10 @@
 
 start(_Type, _Args) ->
     {ok, VSN} = application:get_key(features, vsn),
-    ?LOG_INFO(#{what=><<"Starting">>,
-                version=>VSN}),
+    ?LOG_INFO(#{
+        what => <<"Starting">>,
+        version => VSN
+    }),
     App = features,
     Mode = get_features_mode(),
 
@@ -32,14 +36,14 @@ start(_Type, _Args) ->
 
     Trails = setup_trails(),
 
-    AllRoutes = Routes ++ Trails ++  StaticRoute,
+    AllRoutes = Routes ++ Trails ++ StaticRoute,
 
     Dispatch = trails:single_host_compile(AllRoutes),
 
     HTTPOpts = #{
-      env => #{dispatch => Dispatch},
-      metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
-      stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
+        env => #{dispatch => Dispatch},
+        metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
+        stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
     },
 
     Port = list_to_integer(os:getenv("API_PORT", "8080")),
@@ -48,7 +52,7 @@ start(_Type, _Args) ->
     features_sup:start_link(Mode, StoreLib, MetricsOpts).
 
 stop(_State) ->
-  ok.
+    ok.
 
 metrics_opts() ->
     MemLimitStr = os:getenv("KUBERNETES_MEMORY_LIMIT", "0"),
@@ -87,14 +91,18 @@ set_config(Mode) ->
 
     ok = application:set_env(trails, api_root, "/"),
     ok = application:set_env(features, mode, Mode),
-    ok = application:set_env(cowboy_swagger, global_spec,
+    ok = application:set_env(
+        cowboy_swagger,
+        global_spec,
         #{
-          openapi => "3.0.0",
-          servers => [#{url => "/"}],
-          info => #{
-            title => "Get Kimball API",
-            version => <<"0.0.0">>
-    }}),
+            openapi => "3.0.0",
+            servers => [#{url => "/"}],
+            info => #{
+                title => "Get Kimball API",
+                version => <<"0.0.0">>
+            }
+        }
+    ),
     ok.
 
 setup_namespace() ->
@@ -105,13 +113,15 @@ setup_namespace() ->
 
 setup_analytics_url() ->
     EnvVarValue = os:getenv("ANALYTICS_HOST", "undefined"),
-    URL = case EnvVarValue of
-        "undefined" -> undefined;
-        Host -> "http://" ++ Host ++ "/v0/analytics"
-    end,
+    URL =
+        case EnvVarValue of
+            "undefined" -> undefined;
+            Host -> "http://" ++ Host ++ "/v0/analytics"
+        end,
 
     persistent_term:put({features, analytics_url}, URL),
     ok.
+
 setup_analytics_event_mod(api_server) ->
     Mod = features_count_router,
     application:set_env(features, analytics_event_mod, Mod);
@@ -140,30 +150,34 @@ setup_additional_namespace_config() ->
     Config = additional_namespaces_to_list(Namespaces),
     application:set_env(features, namespaces, Config),
 
-    ?LOG_INFO(#{what=>"Sync to additional namespaces",
-                namespaces=>Namespaces}),
+    ?LOG_INFO(#{
+        what => "Sync to additional namespaces",
+        namespaces => Namespaces
+    }),
     ok.
 
-
 decide_store_lib() ->
-    S3Set = case application:get_env(features, s3_bucket) of
-        {ok, ?DEFAULT_S3_BUCKET} -> false;
-        {ok, ""} -> false;
-        {ok, _S3BucketWasSet} -> true
-    end,
+    S3Set =
+        case application:get_env(features, s3_bucket) of
+            {ok, ?DEFAULT_S3_BUCKET} -> false;
+            {ok, ""} -> false;
+            {ok, _S3BucketWasSet} -> true
+        end,
 
-    GCSSet = case application:get_env(features, gcs_bucket) of
-        {ok, ?DEFAULT_GCS_BUCKET} -> false;
-        {ok, ""} -> false;
-        {ok, _GCSBucketWasSet} -> true
-    end,
+    GCSSet =
+        case application:get_env(features, gcs_bucket) of
+            {ok, ?DEFAULT_GCS_BUCKET} -> false;
+            {ok, ""} -> false;
+            {ok, _GCSBucketWasSet} -> true
+        end,
 
-    Lib = case {S3Set, GCSSet} of
-      {true, true} -> throw({not_supported, multiple_storage_set});
-      {true, _} -> features_store_lib_s3;
-      {_, true} -> features_store_lib_gcs;
-      {false, false} -> undefined
-    end,
+    Lib =
+        case {S3Set, GCSSet} of
+            {true, true} -> throw({not_supported, multiple_storage_set});
+            {true, _} -> features_store_lib_s3;
+            {_, true} -> features_store_lib_gcs;
+            {false, false} -> undefined
+        end,
 
     Lib.
 
@@ -184,24 +198,29 @@ setup_sentry() ->
 
     {ok, VSN} = application:get_key(features, vsn),
     VSNBin = binary:list_to_bin(VSN),
-    Version = << <<"features-">>/binary, VSNBin/binary >>,
+    Version = <<<<"features-">>/binary, VSNBin/binary>>,
     DSN = os:getenv("SENTRY_DSN"),
     case DSN of
         false ->
-            ?LOG_INFO(#{what=>"Sentry not setup. Set 'SENTRY_DSN'"});
+            ?LOG_INFO(#{what => "Sentry not setup. Set 'SENTRY_DSN'"});
         ActualDSN ->
-            ?LOG_INFO(#{what=>"Sentry configured"}),
+            ?LOG_INFO(#{what => "Sentry configured"}),
             ok = logger:add_handler(
                 eraven,
                 er_logger_handler,
-                #{level => warning,
-                  config => #{
-                    dsn => ActualDSN
-        }}),
-        ok = eraven:set_environment_context(eraven,
-                                       Server,
-                                       Environment,
-                                       Version)
+                #{
+                    level => warning,
+                    config => #{
+                        dsn => ActualDSN
+                    }
+                }
+            ),
+            ok = eraven:set_environment_context(
+                eraven,
+                Server,
+                Environment,
+                Version
+            )
     end,
     ok.
 

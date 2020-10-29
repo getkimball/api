@@ -1,4 +1,5 @@
 -module(features_count_relay_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_count_relay).
@@ -28,9 +29,11 @@ basic_case_test() ->
     ok = ?MUT:add(EventName, UserId),
 
     ExpectedHeaders = [{<<"content-type">>, <<"application/json">>}],
-    ExpectedBody = jsx:encode(#{ensure_goal => false,
-                                event_name => EventName,
-                                user_id => UserId}),
+    ExpectedBody = jsx:encode(#{
+        ensure_goal => false,
+        event_name => EventName,
+        user_id => UserId
+    }),
     ExpectedOpts = [{timeout, 1000}],
 
     meck:wait(hackney, request, '_', 1000),
@@ -61,10 +64,20 @@ multiple_counts_test() ->
     ok = ?MUT:add(Adds),
 
     ExpectedHeaders = [{<<"content-type">>, <<"application/json">>}],
-    ExpectedBody = jsx:encode(#{events=>[
-        #{<<"event_name">> => <<"event_1">>, <<"user_id">> => <<"user_1">>, <<"ensure_goal">> => false},
-        #{<<"event_name">> => <<"event_2">>, <<"user_id">> => <<"user_2">>, <<"ensure_goal">> => true}
-    ]}),
+    ExpectedBody = jsx:encode(#{
+        events => [
+            #{
+                <<"event_name">> => <<"event_1">>,
+                <<"user_id">> => <<"user_1">>,
+                <<"ensure_goal">> => false
+            },
+            #{
+                <<"event_name">> => <<"event_2">>,
+                <<"user_id">> => <<"user_2">>,
+                <<"ensure_goal">> => true
+            }
+        ]
+    }),
     ExpectedOpts = [{timeout, 1000}],
 
     meck:wait(hackney, request, '_', 1000),
@@ -94,9 +107,11 @@ ensure_goal_case_test() ->
     ok = ?MUT:add(EventName, UserId, #{ensure_goal => EnsureGoal}),
 
     ExpectedHeaders = [{<<"content-type">>, <<"application/json">>}],
-    ExpectedBody = jsx:encode(#{ensure_goal => true,
-                                event_name => EventName,
-                                user_id => UserId}),
+    ExpectedBody = jsx:encode(#{
+        ensure_goal => true,
+        event_name => EventName,
+        user_id => UserId
+    }),
     ExpectedOpts = [{timeout, 1000}],
 
     meck:wait(hackney, request, '_', 1000),
@@ -125,9 +140,11 @@ int_user_test() ->
     ok = ?MUT:add(EventName, UserId),
 
     ExpectedHeaders = [{<<"content-type">>, <<"application/json">>}],
-    ExpectedBody = jsx:encode(#{ensure_goal => false,
-                                event_name => EventName,
-                                user_id => <<"42">>}),
+    ExpectedBody = jsx:encode(#{
+        ensure_goal => false,
+        event_name => EventName,
+        user_id => <<"42">>
+    }),
     ExpectedOpts = [{timeout, 1000}],
 
     meck:wait(hackney, request, '_', 1000),

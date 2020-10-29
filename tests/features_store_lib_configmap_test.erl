@@ -1,8 +1,8 @@
 -module(features_store_lib_configmap_test).
+
 -include_lib("eunit/include/eunit.hrl").
 
 -define(MUT, features_store_lib_configmap).
-
 
 init_test() ->
     load(),
@@ -27,12 +27,14 @@ write_read_test() ->
 
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
-    ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
+    ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{
+        <<"code">> => 200
+    }),
 
     State = ?MUT:init(Name),
     ok = assert_kubernerlnetes_loaded(),
 
-    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     io:format("here!~n"),
     {ok, State} = ?MUT:store(Data, State),
     io:format("here!~n"),
@@ -56,19 +58,26 @@ first_write_test() ->
 
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
-    ok = meck:expect(swaggerl, op, [{[API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>404}},
-                                    {[API, "createCoreV1NamespacedConfigMap",  '_'], #{<<"code">>=>200}}
-                                    ]),
+    ok = meck:expect(swaggerl, op, [
+        {[API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">> => 404}},
+        {[API, "createCoreV1NamespacedConfigMap", '_'], #{<<"code">> => 200}}
+    ]),
 
     State = ?MUT:init(Name),
     ok = assert_kubernerlnetes_loaded(),
 
-    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     io:format("here!~n"),
     {ok, State} = ?MUT:store(Data, State),
     io:format("here!~n"),
 
-    ReplaceOps = meck:capture(first, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
+    ReplaceOps = meck:capture(
+        first,
+        swaggerl,
+        op,
+        [API, "replaceCoreV1NamespacedConfigMap", '_'],
+        3
+    ),
     CreateOps = meck:capture(first, swaggerl, op, [API, "createCoreV1NamespacedConfigMap", '_'], 3),
     ReplaceName = proplists:get_value(<<"name">>, ReplaceOps),
     ReplaceConfigMapDoc = proplists:get_value(<<"body">>, ReplaceOps),
@@ -87,16 +96,19 @@ push_to_namespaces_test() ->
     Name = "test",
     Namespace = <<"test_namespace">>,
 
-    ok = meck:expect(application, get_env, [{[features, namespaces], {ok, [Namespace]}},
-                                            {[features, namespace], {ok, <<"getkimball">>}}]),
+    ok = meck:expect(application, get_env, [
+        {[features, namespaces], {ok, [Namespace]}},
+        {[features, namespace], {ok, <<"getkimball">>}}
+    ]),
     ok = meck:expect(kuberlnetes, load, ['_'], API),
     ok = meck:expect(swaggerl, operations, ['_'], []),
-    ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{<<"code">>=>200}),
+    ok = meck:expect(swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], #{
+        <<"code">> => 200
+    }),
 
     State = ?MUT:init(Name),
 
-
-    Data = [#{<<"name">>=><<"name">>, <<"status">>=><<"status">> }],
+    Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     {ok, State} = ?MUT:store(Data, State),
 
     StoreOps = meck:capture(last, swaggerl, op, [API, "replaceCoreV1NamespacedConfigMap", '_'], 3),
@@ -108,7 +120,6 @@ push_to_namespaces_test() ->
 
     unload(),
     ok.
-
 
 assert_kubernerlnetes_loaded() ->
     Operations = [
@@ -126,8 +137,10 @@ load() ->
     ok = meck:new(kuberlnetes),
     ok = meck:new(swaggerl),
 
-    ok = meck:expect(application, get_env, [{[features, namespaces], {ok, []}},
-                                            {[features, namespace], {ok, <<"getkimball">>}}]),
+    ok = meck:expect(application, get_env, [
+        {[features, namespaces], {ok, []}},
+        {[features, namespace], {ok, <<"getkimball">>}}
+    ]),
     ok.
 
 unload() ->
