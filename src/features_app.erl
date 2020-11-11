@@ -233,7 +233,6 @@ setup_file_store_path() ->
 
 get_features_mode() ->
     Mode = os:getenv("FEATURES_MODE"),
-    % TODO: Do something more intelligent here to work in local dev
     case Mode of
         "sidecar" -> sidecar;
         "api" -> api_server;
