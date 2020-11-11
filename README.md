@@ -117,6 +117,13 @@ git tag ${TAG}
 git push origin ${TAG}
 ```
 
+## Updating JS components
+
+* Find outdated dependencies with `npm outdated` and update in `package.json
+* Run `npm update`
+
+... I think
+
 # License
 
 All rights reserved. Copyright [Get Kimball Inc.](https://getkimball.com) 2020
