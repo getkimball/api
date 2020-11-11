@@ -21,7 +21,8 @@
 %%%%
 
 init(_Name) ->
-    % TODO: actually use this name
+    % The Name isn't used here as right now this module is only used for
+    % reading/writing features as part of the features_store
     {ok, Namespace} = application:get_env(features, namespace),
     ConfigmapRef = #{
         namespace => Namespace,
