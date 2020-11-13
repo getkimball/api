@@ -29,6 +29,8 @@
 -record(state, {memory_limit}).
 
 -define(PROM_MEM_REMAINING, memory_remaining_bytes).
+-define(PROM_BAYES_PREDICTION, kimball_bayes_prediction).
+-define(PROM_PREDICTIONS_REGISTRY, predictions).
 
 %%%===================================================================
 %%% API functions
@@ -70,8 +72,14 @@ init([Opts]) when is_map(Opts) ->
         {help, "Bytes of memory remaining as viewed by the Erlang VM"}
     ]),
 
+    prometheus_gauge:declare([
+        {name, ?PROM_BAYES_PREDICTION},
+        {help, "Prediction that event will lead to goal"},
+        {labels, [goal, event]},
+        {registry, ?PROM_PREDICTIONS_REGISTRY}
+    ]),
+
     {ok, _TRef} = timer:apply_interval(15000, ?MODULE, tick, []),
-    ?MODULE:tick(),
     {ok, #state{memory_limit = MemoryLimit}}.
 
 %%--------------------------------------------------------------------
@@ -102,12 +110,10 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(tick, State = #state{memory_limit = MemLimit}) ->
-    MemInfo = erlang:memory(),
-    TotalMem = proplists:get_value(total, MemInfo),
-    MemRemaining = MemLimit - TotalMem,
-    prometheus_gauge:set(?PROM_MEM_REMAINING, MemRemaining),
-    {noreply, State};
+handle_cast(tick, State) ->
+    S1 = run_memory_metric(State),
+    S2 = run_bayes_prediction_metric(S1),
+    {noreply, S2};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -152,3 +158,25 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+run_memory_metric(State = #state{memory_limit = MemLimit}) ->
+    MemInfo = erlang:memory(),
+    TotalMem = proplists:get_value(total, MemInfo),
+    MemRemaining = MemLimit - TotalMem,
+    prometheus_gauge:set(?PROM_MEM_REMAINING, MemRemaining),
+    State.
+
+run_bayes_prediction_metric(State) ->
+    PredictionsMap = features_bayesian_predictor:for_goal_counts(),
+    PredictionsList = maps:to_list(PredictionsMap),
+
+    lists:foreach(fun for_prediction_goal_events/1, PredictionsList),
+
+    State.
+
+for_prediction_goal_events({Goal, EventsMap}) ->
+    ForEventFun = fun({Event, Val}) ->
+        prometheus_gauge:set(?PROM_PREDICTIONS_REGISTRY, ?PROM_BAYES_PREDICTION, [Goal, Event], Val)
+    end,
+    EventsList = maps:to_list(EventsMap),
+    lists:foreach(ForEventFun, EventsList).
