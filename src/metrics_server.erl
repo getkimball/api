@@ -71,7 +71,6 @@ init([Opts]) when is_map(Opts) ->
     ]),
 
     {ok, _TRef} = timer:apply_interval(15000, ?MODULE, tick, []),
-    ?MODULE:tick(),
     {ok, #state{memory_limit = MemoryLimit}}.
 
 %%--------------------------------------------------------------------
