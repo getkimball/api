@@ -107,6 +107,10 @@ Metrics for each counter are available at `/metrics/counters`
 
 * `kimball_counter_weekly` - Per week counters if `date_cohort => weekly` is set.
 
+Metrics for goal/event predictions are available at `/metrics/predictions`
+
+* `kimball_bayes_prediction` - Prediction that users who complete `event` label will completed the `goal` label
+
 ## Releasing
 
 ```

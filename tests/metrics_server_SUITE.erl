@@ -13,7 +13,8 @@ groups() ->
     [
         {all, [
             aa_test_timer_is_setup,
-            ab_test_mem_remaning
+            ab_test_mem_remaning,
+            ac_test_prediction_metrics
         ]}
     ].
 
@@ -22,6 +23,9 @@ init_meck(Config) ->
 
     meck:new(timer, [unstick]),
     meck:expect(timer, apply_interval, ['_', '_', '_', '_'], {ok, tref}),
+
+    ok = meck:new(features_bayesian_predictor),
+    ok = meck:expect(features_bayesian_predictor, for_goal_counts, [], #{}),
 
     Config.
 
@@ -44,6 +48,10 @@ end_per_testcase(_, Config) ->
     ok = gen_server:stop(Pid),
     test_utils:meck_unload_prometheus(),
     ?assert(meck:validate(timer)),
+
+    ?assert(meck:validate(features_bayesian_predictor)),
+    ok = meck:unload(features_bayesian_predictor),
+
     meck:unload(timer),
     ok.
 
@@ -61,5 +69,25 @@ ab_test_mem_remaning(Config) ->
 
     % Tick in this test will call it, as well as the init for the server
     ?assertEqual(1, meck:num_calls(prometheus_gauge, set, [memory_remaining_bytes, '_'])),
+
+    Config.
+
+ac_test_prediction_metrics(Config) ->
+    Predictions = #{
+        <<"goal_1">> => #{<<"feature_1">> => 0.5}
+    },
+    ok = meck:expect(features_bayesian_predictor, for_goal_counts, [], Predictions),
+
+    ?MUT:tick(),
+
+    meck:wait(1, prometheus_gauge, set, [predictions, kimball_bayes_prediction, '_', '_'], 1000),
+    io:format("Calls ~p~n", [meck:history(prometheus_gauge)]),
+
+    % Tick in this test will call it, as well as the init for the server
+    Labels = [<<"goal_1">>, <<"feature_1">>],
+    ?assertEqual(
+        1,
+        meck:num_calls(prometheus_gauge, set, [predictions, kimball_bayes_prediction, Labels, 0.5])
+    ),
 
     Config.
