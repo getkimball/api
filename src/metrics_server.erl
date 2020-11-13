@@ -102,12 +102,9 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(tick, State = #state{memory_limit = MemLimit}) ->
-    MemInfo = erlang:memory(),
-    TotalMem = proplists:get_value(total, MemInfo),
-    MemRemaining = MemLimit - TotalMem,
-    prometheus_gauge:set(?PROM_MEM_REMAINING, MemRemaining),
-    {noreply, State};
+handle_cast(tick, State) ->
+    S1 = run_memory_metric(State),
+    {noreply, S1};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -152,3 +149,10 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+run_memory_metric(State = #state{memory_limit = MemLimit}) ->
+    MemInfo = erlang:memory(),
+    TotalMem = proplists:get_value(total, MemInfo),
+    MemRemaining = MemLimit - TotalMem,
+    prometheus_gauge:set(?PROM_MEM_REMAINING, MemRemaining),
+    State.
