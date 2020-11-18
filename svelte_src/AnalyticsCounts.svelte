@@ -47,17 +47,19 @@
 <Row>
 
 <Col>
-{#each analytics as analyticItem }
-<Row>
-  <Col></Col>
-  <Col xs="10">
-  <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
-  </Col>
-  <Col></Col>
-</Row>
-{:else}
-    No feature analytics yet
-    Make sure "user_id" and "feature" are set
-{/each}
+<Table>
+    <thead>
+        <th>Event</th>
+        <th>Count</th>
+    </thead>
+    <tbody>
+        {#each analytics as analyticItem }
+        <tr>
+        <td scope="row">{analyticItem.name}</td>
+        <td>{analyticItem.count}</td>
+
+        {/each}
+    </tbody>
+</Table>
 </Col>
 </Row>
