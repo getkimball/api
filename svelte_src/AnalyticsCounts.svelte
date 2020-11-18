@@ -35,7 +35,7 @@
           for (event of goal.single_event_counts) {
 
             console.log(prediction_json["goals"][goal.name]["events"]);
-            predictions[goal.name][event.event] = prediction_json["goals"][goal.name]["events"][event.event]["bayes"];
+            predictions[goal.name][event.name] = prediction_json["goals"][goal.name]["events"][event.name]["bayes"];
           }
 
         }

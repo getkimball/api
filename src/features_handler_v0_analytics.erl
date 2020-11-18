@@ -231,7 +231,7 @@ render_tag_count(Tags, Count, AccIn) ->
 render_single_tag_count(Tag, Count, AccIn) ->
     [
         #{
-            event => Tag,
+            name => Tag,
             count => Count
         }
         | AccIn

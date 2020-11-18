@@ -203,8 +203,8 @@ get_tag_counts_analytics_test() ->
         #{<<"count">> => 0, <<"events">> => []}
     ],
     ExpectedSTC = [
-        #{<<"count">> => 2, <<"event">> => <<"2">>},
-        #{<<"count">> => 3, <<"event">> => <<"1">>}
+        #{<<"count">> => 2, <<"name">> => <<"2">>},
+        #{<<"count">> => 3, <<"name">> => <<"1">>}
     ],
 
     ExpectedData = #{
