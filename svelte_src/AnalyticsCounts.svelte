@@ -16,7 +16,7 @@
         const json = await res.json();
         const prediction_res = await fetch(`v0/predictions`);
         const prediction_json = await prediction_res.json();
-        analytics = json.counts.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase())
+        analytics = json.counts.sort((a, b) => a.count < b.count)
 
         goals = analytics.filter(obj => obj.single_event_counts.length > 0);
 
