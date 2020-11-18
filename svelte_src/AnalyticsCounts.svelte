@@ -47,7 +47,10 @@
 <Row>
 
 <Col>
-<Table>
+    <Row><Col><h2>Events</h2></Col></Row>
+
+    <Row><Col>
+    <Table>
     <thead>
         <th>Event</th>
         <th>Count</th>
@@ -55,11 +58,24 @@
     <tbody>
         {#each analytics as analyticItem }
         <tr>
-        <td scope="row">{analyticItem.name}</td>
+        <td>{analyticItem.name}</td>
         <td>{analyticItem.count}</td>
 
         {/each}
     </tbody>
-</Table>
+    </Table>
+    </Col></Row>
 </Col>
+
+
+<Col>
+    <Row><Col><h2>Goals</h2></Col></Row>
+
+    <Row><Col>
+   {#each goals as analyticItem }
+       <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
+   {/each}
+    </Col></Row>
+</Col>
+
 </Row>
