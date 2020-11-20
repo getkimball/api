@@ -16,7 +16,7 @@
         const json = await res.json();
         const prediction_res = await fetch(`v0/predictions`);
         const prediction_json = await prediction_res.json();
-        analytics = json.counts.sort((a, b) => a.name.toLowerCase() > b.name.toLowerCase())
+        analytics = json.counts.sort((a, b) => a.count < b.count)
 
         goals = analytics.filter(obj => obj.single_event_counts.length > 0);
 
@@ -35,7 +35,7 @@
           for (event of goal.single_event_counts) {
 
             console.log(prediction_json["goals"][goal.name]["events"]);
-            predictions[goal.name][event.event] = prediction_json["goals"][goal.name]["events"][event.event]["bayes"];
+            predictions[goal.name][event.name] = prediction_json["goals"][goal.name]["events"][event.name]["bayes"];
           }
 
         }
@@ -47,17 +47,35 @@
 <Row>
 
 <Col>
-{#each analytics as analyticItem }
-<Row>
-  <Col></Col>
-  <Col xs="10">
-  <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
-  </Col>
-  <Col></Col>
-</Row>
-{:else}
-    No feature analytics yet
-    Make sure "user_id" and "feature" are set
-{/each}
+    <Row><Col><h2>Events</h2></Col></Row>
+
+    <Row><Col>
+    <Table>
+    <thead>
+        <th>Event</th>
+        <th>Count</th>
+    </thead>
+    <tbody>
+        {#each analytics as analyticItem }
+        <tr>
+        <td>{analyticItem.name}</td>
+        <td>{analyticItem.count}</td>
+
+        {/each}
+    </tbody>
+    </Table>
+    </Col></Row>
 </Col>
+
+
+<Col>
+    <Row><Col><h2>Goals</h2></Col></Row>
+
+    <Row><Col>
+   {#each goals as analyticItem }
+       <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
+   {/each}
+    </Col></Row>
+</Col>
+
 </Row>
