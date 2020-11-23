@@ -450,7 +450,7 @@ body_from_request(Req = #{has_body := true}, Spec) ->
         end,
 
     {ok, Body, Req1} = cowboy_req:read_body(Req),
-    Data = features_json:decode_or_throw(Body, {invalid_json, post_body}),
+    Data = features_json:decode_or_throw(Body, {invalid_json, Body}),
     #{schema := Schema} = ContentSpec,
     ParsedData = match_schema(Schema, Data),
 

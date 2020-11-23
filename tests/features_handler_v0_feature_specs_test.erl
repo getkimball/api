@@ -56,7 +56,7 @@ create_feature_invalid_json_test() ->
     Expected = #{
         <<"error">> => #{
             <<"what">> => Msg,
-            <<"object">> => <<"post_body">>
+            <<"object">> => <<"{:not valid json">>
         }
     },
     http_post(PostReq, 400, Expected),
