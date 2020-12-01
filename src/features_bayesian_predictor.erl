@@ -4,11 +4,15 @@
 
 -export([
     bayes/3,
-    for_goal_counts/1
+    for_goal_counts/1,
+    for_events/2
 ]).
 
 bayes(BGivenA, A, B) ->
     (BGivenA * A) / B.
+
+for_events(_Namespace, _Events) ->
+    #{}.
 
 for_goal_counts(Namespace) ->
     CountMap = features_count_router:count_map(Namespace),

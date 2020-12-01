@@ -20,6 +20,19 @@ trails() ->
             description => "Gets features analytics",
             parameters => [
                 #{
+                    name => event,
+                    description =>
+                        <<"User event to predict goal values">>,
+                    in => query,
+                    schema => #{
+                        type => array,
+                        items => #{
+                            type => string
+                        }
+                    },
+                    required => false
+                },
+                #{
                     name => namespace,
                     description =>
                         <<"Namespace of events">>,
@@ -27,8 +40,7 @@ trails() ->
                     schema => #{
                         type => string,
                         default => <<"default">>
-                    },
-                    required => false
+                    }
                 }
             ],
             responses => #{
@@ -78,11 +90,19 @@ handle_req(
     State
 ) ->
     Namespace = proplists:get_value(namespace, Params),
-    Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
-    RenderedPredictions = maps:map(
-        fun render_bayes_as_predictions/2,
-        Predictions
-    ),
+    Events = proplists:get_value(event, Params),
+    RenderedPredictions = case Events of
+            [] ->
+                Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
+                RP = maps:map(
+                    fun render_bayes_as_predictions/2,
+                    Predictions
+                ),
+                RP;
+            Else ->
+                Predictions = features_bayesian_predictor:for_events(Namespace, Else),
+                Predictions
+    end,
     Data = #{<<"goals">> => RenderedPredictions},
     {Req, 200, Data, State}.
 
