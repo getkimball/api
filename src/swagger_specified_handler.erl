@@ -247,14 +247,21 @@ match_params(
             in := query,
             required := false,
             schema := #{
-                type := string
+                type := Type
             } = Schema
         }
         | T
     ],
     Req
 ) ->
-    #{Name := Value} = cowboy_req:match_qs([{Name, [], undefined}], Req),
+
+    DefaultLookupTable = #{
+        string => undefined,
+        array => []
+    },
+    #{Type := Default} = DefaultLookupTable,
+
+    #{Name := Value} = cowboy_req:match_qs([{Name, [], Default}], Req),
     Param = validate_property_spec(Value, Schema),
     [{Name, Param} | match_params(T, Req)].
 

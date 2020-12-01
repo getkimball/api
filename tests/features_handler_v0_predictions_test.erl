@@ -34,7 +34,8 @@ setup() ->
 get_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun get_empty_predictions/0,
-        fun get_single_prediction/0
+        fun get_single_prediction/0,
+        fun get_event_predictions/0
     ]}.
 
 get_empty_predictions() ->
@@ -68,5 +69,27 @@ get_single_prediction() ->
     },
 
     Req = ?CTH:req(),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_event_predictions() ->
+    Predictions = #{
+        <<"goal_1">> => 0.5
+    },
+
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [[<<"foo">>, <<"bar">>]],
+        Predictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => 0.5
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"event">>, <<"foo">>}, {<<"event">>, <<"bar">>}]),
     State = #{},
     ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).

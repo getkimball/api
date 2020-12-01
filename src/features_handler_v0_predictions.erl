@@ -18,6 +18,22 @@ trails() ->
             operationId => getAnalytics,
             tags => ["Analytics"],
             description => "Gets features analytics",
+            parameters => [
+                #{
+                    name => event,
+                    description =>
+                        <<"User event to predict goal values">>,
+                    in => query,
+                    schema => #{
+                        type => array,
+                        items => #{
+                            type => string
+                        }
+                    },
+                    required => false
+                }
+            ],
+
             responses => #{
                 200 => #{
                     description => <<"Bayesian predictions">>,
@@ -60,15 +76,25 @@ init(Req, Opts) ->
 
 handle_req(
     Req = #{method := <<"GET">>},
-    _Params,
+    Params,
     _Body = undefined,
     State
 ) ->
-    Predictions = features_bayesian_predictor:for_goal_counts(),
-    RenderedPredictions = maps:map(
-        fun render_bayes_as_predictions/2,
-        Predictions
-    ),
+    Events = proplists:get_value(event, Params),
+    RenderedPredictions =
+        case Events of
+            [] ->
+                Predictions = features_bayesian_predictor:for_goal_counts(),
+                RP = maps:map(
+                    fun render_bayes_as_predictions/2,
+                    Predictions
+                ),
+                RP;
+            Else ->
+                OrderedEvents = lists:reverse(Else),
+                Predictions = features_bayesian_predictor:for_events(OrderedEvents),
+                Predictions
+        end,
     Data = #{<<"goals">> => RenderedPredictions},
     {Req, 200, Data, State}.
 
