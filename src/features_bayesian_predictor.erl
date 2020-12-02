@@ -11,8 +11,34 @@
 bayes(BGivenA, A, B) ->
     (BGivenA * A) / B.
 
-for_events(_Namespace, _Events) ->
-    #{}.
+for_events(_Namespace, []) ->
+    #{};
+for_events(Namespace, Events) ->
+    GlobalPredictions = for_goal_counts(Namespace),
+
+    % Iterate over all the events and grab predictions for a each goal that has
+    % a prediction for that event. Then accumulate those predictions, taking
+    % just the prediction from one event (for now).
+    EventMFFun = fun(MapEvent, GlobalAccIn) ->
+        % Match event name to the predictions and build a goal => prediction map
+        AccumFun = fun
+            (Goal, #{MapEvent := Prediction}, AccIn) ->
+                AccIn#{Goal => Prediction};
+            (_Goal, _NoMatchPredictions, AccIn) ->
+                AccIn
+        end,
+
+        % Grab predictions for each event
+        EventPredictions = maps:fold(AccumFun, #{}, GlobalPredictions),
+
+        % Merge with predictions from previous events
+        MergedPredictions = maps:merge(GlobalAccIn, EventPredictions),
+
+        {EventPredictions, MergedPredictions}
+    end,
+
+    {_PerEventPredictions, FinalPredictions} = lists:mapfoldl(EventMFFun, #{}, Events),
+    FinalPredictions.
 
 for_goal_counts(Namespace) ->
     CountMap = features_count_router:count_map(Namespace),
