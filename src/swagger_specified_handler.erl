@@ -254,7 +254,6 @@ match_params(
     ],
     Req
 ) ->
-
     DefaultLookupTable = #{
         string => undefined,
         array => []
