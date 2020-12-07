@@ -8,6 +8,7 @@
     create/4,
     global_counter_id/1,
     name/1,
+    namespace/1,
     pattern_matcher_name/2,
     pattern_matcher_type/2,
     to_file_path/1,
@@ -41,6 +42,9 @@ global_counter_id(Namespace) ->
 
 name(#id{name = Name}) ->
     Name.
+
+namespace(#id{namespace = Namespace}) ->
+    Namespace.
 
 pattern_matcher_name(Namespace, Name) ->
     #id{namespace = Namespace, name = Name, type = '_', data = '_'}.

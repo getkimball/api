@@ -134,7 +134,7 @@ handle_req(
     _Body = undefined,
     #{analytics_event_mod := features_count_router}
 ) ->
-    Counts = features_count_router:counts(),
+    Counts = features_count_router:counts(<<"default">>),
     RenderedCounts = lists:map(fun render_count_map/1, Counts),
     Data = #{<<"counts">> => RenderedCounts},
     ?LOG_DEBUG(#{

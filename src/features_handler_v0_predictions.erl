@@ -64,7 +64,7 @@ handle_req(
     _Body = undefined,
     State
 ) ->
-    Predictions = features_bayesian_predictor:for_goal_counts(),
+    Predictions = features_bayesian_predictor:for_goal_counts(<<"default">>),
     RenderedPredictions = maps:map(
         fun render_bayes_as_predictions/2,
         Predictions

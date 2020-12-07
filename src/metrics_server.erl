@@ -167,7 +167,8 @@ run_memory_metric(State = #state{memory_limit = MemLimit}) ->
     State.
 
 run_bayes_prediction_metric(State) ->
-    PredictionsMap = features_bayesian_predictor:for_goal_counts(),
+    % TODO run for each namespace?
+    PredictionsMap = features_bayesian_predictor:for_goal_counts(<<"default">>),
     PredictionsList = maps:to_list(PredictionsMap),
 
     lists:foreach(fun for_prediction_goal_events/1, PredictionsList),

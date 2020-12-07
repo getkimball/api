@@ -2,14 +2,14 @@
 
 -export([
     bayes/3,
-    for_goal_counts/0
+    for_goal_counts/1
 ]).
 
 bayes(BGivenA, A, B) ->
     (BGivenA * A) / B.
 
-for_goal_counts() ->
-    CountMap = features_count_router:count_map(),
+for_goal_counts(Namespace) ->
+    CountMap = features_count_router:count_map(Namespace),
     GoalCounts = maps:filter(fun filter_goals_with_tagged_events/2, CountMap),
     GlobalCounterId = features_counter_id:global_counter_id(<<"default">>),
     #{GlobalCounterId := #{count := GlobalCount}} = CountMap,

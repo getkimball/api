@@ -30,8 +30,8 @@
     add/2,
     add/4,
     add_goal/2,
-    counts/0,
-    count_map/0,
+    counts/1,
+    count_map/1,
     counter_pids/0,
     goals/1,
     register_counter/2
@@ -131,18 +131,28 @@ goals(Namespace) ->
 register_counter(CounterID, Pid) ->
     gen_server:cast(?MODULE, {register_counter, CounterID, Pid}).
 
-counts() ->
+counts(Namespace) ->
     CountFun = fun(#counter_registration{id = CounterID, pid = Pid}, Acc0) ->
-        Counts = features_counter:count(Pid),
-        M = Counts#{id => CounterID},
-        [M | Acc0]
+        case features_counter_id:namespace(CounterID) of
+            Namespace ->
+                Counts = features_counter:count(Pid),
+                M = Counts#{id => CounterID},
+                [M | Acc0];
+            _ ->
+                Acc0
+        end
     end,
     ets:foldl(CountFun, [], ?COUNTER_REGISTRY).
 
-count_map() ->
+count_map(Namespace) ->
     CountFun = fun(#counter_registration{id = CounterID, pid = Pid}, Acc0) ->
-        Counts = features_counter:count(Pid),
-        Acc0#{CounterID => Counts}
+        case features_counter_id:namespace(CounterID) of
+            Namespace ->
+                Counts = features_counter:count(Pid),
+                Acc0#{CounterID => Counts};
+            _ ->
+                Acc0
+        end
     end,
     ets:foldl(CountFun, #{}, ?COUNTER_REGISTRY).
 

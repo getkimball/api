@@ -22,9 +22,12 @@ groups() ->
             af_test_existing_counter_as_existing_goal,
             ag_test_counter_registration_race,
             ah_test_multiple_counts_added_at_once,
+            ai_test_existing_counter_in_different_namespace,
             ba_test_counter_counts,
             bb_test_counter_pids,
             bc_test_counter_count_map,
+            bd_test_namespaced_counter_count_map,
+            be_test_namespaced_counter_counts,
             ca_test_start_with_existing_counters,
             cb_test_counter_registration_persists,
             cc_test_weekly_cohort_counter_created,
@@ -250,6 +253,38 @@ ah_test_multiple_counts_added_at_once(Config) ->
 
     Config.
 
+ai_test_existing_counter_in_different_namespace(Config) ->
+    Feature = <<"feature_name">>,
+    CounterID1 = features_counter_id:create(Feature),
+    CounterID2 = features_counter_id:create(<<"not default">>, Feature, named),
+    Pid = self(),
+    meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
+
+    User = <<"user_id">>,
+
+    ?MUT:add(<<"default">>, Feature, User, #{}),
+    ?MUT:register_counter(CounterID1, Pid),
+
+    % Used for syncronization / processing messages
+    ?MUT:goals(<<"default">>),
+
+    ?MUT:add(<<"not default">>, Feature, User, #{}),
+
+    Spec1 = #{
+        id => {features_counter, CounterID1},
+        start => {features_counter, start_link, [?STORE_LIB, CounterID1]}
+    },
+    Spec2 = #{
+        id => {features_counter, CounterID2},
+        start => {features_counter, start_link, [?STORE_LIB, CounterID2]}
+    },
+
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec1])),
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec2])),
+    ?assertEqual(4, meck:num_calls(?COUNTER_MOD, add, [User, '_', Pid])),
+
+    Config.
+
 ba_test_counter_counts(Config) ->
     Feature = <<"feature_name">>,
     CounterID = features_counter_id:create(Feature),
@@ -264,7 +299,7 @@ ba_test_counter_counts(Config) ->
     % Run to synchronize/handle all messages
     ?MUT:goals(<<"default">>),
 
-    Counts = ?MUT:counts(),
+    Counts = ?MUT:counts(<<"default">>),
 
     ?assertEqual([counts(#{id => CounterID, count => Num})], Counts),
     Config.
@@ -298,9 +333,63 @@ bc_test_counter_count_map(Config) ->
     % Run to synchronize/handle all messages
     ?MUT:goals(<<"default">>),
 
-    Counts = ?MUT:count_map(),
+    Counts = ?MUT:count_map(<<"default">>),
 
     ?assertEqual(#{CounterID => Count}, Counts),
+    Config.
+
+bd_test_namespaced_counter_count_map(Config) ->
+    Feature = <<"feature_name">>,
+    CounterID1 = features_counter_id:create(Feature),
+    CounterID2 = features_counter_id:create(<<"not default">>, Feature, named),
+    Pid1 = erlang:list_to_pid("<0.0.0>"),
+    Pid2 = erlang:list_to_pid("<0.0.1>"),
+    Count1 = counts(#{count => 1}),
+    Count2 = counts(#{count => 2}),
+
+    meck:expect(features_counter, count, [
+        {[Pid1], Count1},
+        {[Pid2], Count2}
+    ]),
+
+    ?MUT:register_counter(CounterID1, Pid1),
+    ?MUT:register_counter(CounterID2, Pid2),
+
+    % Run to synchronize/handle all messages
+    ?MUT:goals(<<"default">>),
+
+    Counts1 = ?MUT:count_map(<<"default">>),
+    Counts2 = ?MUT:count_map(<<"not default">>),
+
+    ?assertEqual(#{CounterID1 => Count1}, Counts1),
+    ?assertEqual(#{CounterID2 => Count2}, Counts2),
+    Config.
+
+be_test_namespaced_counter_counts(Config) ->
+    Feature = <<"feature_name">>,
+    CounterID1 = features_counter_id:create(Feature),
+    CounterID2 = features_counter_id:create(<<"not default">>, Feature, named),
+    Pid1 = erlang:list_to_pid("<0.0.0>"),
+    Pid2 = erlang:list_to_pid("<0.0.1>"),
+    Count1 = counts(#{count => 1}),
+    Count2 = counts(#{count => 2}),
+
+    meck:expect(features_counter, count, [
+        {[Pid1], Count1},
+        {[Pid2], Count2}
+    ]),
+
+    ?MUT:register_counter(CounterID1, Pid1),
+    ?MUT:register_counter(CounterID2, Pid2),
+
+    % Run to synchronize/handle all messages
+    ?MUT:goals(<<"default">>),
+
+    Counts1 = ?MUT:counts(<<"default">>),
+    Counts2 = ?MUT:counts(<<"not default">>),
+
+    ?assertEqual([counts(#{id => CounterID1, count => 1})], Counts1),
+    ?assertEqual([counts(#{id => CounterID2, count => 2})], Counts2),
     Config.
 
 ca_test_start_with_existing_counters(Config) ->
@@ -340,7 +429,7 @@ cb_test_counter_registration_persists(Config) ->
     ExpectedData = expected_stored_data(#{counters => [CounterID]}),
     ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
 
-    Counts = ?MUT:counts(),
+    Counts = ?MUT:counts(<<"default">>),
 
     ?assertEqual([counts(#{id => CounterID, count => Num})], Counts),
 
@@ -506,7 +595,7 @@ ea_test_triggering_a_goal(Config) ->
     ?MUT:add(NonGoalFeature, User),
     ?MUT:add(GoalFeature, User),
 
-    Counts = ?MUT:counts(),
+    Counts = ?MUT:counts(<<"default">>),
 
     io:format("Adds ~p~n", [meck:history(?COUNTER_MOD)]),
     ExpectedEvents = lists:sort([NonGoalFeature]),
@@ -592,7 +681,7 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
     % synchronize call
     _Goals2 = ?MUT:goals(<<"default">>),
 
-    Counts = ?MUT:counts(),
+    Counts = ?MUT:counts(<<"default">>),
 
     ExpectedEvents = lists:sort([NonGoalFeature]),
     ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_'], 1)),

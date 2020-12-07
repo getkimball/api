@@ -40,7 +40,7 @@ get_test_() ->
 get_empty_predictions() ->
     Predictions = #{},
 
-    ok = meck:expect(features_bayesian_predictor, for_goal_counts, [], Predictions),
+    ok = meck:expect(features_bayesian_predictor, for_goal_counts, ['_'], Predictions),
 
     ExpectedData = #{<<"goals">> => #{}},
 
@@ -53,7 +53,7 @@ get_single_prediction() ->
         <<"goal_1">> => #{<<"feature_1">> => 0.5}
     },
 
-    ok = meck:expect(features_bayesian_predictor, for_goal_counts, [], Predictions),
+    ok = meck:expect(features_bayesian_predictor, for_goal_counts, ['_'], Predictions),
 
     ExpectedData = #{
         <<"goals">> => #{

@@ -17,7 +17,7 @@ load() ->
     ),
 
     ok = meck:new(features_count_router),
-    ok = meck:expect(features_count_router, counts, [], #{}),
+    ok = meck:expect(features_count_router, counts, ['_'], #{}),
     ok = meck:expect(features_count_router, add, ['_'], ok),
     ok = meck:expect(features_count_router, add, ['_', '_', '_', '_'], ok),
 
@@ -52,7 +52,7 @@ get_basic_analytics_test() ->
     Feature = <<"feature">>,
     ID = features_counter_id:create(Feature),
     Count = 4,
-    ok = meck:expect(features_count_router, counts, [], [
+    ok = meck:expect(features_count_router, counts, ['_'], [
         #{
             id => ID,
             count => Count,
@@ -98,7 +98,7 @@ get_basic_tag_counts_analytics_test() ->
     Count = 4,
     TagCount = 1,
     TagCounts = #{[] => TagCount},
-    ok = meck:expect(features_count_router, counts, [], [
+    ok = meck:expect(features_count_router, counts, ['_'], [
         #{
             id => ID,
             count => Count,
@@ -139,7 +139,7 @@ get_date_cohort_tag_counts_analytics_test() ->
     Count = 4,
     TagCount = 1,
     TagCounts = #{[] => TagCount},
-    ok = meck:expect(features_count_router, counts, [], [
+    ok = meck:expect(features_count_router, counts, ['_'], [
         #{
             id => ID,
             count => Count,
@@ -187,7 +187,7 @@ get_tag_counts_analytics_test() ->
         <<"1">> => 3,
         <<"2">> => 2
     },
-    ok = meck:expect(features_count_router, counts, [], [
+    ok = meck:expect(features_count_router, counts, ['_'], [
         #{
             id => ID,
             count => Count,

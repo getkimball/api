@@ -6,7 +6,6 @@
 
 load() ->
     ok = meck:new(features_count_router),
-    ok = meck:expect(features_count_router, counts, [], #{}),
     ok = meck:expect(features_count_router, add, ['_', '_'], ok),
 
     ok.
@@ -38,12 +37,12 @@ goal_predictions() ->
         GoalID => #{count => 4, single_tag_counts => #{FeatureName => 1}},
         GlobalCounterID => #{count => 6, single_tag_counts => #{}}
     },
-    ok = meck:expect(features_count_router, count_map, [], CountMap),
+    ok = meck:expect(features_count_router, count_map, [<<"default">>], CountMap),
 
     ExpectedPredictions = #{
         <<"goal_1">> => #{<<"feature_1">> => 0.5}
     },
 
-    Predictions = ?MUT:for_goal_counts(),
+    Predictions = ?MUT:for_goal_counts(<<"default">>),
 
     ?assertEqual(ExpectedPredictions, Predictions).
