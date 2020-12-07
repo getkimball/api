@@ -62,7 +62,6 @@
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
 -define(PROM_COUNTER_NAME, kimball_counters).
 -define(PROM_ADD_DURATION, kimball_event_add_duration_microseconds).
--define(GLOBAL_COUNTER, <<"global_counter">>).
 -define(STORE_LIB_MOD, features_store_lib_s3).
 -define(STORE_LIB_MOD_PT_KEY, features_count_router_store_lib_mod).
 
@@ -319,7 +318,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(start_global_counter, State) ->
-    ensure_child_started(features_counter_id:create(?GLOBAL_COUNTER, internal)),
+    ensure_child_started(features_counter_id:global_counter_id()),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -356,7 +355,7 @@ counters_for_event(
     {Year, WeekNum}
 ) ->
     GlobalRegistration = get_registration(
-        features_counter_id:create(?GLOBAL_COUNTER, internal)
+        features_counter_id:global_counter_id()
     ),
     FeatureRegistration = get_registration(
         features_counter_id:create(CounterName)

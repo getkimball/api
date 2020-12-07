@@ -461,7 +461,7 @@ ea_test_triggering_a_goal(Config) ->
     GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
     WeeklyGoalCounterPid = erlang:list_to_pid("<0.0.3>"),
 
-    GlobalCounterID = features_counter_id:create(<<"global_counter">>, internal),
+    GlobalCounterID = features_counter_id:global_counter_id(),
     NonGoalCounterID = features_counter_id:create(NonGoalFeature),
     GoalCounterID = features_counter_id:create(GoalFeature),
     WeeklyGoalCounterID = features_counter_id:create(GoalFeature, weekly, {Year, Week}),
@@ -544,7 +544,7 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
     NonGoalCounterPid = erlang:list_to_pid("<0.0.1>"),
     GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
 
-    GlobalCounterID = features_counter_id:create(<<"global_counter">>, internal),
+    GlobalCounterID = features_counter_id:global_counter_id(),
     NonGoalCounterID = features_counter_id:create(NonGoalFeature),
     GoalCounterID = features_counter_id:create(GoalFeature),
 
