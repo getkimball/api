@@ -352,7 +352,7 @@ cc_test_weekly_cohort_counter_created(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     {Year, Week} = calendar:iso_week_number(),
     Name = <<"cc_feature">>,
-    WeeklyCounterID = features_counter_id:create(Name, weekly, {Year, Week}),
+    WeeklyCounterID = features_counter_id:create(<<"default">>, Name, weekly, {Year, Week}),
     Num = 1,
     Count = #{count => Num},
 
@@ -381,7 +381,7 @@ cd_test_weekly_cohort_counter_created_and_added_again(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     {Year, Week} = calendar:iso_week_number(),
     Name = <<"cc_feature">>,
-    WeeklyCounterID = features_counter_id:create(Name, weekly, {Year, Week}),
+    WeeklyCounterID = features_counter_id:create(<<"default">>, Name, weekly, {Year, Week}),
     Num = 1,
     Count = #{count => Num},
 
@@ -461,10 +461,15 @@ ea_test_triggering_a_goal(Config) ->
     GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
     WeeklyGoalCounterPid = erlang:list_to_pid("<0.0.3>"),
 
-    GlobalCounterID = features_counter_id:global_counter_id(),
+    GlobalCounterID = features_counter_id:global_counter_id(<<"default">>),
     NonGoalCounterID = features_counter_id:create(NonGoalFeature),
     GoalCounterID = features_counter_id:create(GoalFeature),
-    WeeklyGoalCounterID = features_counter_id:create(GoalFeature, weekly, {Year, Week}),
+    WeeklyGoalCounterID = features_counter_id:create(
+        <<"default">>,
+        GoalFeature,
+        weekly,
+        {Year, Week}
+    ),
 
     meck:expect(
         supervisor,
@@ -544,7 +549,7 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
     NonGoalCounterPid = erlang:list_to_pid("<0.0.1>"),
     GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
 
-    GlobalCounterID = features_counter_id:global_counter_id(),
+    GlobalCounterID = features_counter_id:global_counter_id(<<"default">>),
     NonGoalCounterID = features_counter_id:create(NonGoalFeature),
     GoalCounterID = features_counter_id:create(GoalFeature),
 

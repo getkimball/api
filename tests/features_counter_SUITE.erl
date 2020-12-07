@@ -390,7 +390,7 @@ fa_test_prometheus_counter_for_binary_name(Config) ->
                 [
                     {name, kimball_counter},
                     {help, "Value of event counters"},
-                    {labels, [name]},
+                    {labels, [kimball_namespace, name]},
                     {registry, counters}
                 ]
             ]
@@ -406,7 +406,7 @@ fa_test_prometheus_counter_for_binary_name(Config) ->
             [
                 counters,
                 kimball_counter,
-                [Name],
+                [<<"default">>, Name],
                 1
             ]
         )
@@ -423,10 +423,11 @@ fa_test_prometheus_counter_for_binary_name(Config) ->
     Config.
 
 fb_test_prometheus_counter_for_weekly_name(Config) ->
+    Namespace = <<"default">>,
     NameBin = <<"test name">>,
     Year = 2020,
     Week = 1,
-    ID = features_counter_id:create(NameBin, weekly, {Year, Week}),
+    ID = features_counter_id:create(Namespace, NameBin, weekly, {Year, Week}),
 
     {ok, Pid} = ?MUT:start_link(?STORE_LIB, ID),
 
@@ -445,7 +446,7 @@ fb_test_prometheus_counter_for_weekly_name(Config) ->
                 [
                     {name, kimball_counter_weekly},
                     {help, "Value of event counters"},
-                    {labels, [name, year, week]},
+                    {labels, [kimball_namespace, name, year, week]},
                     {registry, counters}
                 ]
             ]
@@ -461,7 +462,7 @@ fb_test_prometheus_counter_for_weekly_name(Config) ->
             [
                 counters,
                 kimball_counter_weekly,
-                [NameBin, Year, Week],
+                [Namespace, NameBin, Year, Week],
                 1
             ]
         )

@@ -135,7 +135,7 @@ get_basic_tag_counts_analytics_test() ->
 get_date_cohort_tag_counts_analytics_test() ->
     load(),
     Name = <<"feature">>,
-    ID = features_counter_id:create(Name, weekly, {2020, 1}),
+    ID = features_counter_id:create(<<"default">>, Name, weekly, {2020, 1}),
     Count = 4,
     TagCount = 1,
     TagCounts = #{[] => TagCount},

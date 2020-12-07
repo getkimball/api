@@ -60,6 +60,7 @@
 
 -define(COUNTER_CONFIG, feature_counter_config_table).
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
+-define(DEFAULT_NAMESPACE, <<"default">>).
 -define(PROM_COUNTER_NAME, kimball_counters).
 -define(PROM_ADD_DURATION, kimball_event_add_duration_microseconds).
 -define(STORE_LIB_MOD, features_store_lib_s3).
@@ -225,7 +226,7 @@ init([StoreLib]) ->
 %%--------------------------------------------------------------------
 handle_call({add_goal, Goal}, _From, State = #state{goals = Goals}) ->
     % Ensure registration, if it exists, knows that this is a goal
-    IDMatcher = features_counter_id:pattern_matcher_name(Goal),
+    IDMatcher = features_counter_id:pattern_matcher_name(?DEFAULT_NAMESPACE, Goal),
     Matcher = #counter_registration{id = IDMatcher, pid = '_', is_goal = '_'},
     FeatureRegistrations = ets:match_object(?COUNTER_REGISTRY, Matcher),
     SetGoalRegistration = fun(Registration) ->
@@ -318,7 +319,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info(start_global_counter, State) ->
-    ensure_child_started(features_counter_id:global_counter_id()),
+    ensure_child_started(features_counter_id:global_counter_id(?DEFAULT_NAMESPACE)),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -354,14 +355,15 @@ counters_for_event(
     #counter_config{date_cohort = DateCohort},
     {Year, WeekNum}
 ) ->
+    Namespace = ?DEFAULT_NAMESPACE,
     GlobalRegistration = get_registration(
-        features_counter_id:global_counter_id()
+        features_counter_id:global_counter_id(Namespace)
     ),
     FeatureRegistration = get_registration(
-        features_counter_id:create(CounterName)
+        features_counter_id:create(Namespace, CounterName, named)
     ),
 
-    WeekID = features_counter_id:create(CounterName, weekly, {Year, WeekNum}),
+    WeekID = features_counter_id:create(Namespace, CounterName, weekly, {Year, WeekNum}),
     DateCohortRegistrations =
         case DateCohort of
             undefined -> [];
@@ -448,7 +450,7 @@ named_counters_for_key(Key) ->
             false -> AccIn
         end
     end,
-    IDMatcher = features_counter_id:pattern_matcher_type(named),
+    IDMatcher = features_counter_id:pattern_matcher_type(?DEFAULT_NAMESPACE, named),
     Matcher = #counter_registration{id = IDMatcher, pid = '_', is_goal = '_'},
     InternalCounters = ets:match_object(?COUNTER_REGISTRY, Matcher),
 

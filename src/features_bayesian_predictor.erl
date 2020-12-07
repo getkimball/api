@@ -11,7 +11,7 @@ bayes(BGivenA, A, B) ->
 for_goal_counts() ->
     CountMap = features_count_router:count_map(),
     GoalCounts = maps:filter(fun filter_goals_with_tagged_events/2, CountMap),
-    GlobalCounterId = features_counter_id:global_counter_id(),
+    GlobalCounterId = features_counter_id:global_counter_id(<<"default">>),
     #{GlobalCounterId := #{count := GlobalCount}} = CountMap,
 
     CalcFun = fun(

@@ -32,7 +32,7 @@ goal_predictions() ->
     GoalName = <<"goal_1">>,
     GoalID = features_counter_id:create(GoalName),
 
-    GlobalCounterID = features_counter_id:global_counter_id(),
+    GlobalCounterID = features_counter_id:global_counter_id(<<"default">>),
 
     CountMap = #{
         FeatureID => #{count => 2, single_tag_counts => #{}},
