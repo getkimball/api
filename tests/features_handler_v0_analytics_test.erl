@@ -19,7 +19,7 @@ load() ->
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
     ok = meck:expect(features_count_router, add, ['_'], ok),
-    ok = meck:expect(features_count_router, add, ['_', '_', '_'], ok),
+    ok = meck:expect(features_count_router, add, ['_', '_', '_', '_'], ok),
 
     ok.
 
@@ -247,7 +247,12 @@ save_analytic_event_test() ->
 
     ?assertEqual(
         1,
-        meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal => false}])
+        meck:num_calls(features_count_router, add, [
+            <<"default">>,
+            EventName,
+            UserID,
+            #{ensure_goal => false}
+        ])
     ),
 
     unload().
@@ -268,7 +273,12 @@ save_analytic_event_dont_ensure_goal_test() ->
 
     ?assertEqual(
         1,
-        meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal => false}])
+        meck:num_calls(features_count_router, add, [
+            <<"default">>,
+            EventName,
+            UserID,
+            #{ensure_goal => false}
+        ])
     ),
 
     unload().
@@ -289,7 +299,12 @@ save_analytic_event_ensure_goal_test() ->
 
     ?assertEqual(
         1,
-        meck:num_calls(features_count_router, add, [EventName, UserID, #{ensure_goal => true}])
+        meck:num_calls(features_count_router, add, [
+            <<"default">>,
+            EventName,
+            UserID,
+            #{ensure_goal => true}
+        ])
     ),
 
     unload().
@@ -311,9 +326,9 @@ save_multiple_analytic_events_test() ->
     ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
     Expected = [
-        {EventName, UserID, #{ensure_goal => false}},
-        {EventName, UserID, #{ensure_goal => false}},
-        {EventName, UserID, #{ensure_goal => true}}
+        {<<"default">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"default">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"default">>, EventName, UserID, #{ensure_goal => true}}
     ],
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
@@ -335,9 +350,9 @@ save_list_multiple_analytic_events_test() ->
     ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
 
     Expected = [
-        {EventName, UserID, #{ensure_goal => false}},
-        {EventName, UserID, #{ensure_goal => false}},
-        {EventName, UserID, #{ensure_goal => true}}
+        {<<"default">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"default">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"default">>, EventName, UserID, #{ensure_goal => true}}
     ],
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
@@ -488,4 +503,7 @@ non_matching_event_of_multiple_events_test() ->
 assert_added(Event, UserID, Opts, Num) ->
     io:format("features_count_router history: ~p~n", [meck:history(features_count_router)]),
 
-    ?assertEqual(Num, meck:num_calls(features_count_router, add, [Event, UserID, Opts])).
+    ?assertEqual(
+        Num,
+        meck:num_calls(features_count_router, add, [<<"default">>, Event, UserID, Opts])
+    ).

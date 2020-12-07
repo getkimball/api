@@ -118,7 +118,7 @@ ab_test_existing_counter(Config) ->
     ?MUT:register_counter(CounterID, Pid),
 
     % Used for syncronization / processing messages
-    ?MUT:goals(),
+    ?MUT:goals(<<"default">>),
 
     ?MUT:add(Feature, User),
 
@@ -138,7 +138,7 @@ ac_test_new_counter_as_goal(Config) ->
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
     User = <<"user_id">>,
 
-    ?MUT:add(Feature, User, #{ensure_goal => true}),
+    ?MUT:add(<<"default">>, Feature, User, #{ensure_goal => true}),
 
     Spec = spec_for_feature(Feature),
 
@@ -157,11 +157,11 @@ ad_test_existing_counter_as_goal(Config) ->
 
     User = <<"user_id">>,
 
-    ?MUT:add(Feature, User, #{ensure_goal => true}),
+    ?MUT:add(<<"default">>, Feature, User, #{ensure_goal => true}),
     ?MUT:register_counter(CounterID, Pid),
 
     % Used for syncronization / processing messages
-    ?MUT:goals(),
+    ?MUT:goals(<<"default">>),
 
     io:format("Calls ~p~n", [meck:history(?COUNTER_MOD)]),
     ?MUT:add(Feature, User),
@@ -184,7 +184,7 @@ ae_test_new_counter_as_explictely_not_ensuring_goal(Config) ->
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
     User = <<"user_id">>,
 
-    ?MUT:add(Feature, User, #{ensure_goal => false}),
+    ?MUT:add(<<"default">>, Feature, User, #{ensure_goal => false}),
 
     Spec = spec_for_feature(Feature),
 
@@ -201,13 +201,13 @@ af_test_existing_counter_as_existing_goal(Config) ->
 
     User = <<"user_id">>,
 
-    ?MUT:add_goal(Feature),
+    ?MUT:add_goal(<<"default">>, Feature),
     ?MUT:register_counter(CounterID, Pid),
     % Used for syncronization / processing messages
-    ?MUT:goals(),
-    ?MUT:add(Feature, User, #{ensure_goal => true}),
+    ?MUT:goals(<<"default">>),
+    ?MUT:add(<<"default">>, Feature, User, #{ensure_goal => true}),
     % Used for syncronization / processing messages
-    ?MUT:goals(),
+    ?MUT:goals(<<"default">>),
 
     ExpectedOtherCounters = [],
 
@@ -237,8 +237,8 @@ ah_test_multiple_counts_added_at_once(Config) ->
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, Pid}),
 
     Adds = [
-        {<<"event_1">>, <<"user_1">>, #{}},
-        {<<"event_2">>, <<"user_2">>, #{ensure_goal => true}}
+        {<<"default">>, <<"event_1">>, <<"user_1">>, #{}},
+        {<<"default">>, <<"event_2">>, <<"user_2">>, #{ensure_goal => true}}
     ],
 
     ?MUT:add(Adds),
@@ -262,7 +262,7 @@ ba_test_counter_counts(Config) ->
     ?MUT:register_counter(CounterID, Pid),
 
     % Run to synchronize/handle all messages
-    ?MUT:goals(),
+    ?MUT:goals(<<"default">>),
 
     Counts = ?MUT:counts(),
 
@@ -277,7 +277,7 @@ bb_test_counter_pids(Config) ->
     ?MUT:register_counter(CounterID, Pid),
 
     % Run to synchronize/handle all messages
-    ?MUT:goals(),
+    ?MUT:goals(<<"default">>),
 
     Pids = ?MUT:counter_pids(),
 
@@ -296,7 +296,7 @@ bc_test_counter_count_map(Config) ->
     ?MUT:register_counter(CounterID, Pid),
 
     % Run to synchronize/handle all messages
-    ?MUT:goals(),
+    ?MUT:goals(<<"default">>),
 
     Counts = ?MUT:count_map(),
 
@@ -408,8 +408,8 @@ cd_test_weekly_cohort_counter_created_and_added_again(Config) ->
 da_test_new_goal(Config) ->
     Goal = <<"goal_name">>,
 
-    ?MUT:add_goal(Goal),
-    Goals = ?MUT:goals(),
+    ?MUT:add_goal(<<"default">>, Goal),
+    Goals = ?MUT:goals(<<"default">>),
 
     ExpectedGoals = [Goal],
 
@@ -431,14 +431,14 @@ db_test_existing_goal(Config) ->
     Config1 = [{pid, Pid} | Config],
 
     meck:wait(features_store_lib, get, '_', 1000),
-    Goals = ?MUT:goals(),
+    Goals = ?MUT:goals(<<"default">>),
 
     ExpectedGoals = [Goal],
 
     ?assertEqual(ExpectedGoals, Goals),
 
     % Ensure that this doesn't write to the store again when adding the goal again
-    ?MUT:add_goal(Goal),
+    ?MUT:add_goal(<<"default">>, Goal),
     ?assertError(not_found, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Config1.
@@ -483,7 +483,7 @@ ea_test_triggering_a_goal(Config) ->
     ?MUT:register_counter(GoalCounterID, GoalCounterPid),
     ?MUT:register_counter(WeeklyGoalCounterID, WeeklyGoalCounterPid),
 
-    ?MUT:add_goal(GoalFeature),
+    ?MUT:add_goal(<<"default">>, GoalFeature),
 
     meck:expect(?COUNTER_MOD, add, ['_', '_', '_'], ok),
     meck:expect(?COUNTER_MOD, add, ['_', '_', '_', '_'], ok),
@@ -501,7 +501,7 @@ ea_test_triggering_a_goal(Config) ->
         {[WeeklyGoalCounterPid], #{count => 1, tag_counts => #{[NonGoalFeature] => 1}}}
     ]),
     % synchronize call
-    _Goals = ?MUT:goals(),
+    _Goals = ?MUT:goals(<<"default">>),
 
     ?MUT:add(NonGoalFeature, User),
     ?MUT:add(GoalFeature, User),
@@ -563,10 +563,10 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
     ?MUT:register_counter(GlobalCounterID, GlobalCounterPid),
     ?MUT:register_counter(NonGoalCounterID, NonGoalCounterPid),
 
-    ?MUT:add_goal(GoalFeature),
+    ?MUT:add_goal(<<"default">>, GoalFeature),
 
     % synchronize call
-    _Goals0 = ?MUT:goals(),
+    _Goals0 = ?MUT:goals(<<"default">>),
 
     ?MUT:register_counter(GoalCounterID, GoalCounterPid),
 
@@ -584,13 +584,13 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
         {[GoalCounterPid], #{count => 1, tag_counts => #{[NonGoalFeature] => 1}}}
     ]),
     % synchronize call
-    _Goals1 = ?MUT:goals(),
+    _Goals1 = ?MUT:goals(<<"default">>),
 
     ?MUT:add(NonGoalFeature, User),
     ?MUT:add(GoalFeature, User),
 
     % synchronize call
-    _Goals2 = ?MUT:goals(),
+    _Goals2 = ?MUT:goals(<<"default">>),
 
     Counts = ?MUT:counts(),
 
@@ -644,7 +644,7 @@ ga_test_with_value(Config) ->
     Value = 1,
     User = <<"user_id">>,
 
-    ?MUT:add(Feature, User, #{ensure_goal => true, value => Value}),
+    ?MUT:add(<<"default">>, Feature, User, #{ensure_goal => true, value => Value}),
 
     Spec = spec_for_feature(Feature),
 

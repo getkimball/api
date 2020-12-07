@@ -19,7 +19,7 @@ load() ->
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
     ok = meck:expect(features_count_router, add, ['_', '_'], ok),
-    ok = meck:expect(features_count_router, add_goal, ['_'], ok),
+    ok = meck:expect(features_count_router, add_goal, ['_', '_'], ok),
 
     ok.
 
@@ -47,7 +47,7 @@ setup_test() ->
 get_goals_test() ->
     load(),
     Goal = <<"test_goal">>,
-    ok = meck:expect(features_count_router, goals, [], [Goal]),
+    ok = meck:expect(features_count_router, goals, ['_'], [Goal]),
 
     ExpectedData = #{<<"goals">> => [Goal]},
 
@@ -83,6 +83,6 @@ save_goal_event_test() ->
 
     ?CTH:http_post(?MUT, #{}, PostReq, 204, no_body),
 
-    ?assertEqual(EventName, meck:capture(first, features_count_router, add_goal, '_', 1)),
+    ?assertEqual(EventName, meck:capture(first, features_count_router, add_goal, '_', 2)),
 
     unload().

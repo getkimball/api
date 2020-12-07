@@ -171,7 +171,7 @@ handle_req(
     Body,
     State = #{analytics_event_mod := AnalyticsEventMod}
 ) ->
-    {EventName, UserID, Opts} = build_event_call(Body),
+    {Namespace, EventName, UserID, Opts} = build_event_call(Body),
 
     ?LOG_DEBUG(#{
         what => "Analytic event",
@@ -180,7 +180,7 @@ handle_req(
         event_name => EventName
     }),
 
-    AnalyticsEventMod:add(EventName, UserID, Opts),
+    AnalyticsEventMod:add(Namespace, EventName, UserID, Opts),
 
     {Req, 204, <<"">>, State};
 handle_req(Req = #{method := <<"GET">>}, Params, Body, State) ->
@@ -252,4 +252,4 @@ build_event_call(#{
         ensure_goal => EnsureGoal,
         value => Value
     },
-    {EventName, UserID, Opts}.
+    {<<"default">>, EventName, UserID, Opts}.

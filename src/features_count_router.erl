@@ -28,12 +28,12 @@
 -export([
     add/1,
     add/2,
-    add/3,
-    add_goal/1,
+    add/4,
+    add_goal/2,
     counts/0,
     count_map/0,
     counter_pids/0,
-    goals/0,
+    goals/1,
     register_counter/2
 ]).
 
@@ -81,28 +81,28 @@ start_link(StoreLib) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [StoreLib], []).
 
 add(Items) when is_list(Items) ->
-    [add(C, K, O) || {C, K, O} <- Items],
+    [add(NS, C, K, O) || {NS, C, K, O} <- Items],
     ok.
 
 add(CounterName, Key) ->
-    add(CounterName, Key, #{}).
+    add(?DEFAULT_NAMESPACE, CounterName, Key, #{}).
 
-add(CounterName, Key, Opts = #{ensure_goal := false}) ->
+add(Namespace, CounterName, Key, Opts = #{ensure_goal := false}) ->
     Opts2 = maps:remove(ensure_goal, Opts),
-    add(CounterName, Key, Opts2);
-add(CounterName, Key, Opts = #{ensure_goal := true}) ->
-    ensure_goal(CounterName),
+    add(Namespace, CounterName, Key, Opts2);
+add(Namespace, CounterName, Key, Opts = #{ensure_goal := true}) ->
+    ensure_goal(Namespace, CounterName),
     Opts2 = maps:remove(ensure_goal, Opts),
-    add(CounterName, Key, Opts2);
-add(CounterName, Key, Opts) ->
+    add(Namespace, CounterName, Key, Opts2);
+add(Namespace, CounterName, Key, Opts) ->
     Start = erlang:monotonic_time(microsecond),
     Value = maps:get(value, Opts, undefined),
     YearWeekNum = calendar:iso_week_number(),
 
     CounterConfig = counter_config_for_name(CounterName),
-    Counters = counters_for_event(CounterName, CounterConfig, YearWeekNum),
+    Counters = counters_for_event(Namespace, CounterName, CounterConfig, YearWeekNum),
     StartAndAdd = fun(CounterRegistration) ->
-        ensure_started_and_add(CounterRegistration, Key, Value)
+        ensure_started_and_add(Namespace, CounterRegistration, Key, Value)
     end,
     ok = lists:foreach(StartAndAdd, Counters),
 
@@ -112,21 +112,21 @@ add(CounterName, Key, Opts) ->
     prometheus_summary:observe(?PROM_ADD_DURATION, Duration),
     ok.
 
-ensure_goal(Goal) ->
+ensure_goal(Namespace, Goal) ->
     CR = ets:lookup(?COUNTER_REGISTRY, Goal),
     case CR of
         [#counter_registration{is_goal = true}] -> ok;
-        _ -> add_goal(Goal)
+        _ -> add_goal(Namespace, Goal)
     end.
 
-add_goal(Goal) ->
-    gen_server:call(?MODULE, {add_goal, Goal}).
+add_goal(Namespace, Goal) ->
+    gen_server:call(?MODULE, {add_goal, Namespace, Goal}).
 
-is_goal(Goal) ->
-    gen_server:call(?MODULE, {is_goal, Goal}).
+is_goal(CounterID) ->
+    gen_server:call(?MODULE, {is_goal, CounterID}).
 
-goals() ->
-    gen_server:call(?MODULE, goals).
+goals(Namespace) ->
+    gen_server:call(?MODULE, {goals, Namespace}).
 
 register_counter(CounterID, Pid) ->
     gen_server:cast(?MODULE, {register_counter, CounterID, Pid}).
@@ -224,8 +224,9 @@ init([StoreLib]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({add_goal, Goal}, _From, State = #state{goals = Goals}) ->
+handle_call({add_goal, _Namespace, Goal}, _From, State = #state{goals = Goals}) ->
     % Ensure registration, if it exists, knows that this is a goal
+    % TODO: Namespace this
     IDMatcher = features_counter_id:pattern_matcher_name(?DEFAULT_NAMESPACE, Goal),
     Matcher = #counter_registration{id = IDMatcher, pid = '_', is_goal = '_'},
     FeatureRegistrations = ets:match_object(?COUNTER_REGISTRY, Matcher),
@@ -251,7 +252,8 @@ handle_call({is_goal, CounterID}, _From, State = #state{goals = Goals}) ->
     Name = features_counter_id:name(CounterID),
     Reply = lists:member(Name, Goals),
     {reply, Reply, State};
-handle_call(goals, _From, State = #state{goals = Goals}) ->
+handle_call({goals, _Namespace}, _From, State = #state{goals = Goals}) ->
+    % TODO: Namespace this
     Reply = Goals,
     {reply, Reply, State}.
 
@@ -351,11 +353,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 counters_for_event(
+    Namespace,
     CounterName,
     #counter_config{date_cohort = DateCohort},
     {Year, WeekNum}
 ) ->
-    Namespace = ?DEFAULT_NAMESPACE,
     GlobalRegistration = get_registration(
         features_counter_id:global_counter_id(Namespace)
     ),
@@ -415,6 +417,7 @@ ensure_child_started(CounterID) ->
     Pid.
 
 ensure_started_and_add(
+    Namespace,
     CR = #counter_registration{id = CounterID, pid = undefined},
     Key,
     Value
@@ -422,19 +425,21 @@ ensure_started_and_add(
     Pid = ensure_child_started(CounterID),
     IsGoal = is_goal(CounterID),
     R = CR#counter_registration{pid = Pid, is_goal = IsGoal},
-    ensure_started_and_add(R, Key, Value);
+    ensure_started_and_add(Namespace, R, Key, Value);
 ensure_started_and_add(
+    _Namespace,
     #counter_registration{pid = Pid, is_goal = false},
     Key,
     Value
 ) ->
     ok = features_counter:add(Key, Value, Pid);
 ensure_started_and_add(
+    Namespace,
     #counter_registration{pid = Pid, is_goal = true},
     Key,
     Value
 ) ->
-    OtherCounters = named_counters_for_key(Key),
+    OtherCounters = named_counters_for_key(Namespace, Key),
     ok = features_counter:add(Key, OtherCounters, Value, Pid).
 
 get_registration(CounterID) ->
@@ -443,14 +448,14 @@ get_registration(CounterID) ->
         [R] -> R
     end.
 
-named_counters_for_key(Key) ->
+named_counters_for_key(Namespace, Key) ->
     F = fun(#counter_registration{id = CounterID, pid = Pid}, AccIn) ->
         case features_counter:includes_key(Key, Pid) of
             true -> [counter_id_to_tag(CounterID) | AccIn];
             false -> AccIn
         end
     end,
-    IDMatcher = features_counter_id:pattern_matcher_type(?DEFAULT_NAMESPACE, named),
+    IDMatcher = features_counter_id:pattern_matcher_type(Namespace, named),
     Matcher = #counter_registration{id = IDMatcher, pid = '_', is_goal = '_'},
     InternalCounters = ets:match_object(?COUNTER_REGISTRY, Matcher),
 

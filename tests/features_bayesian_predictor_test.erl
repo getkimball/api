@@ -8,7 +8,6 @@ load() ->
     ok = meck:new(features_count_router),
     ok = meck:expect(features_count_router, counts, [], #{}),
     ok = meck:expect(features_count_router, add, ['_', '_'], ok),
-    ok = meck:expect(features_count_router, add_goal, ['_'], ok),
 
     ok.
 

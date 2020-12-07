@@ -95,7 +95,7 @@ handle_req(
     _Body = undefined,
     #{analytics_event_mod := features_count_router}
 ) ->
-    Goals = features_count_router:goals(),
+    Goals = features_count_router:goals(<<"default">>),
     Data = #{<<"goals">> => Goals},
     ?LOG_DEBUG(#{
         what => "Goal Events",
@@ -124,7 +124,7 @@ handle_req(
         what => "Goal event",
         goal_name => GoalName
     }),
-    features_count_router:add_goal(GoalName),
+    features_count_router:add_goal(<<"default">>, GoalName),
 
     {Req, 204, <<"">>, State}.
 
