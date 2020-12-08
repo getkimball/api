@@ -34,8 +34,10 @@ groups() ->
             cd_test_weekly_cohort_counter_created_and_added_again,
             da_test_new_goal,
             db_test_existing_goal,
+            dc_test_goals_are_namespaced,
             ea_test_triggering_a_goal,
             eb_test_triggering_a_goal_registered_after_goal_added,
+            ec_test_triggering_a_goal_from_another_namespace,
             fa_test_event_no_persistence,
             ga_test_with_value
         ]}
@@ -500,9 +502,10 @@ da_test_new_goal(Config) ->
     ?MUT:add_goal(<<"default">>, Goal),
     Goals = ?MUT:goals(<<"default">>),
 
+    ExpectedStoredGoals = #{<<"default">> => #{Goal => undefined}},
     ExpectedGoals = [Goal],
 
-    ExpectedData = expected_stored_data(#{goals => ExpectedGoals}),
+    ExpectedData = expected_stored_data(#{goals => ExpectedStoredGoals}),
     ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
 
     ?assertEqual(ExpectedGoals, Goals),
@@ -512,7 +515,7 @@ da_test_new_goal(Config) ->
 db_test_existing_goal(Config) ->
     StoreLibState = ?config(store_lib_state, Config),
     Goal = <<"feature_name">>,
-    StoredData = #{goals => [Goal]},
+    StoredData = #{goals => #{<<"default">> => #{Goal => undefined}}},
 
     meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
 
@@ -531,6 +534,28 @@ db_test_existing_goal(Config) ->
     ?assertError(not_found, meck:capture(first, features_store_lib, store, '_', 1)),
 
     Config1.
+
+dc_test_goals_are_namespaced(Config) ->
+    Goal1 = <<"goal1">>,
+    Goal2 = <<"goal2">>,
+
+    ?MUT:add_goal(<<"default">>, Goal1),
+    ?MUT:add_goal(Goal2, Goal2),
+    Goals1 = ?MUT:goals(<<"default">>),
+    Goals2 = ?MUT:goals(Goal2),
+
+    ExpectedStoredGoals = #{
+        <<"default">> => #{Goal1 => undefined},
+        Goal2 => #{Goal2 => undefined}
+    },
+
+    ExpectedData = expected_stored_data(#{goals => ExpectedStoredGoals}),
+    ?assertEqual(ExpectedData, meck:capture(last, features_store_lib, store, '_', 1)),
+
+    ?assertEqual([Goal1], Goals1),
+    ?assertEqual([Goal2], Goals2),
+
+    Config.
 
 ea_test_triggering_a_goal(Config) ->
     CounterConfig = #{date_cohort => weekly},
@@ -704,6 +729,89 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
 
     Config.
 
+ec_test_triggering_a_goal_from_another_namespace(Config) ->
+    User = <<"user_id">>,
+
+    NonGoalFeature = <<"non_goal">>,
+    GoalFeature = <<"goal">>,
+
+    GlobalCounterPid = erlang:list_to_pid("<0.0.0>"),
+    NSGlobalCounterPid = erlang:list_to_pid("<0.1.0>"),
+    NonGoalCounterPid = erlang:list_to_pid("<0.0.1>"),
+    GoalCounterPid = erlang:list_to_pid("<0.0.2>"),
+
+    GlobalCounterID = features_counter_id:global_counter_id(<<"default">>),
+    NSGlobalCounterID = features_counter_id:global_counter_id(<<"not default">>),
+    NonGoalCounterID = features_counter_id:create(NonGoalFeature),
+    GoalCounterID = features_counter_id:create(<<"not default">>, GoalFeature, named),
+
+    meck:expect(
+        supervisor,
+        start_child,
+        [features_counter_sup, '_'],
+        meck:raise(error, should_not_hit_this)
+    ),
+
+    ?MUT:register_counter(GlobalCounterID, GlobalCounterPid),
+    ?MUT:register_counter(NSGlobalCounterID, NSGlobalCounterPid),
+    ?MUT:register_counter(NonGoalCounterID, NonGoalCounterPid),
+    ?MUT:register_counter(GoalCounterID, GoalCounterPid),
+
+    ?MUT:add_goal(<<"not default">>, GoalFeature),
+
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_'], ok),
+    meck:expect(?COUNTER_MOD, add, ['_', '_', '_', '_'], ok),
+    meck:expect(?COUNTER_MOD, includes_key, [
+        {['_', NonGoalCounterPid], true},
+        {['_', GlobalCounterPid], true},
+        {['_', GoalCounterPid], false}
+    ]),
+
+    meck:expect(?COUNTER_MOD, count, [
+        {[NonGoalCounterPid], #{count => 1, tag_counts => #{[] => 1}}},
+        {[GlobalCounterPid], #{count => 1, tag_counts => #{[] => 1}}},
+        {[NSGlobalCounterPid], #{count => 1, tag_counts => #{[] => 1}}},
+        {[GoalCounterPid], #{count => 1, tag_counts => #{[] => 1}}}
+    ]),
+    % synchronize call
+    _Goals = ?MUT:goals(<<"default">>),
+
+    ?MUT:add(NonGoalFeature, User),
+    ?MUT:add(<<"not default">>, GoalFeature, User, #{}),
+
+    Counts = ?MUT:counts(<<"default">>),
+    NamespaceCounts = ?MUT:counts(<<"not default">>),
+
+    io:format("Adds ~p~n", [meck:history(?COUNTER_MOD)]),
+    ExpectedEvents = lists:sort([]),
+    ?assertEqual(User, meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], 1)),
+    ?assertEqual(
+        ExpectedEvents,
+        lists:sort(meck:capture(first, ?COUNTER_MOD, add, ['_', '_', '_', GoalCounterPid], 2))
+    ),
+
+    ExpectedCounts = [
+        #{count => 1, id => NonGoalCounterID, tag_counts => #{[] => 1}},
+        #{count => 1, id => GlobalCounterID, tag_counts => #{[] => 1}}
+    ],
+
+    ExpectedNamespaceCounts = [
+        #{count => 1, id => NSGlobalCounterID, tag_counts => #{[] => 1}},
+        #{count => 1, id => GoalCounterID, tag_counts => #{[] => 1}}
+    ],
+
+    ?assertEqual(
+        lists:sort(ExpectedCounts),
+        lists:sort(Counts)
+    ),
+
+    ?assertEqual(
+        lists:sort(ExpectedNamespaceCounts),
+        lists:sort(NamespaceCounts)
+    ),
+
+    Config.
+
 fa_test_event_no_persistence(Config) ->
     Feature = <<"feature_name">>,
     CounterPid = self(),
@@ -747,7 +855,7 @@ ga_test_with_value(Config) ->
 expected_stored_data(Data) ->
     #{
         counters => maps:get(counters, Data, []),
-        goals => maps:get(goals, Data, [])
+        goals => maps:get(goals, Data, #{})
     }.
 
 spec_for_feature(Feature) when is_binary(Feature) ->

@@ -234,10 +234,9 @@ init([StoreLib]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({add_goal, _Namespace, Goal}, _From, State = #state{goals = Goals}) ->
+handle_call({add_goal, Namespace, Goal}, _From, State = #state{goals = Goals}) ->
     % Ensure registration, if it exists, knows that this is a goal
-    % TODO: Namespace this
-    IDMatcher = features_counter_id:pattern_matcher_name(?DEFAULT_NAMESPACE, Goal),
+    IDMatcher = features_counter_id:pattern_matcher_name(Namespace, Goal),
     Matcher = #counter_registration{id = IDMatcher, pid = '_', is_goal = '_'},
     FeatureRegistrations = ets:match_object(?COUNTER_REGISTRY, Matcher),
     SetGoalRegistration = fun(Registration) ->
@@ -245,26 +244,31 @@ handle_call({add_goal, _Namespace, Goal}, _From, State = #state{goals = Goals}) 
         true = ets:insert(?COUNTER_REGISTRY, NewRegistration)
     end,
 
+    % Update existing registrations
     lists:foreach(SetGoalRegistration, FeatureRegistrations),
 
-    % Include the goal in our internal list, then persist
+    % Include the goal in our internal map, then persist
+    NamespaceGoals = maps:get(Namespace, Goals, #{}),
     State1 =
-        case lists:member(Goal, Goals) of
+        case maps:is_key(Goal, NamespaceGoals) of
             true ->
                 State;
             false ->
-                Goals1 = [Goal | Goals],
+                NamespaceGoals1 = NamespaceGoals#{Goal => undefined},
+                Goals1 = Goals#{Namespace => NamespaceGoals1},
                 persist_state(State#state{goals = Goals1})
         end,
     Reply = ok,
     {reply, Reply, State1};
 handle_call({is_goal, CounterID}, _From, State = #state{goals = Goals}) ->
+    Namespace = features_counter_id:namespace(CounterID),
     Name = features_counter_id:name(CounterID),
-    Reply = lists:member(Name, Goals),
+    NamespaceGoals = maps:get(Namespace, Goals, #{}),
+    Reply = maps:is_key(Name, NamespaceGoals),
     {reply, Reply, State};
-handle_call({goals, _Namespace}, _From, State = #state{goals = Goals}) ->
-    % TODO: Namespace this
-    Reply = Goals,
+handle_call({goals, Namespace}, _From, State = #state{goals = Goals}) ->
+    NamespaceGoals = maps:get(Namespace, Goals, #{}),
+    Reply = maps:keys(NamespaceGoals),
     {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -284,7 +288,7 @@ handle_cast(load_or_init, State = #state{store_lib_state = StoreLibState}) ->
             Else -> Else
         end,
     Counters = maps:get(counters, Data, []),
-    Goals = maps:get(goals, Data, []),
+    Goals = maps:get(goals, Data, #{}),
     _Pids = [ensure_child_started(Counter) || Counter <- Counters],
     {noreply, State#state{
         counters = Counters,
@@ -298,8 +302,10 @@ handle_cast(
         goals = Goals
     }
 ) ->
+    Namespace = features_counter_id:namespace(CounterID),
     Name = features_counter_id:name(CounterID),
-    IsGoal = lists:member(Name, Goals),
+    NamespaceGoals = maps:get(Namespace, Goals, #{}),
+    IsGoal = maps:is_key(Name, NamespaceGoals),
     CR = #counter_registration{
         id = CounterID,
         pid = Pid,
