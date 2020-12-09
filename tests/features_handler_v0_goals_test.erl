@@ -89,8 +89,12 @@ get_basic_analytics_in_sidecar_mode_404s() ->
 %   Save goal event
 %%%%
 
-save_goal_event_test() ->
-    load(),
+save_goals_test_() ->
+    {foreach, fun load/0, fun unload/1, [
+        fun save_goal_event/0
+    ]}.
+
+save_goal_event() ->
     EventName = <<"event_name">>,
     Doc = #{
         goal_name => EventName
@@ -100,6 +104,4 @@ save_goal_event_test() ->
 
     ?CTH:http_post(?MUT, #{}, PostReq, 204, no_body),
 
-    ?assertEqual(EventName, meck:capture(first, features_count_router, add_goal, '_', 2)),
-
-    unload().
+    ?assertEqual(EventName, meck:capture(first, features_count_router, add_goal, '_', 2)).
