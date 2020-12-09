@@ -49,6 +49,7 @@ setup_test() ->
 get_goals_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun get_goals/0,
+        fun get_namespaced_goals/0,
         fun get_basic_analytics_in_sidecar_mode_404s/0
     ]}.
 
@@ -62,6 +63,20 @@ get_goals() ->
     State = #{analytics_event_mod => features_count_router},
 
     ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_namespaced_goals() ->
+    Goal = <<"test_goal">>,
+    Namespace = <<"test namespace">>,
+    ok = meck:expect(features_count_router, goals, [Namespace], [Goal]),
+
+    ExpectedData = #{<<"goals">> => [Goal]},
+
+    Req = ?CTH:req(get, [{<<"namespace">>, Namespace}]),
+    State = #{analytics_event_mod => features_count_router},
+
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+
+    test_utils:assertNCalls(1, features_count_router, goals, [Namespace]).
 
 get_basic_analytics_in_sidecar_mode_404s() ->
     Req = ?CTH:req(),

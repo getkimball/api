@@ -16,6 +16,19 @@ trails() ->
             operationId => getGoals,
             tags => ["Analytics"],
             description => "Gets event goals",
+            parameters => [
+                #{
+                    name => namespace,
+                    description =>
+                        <<"Namespace of events">>,
+                    in => query,
+                    schema => #{
+                        type => string,
+                        default => <<"default">>
+                    },
+                    required => false
+                }
+            ],
             responses => #{
                 200 => #{
                     description => <<"Event Goals">>,
@@ -91,11 +104,12 @@ init(Req, Opts) ->
 
 handle_req(
     Req = #{method := <<"GET">>},
-    _Params,
+    Params,
     _Body = undefined,
     #{analytics_event_mod := features_count_router}
 ) ->
-    Goals = features_count_router:goals(<<"default">>),
+    Namespace = proplists:get_value(namespace, Params),
+    Goals = features_count_router:goals(Namespace),
     Data = #{<<"goals">> => Goals},
     ?LOG_DEBUG(#{
         what => "Goal Events",
