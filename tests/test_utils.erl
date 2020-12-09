@@ -3,10 +3,15 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -export([
+    assertNCalls/4,
     defaulted_feature_spec/2,
     meck_load_prometheus/0,
     meck_unload_prometheus/0
 ]).
+
+assertNCalls(Num, Mod, Fun, Args) ->
+    io:format("Mod calls ~p: ~p~n", [Mod, meck:history(Mod)]),
+    ?assertEqual(Num, meck:num_calls(Mod, Fun, Args)).
 
 defaulted_feature_spec(Name, Spec) ->
     Default = #{

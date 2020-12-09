@@ -120,7 +120,7 @@ get_namespaced_analytics() ->
     State = #{analytics_event_mod => features_count_router},
     ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
 
-    assertNCalls(1, features_count_router, counts, [Namespace]).
+    test_utils:assertNCalls(1, features_count_router, counts, [Namespace]).
 
 get_basic_analytics_in_sidecar_mode_404s() ->
     Req = ?CTH:req(),
@@ -416,7 +416,7 @@ save_multiple_analytic_events_with_namespaces() ->
         {<<"ns2">>, EventName, UserID, #{ensure_goal => true}}
     ],
 
-    assertNCalls(1, features_count_router, add, [Expected]).
+    test_utils:assertNCalls(1, features_count_router, add, [Expected]).
 
 save_list_multiple_analytic_events() ->
     EventName = <<"event_name">>,
@@ -458,7 +458,7 @@ save_list_multiple_analytic_events_with_namespaces() ->
         {<<"ns2">>, EventName, UserID, #{ensure_goal => true}}
     ],
 
-    assertNCalls(1, features_count_router, add, [Expected]).
+    test_utils:assertNCalls(1, features_count_router, add, [Expected]).
 
 value_test_() ->
     {foreach, fun load/0, fun unload/1, [
@@ -608,7 +608,3 @@ assert_added(Event, UserID, Opts, Num) ->
         Num,
         meck:num_calls(features_count_router, add, [<<"default">>, Event, UserID, Opts])
     ).
-
-assertNCalls(Num, Mod, Fun, Args) ->
-    io:format("Mod calls ~p: ~p~n", [Mod, meck:history(Mod)]),
-    ?assertEqual(Num, meck:num_calls(Mod, Fun, Args)).
