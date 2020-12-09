@@ -230,8 +230,16 @@ get_tag_counts_analytics_test() ->
 %   Save analytic event
 %%%%
 
-save_analytic_event_test() ->
-    load(),
+save_analytic_event_test_() ->
+    {foreach, fun load/0, fun unload/1, [
+        fun save_analytic_event/0,
+        fun save_analytic_event_dont_ensure_goal/0,
+        fun save_analytic_event_ensure_goal/0,
+        fun save_multiple_analytic_events/0,
+        fun save_list_multiple_analytic_events/0
+    ]}.
+
+save_analytic_event() ->
     EventName = <<"event_name">>,
     UserID = <<"user_id">>,
     Doc = #{
@@ -253,12 +261,9 @@ save_analytic_event_test() ->
             UserID,
             #{ensure_goal => false}
         ])
-    ),
+    ).
 
-    unload().
-
-save_analytic_event_dont_ensure_goal_test() ->
-    load(),
+save_analytic_event_dont_ensure_goal() ->
     EventName = <<"event_name">>,
     UserID = <<"user_id">>,
     Doc = #{
@@ -279,12 +284,9 @@ save_analytic_event_dont_ensure_goal_test() ->
             UserID,
             #{ensure_goal => false}
         ])
-    ),
+    ).
 
-    unload().
-
-save_analytic_event_ensure_goal_test() ->
-    load(),
+save_analytic_event_ensure_goal() ->
     EventName = <<"event_name">>,
     UserID = <<"user_id">>,
     Doc = #{
@@ -305,12 +307,9 @@ save_analytic_event_ensure_goal_test() ->
             UserID,
             #{ensure_goal => true}
         ])
-    ),
+    ).
 
-    unload().
-
-save_multiple_analytic_events_test() ->
-    load(),
+save_multiple_analytic_events() ->
     EventName = <<"event_name">>,
     UserID = <<"user_id">>,
     Doc = #{
@@ -331,12 +330,9 @@ save_multiple_analytic_events_test() ->
         {<<"default">>, EventName, UserID, #{ensure_goal => true}}
     ],
 
-    ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
+    ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])).
 
-    unload().
-
-save_list_multiple_analytic_events_test() ->
-    load(),
+save_list_multiple_analytic_events() ->
     EventName = <<"event_name">>,
     UserID = <<"user_id">>,
     Doc = [
@@ -355,9 +351,7 @@ save_list_multiple_analytic_events_test() ->
         {<<"default">>, EventName, UserID, #{ensure_goal => true}}
     ],
 
-    ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])),
-
-    unload().
+    ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])).
 
 value_test_() ->
     {foreach, fun load/0, fun unload/1, [
