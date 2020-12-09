@@ -22,6 +22,9 @@ load() ->
 
     ok.
 
+unload(_) ->
+    unload().
+
 unload() ->
     ?assert(meck:validate(features_count_router)),
     ok = meck:unload(features_count_router),
@@ -43,8 +46,13 @@ setup_test() ->
 %   Get goals from router
 %%%%
 
-get_goals_test() ->
-    load(),
+get_goals_test_() ->
+    {foreach, fun load/0, fun unload/1, [
+        fun get_goals/0,
+        fun get_basic_analytics_in_sidecar_mode_404s/0
+    ]}.
+
+get_goals() ->
     Goal = <<"test_goal">>,
     ok = meck:expect(features_count_router, goals, ['_'], [Goal]),
 
@@ -53,19 +61,14 @@ get_goals_test() ->
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
 
-    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
 
-    unload().
-
-get_basic_analytics_in_sidecar_mode_404s_test() ->
-    load(),
+get_basic_analytics_in_sidecar_mode_404s() ->
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_relay},
     ExpectedData = #{<<"error">> => #{<<"what">> => <<"Daemonset cannot GET goals">>}},
 
-    ?CTH:http_get(?MUT, State, Req, 404, ExpectedData),
-
-    unload().
+    ?CTH:http_get(?MUT, State, Req, 404, ExpectedData).
 
 %%%%
 %   Save goal event
