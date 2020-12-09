@@ -91,7 +91,8 @@ get_basic_analytics_in_sidecar_mode_404s() ->
 
 save_goals_test_() ->
     {foreach, fun load/0, fun unload/1, [
-        fun save_goal_event/0
+        fun save_goal_event/0,
+        fun save_namespaced_goal_event/0
     ]}.
 
 save_goal_event() ->
@@ -104,4 +105,18 @@ save_goal_event() ->
 
     ?CTH:http_post(?MUT, #{}, PostReq, 204, no_body),
 
-    ?assertEqual(EventName, meck:capture(first, features_count_router, add_goal, '_', 2)).
+    test_utils:assertNCalls(1, features_count_router, add_goal, [<<"default">>, EventName]).
+
+save_namespaced_goal_event() ->
+    EventName = <<"event_name">>,
+    Namespace = <<"test namespace">>,
+    Doc = #{
+        goal_name => EventName,
+        namespace => Namespace
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{}, PostReq, 204, no_body),
+
+    test_utils:assertNCalls(1, features_count_router, add_goal, [Namespace, EventName]).

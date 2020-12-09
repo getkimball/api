@@ -95,6 +95,11 @@ goal_event_input_schema() ->
             goal_name => #{
                 type => string,
                 description => <<"Name of goal event">>
+            },
+            namespace => #{
+                type => string,
+                default => <<"default">>,
+                description => <<"Separate events into distinct namespaces">>
             }
         }
     }.
@@ -131,14 +136,14 @@ handle_req(
 handle_req(
     Req = #{method := <<"POST">>},
     _Params,
-    _Body = #{goal_name := GoalName},
+    _Body = #{namespace := Namespace, goal_name := GoalName},
     State
 ) ->
     ?LOG_DEBUG(#{
         what => "Goal event",
         goal_name => GoalName
     }),
-    features_count_router:add_goal(<<"default">>, GoalName),
+    features_count_router:add_goal(Namespace, GoalName),
 
     {Req, 204, <<"">>, State}.
 
