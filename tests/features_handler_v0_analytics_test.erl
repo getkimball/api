@@ -50,6 +50,7 @@ setup_test() ->
 get_analytics_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun get_basic_analytics/0,
+        fun get_namespaced_analytics/0,
         fun get_basic_analytics_in_sidecar_mode_404s/0,
         fun get_basic_tag_counts_analytics/0,
         fun get_date_cohort_tag_counts_analytics/0,
@@ -86,6 +87,40 @@ get_basic_analytics() ->
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
     ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_namespaced_analytics() ->
+    Feature = <<"feature">>,
+    ID = features_counter_id:create(Feature),
+    Namespace = <<"not default">>,
+    Count = 4,
+    ok = meck:expect(features_count_router, counts, [Namespace], [
+        #{
+            id => ID,
+            count => Count,
+            single_tag_counts => #{},
+            value => #{},
+            tag_counts => #{}
+        }
+    ]),
+
+    ExpectedData = #{
+        <<"counts">> => [
+            #{
+                <<"name">> => Feature,
+                <<"count">> => Count,
+                <<"single_event_counts">> => [],
+                <<"type">> => <<"named">>,
+                <<"value">> => #{},
+                <<"event_counts">> => []
+            }
+        ]
+    },
+
+    Req = ?CTH:req(get, [{<<"namespace">>, Namespace}]),
+    State = #{analytics_event_mod => features_count_router},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+
+    assertNCalls(1, features_count_router, counts, [Namespace]).
 
 get_basic_analytics_in_sidecar_mode_404s() ->
     Req = ?CTH:req(),

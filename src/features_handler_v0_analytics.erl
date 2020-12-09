@@ -18,6 +18,19 @@ trails() ->
             operationId => getAnalytics,
             tags => ["Analytics"],
             description => "Gets features analytics",
+            parameters => [
+                #{
+                    name => namespace,
+                    description =>
+                        <<"Namespace of events">>,
+                    in => query,
+                    schema => #{
+                        type => string,
+                        default => <<"default">>
+                    },
+                    required => false
+                }
+            ],
             responses => #{
                 200 => #{
                     description => <<"Features">>,
@@ -135,11 +148,12 @@ init(Req, Opts) ->
 
 handle_req(
     Req = #{method := <<"GET">>},
-    _Params,
+    Params,
     _Body = undefined,
     #{analytics_event_mod := features_count_router}
 ) ->
-    Counts = features_count_router:counts(<<"default">>),
+    Namespace = proplists:get_value(namespace, Params),
+    Counts = features_count_router:counts(Namespace),
     RenderedCounts = lists:map(fun render_count_map/1, Counts),
     Data = #{<<"counts">> => RenderedCounts},
     ?LOG_DEBUG(#{
