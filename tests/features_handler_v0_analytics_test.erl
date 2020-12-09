@@ -46,9 +46,17 @@ setup_test() ->
 %%%%
 %   Get analytics from router
 %%%%
+%%%
+get_analytics_test_() ->
+    {foreach, fun load/0, fun unload/1, [
+        fun get_basic_analytics/0,
+        fun get_basic_analytics_in_sidecar_mode_404s/0,
+        fun get_basic_tag_counts_analytics/0,
+        fun get_date_cohort_tag_counts_analytics/0,
+        fun get_tag_counts_analytics/0
+    ]}.
 
-get_basic_analytics_test() ->
-    load(),
+get_basic_analytics() ->
     Feature = <<"feature">>,
     ID = features_counter_id:create(Feature),
     Count = 4,
@@ -77,22 +85,16 @@ get_basic_analytics_test() ->
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
-    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
 
-    unload().
-
-get_basic_analytics_in_sidecar_mode_404s_test() ->
-    load(),
+get_basic_analytics_in_sidecar_mode_404s() ->
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_relay},
     ExpectedData = #{<<"error">> => #{<<"what">> => <<"Daemonset cannot GET analytics">>}},
 
-    ?CTH:http_get(?MUT, State, Req, 404, ExpectedData),
+    ?CTH:http_get(?MUT, State, Req, 404, ExpectedData).
 
-    unload().
-
-get_basic_tag_counts_analytics_test() ->
-    load(),
+get_basic_tag_counts_analytics() ->
     Feature = <<"feature">>,
     ID = features_counter_id:create(Feature),
     Count = 4,
@@ -128,12 +130,9 @@ get_basic_tag_counts_analytics_test() ->
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
-    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
 
-    unload().
-
-get_date_cohort_tag_counts_analytics_test() ->
-    load(),
+get_date_cohort_tag_counts_analytics() ->
     Name = <<"feature">>,
     ID = features_counter_id:create(<<"default">>, Name, weekly, {2020, 1}),
     Count = 4,
@@ -169,12 +168,9 @@ get_date_cohort_tag_counts_analytics_test() ->
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
-    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
 
-    unload().
-
-get_tag_counts_analytics_test() ->
-    load(),
+get_tag_counts_analytics() ->
     Feature = <<"feature">>,
     ID = features_counter_id:create(Feature),
     Count = 4,
@@ -222,9 +218,7 @@ get_tag_counts_analytics_test() ->
 
     Req = ?CTH:req(),
     State = #{analytics_event_mod => features_count_router},
-    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
-
-    unload().
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
 
 %%%%
 %   Save analytic event
