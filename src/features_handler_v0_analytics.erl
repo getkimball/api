@@ -94,6 +94,11 @@ analytic_event_input_schema() ->
                 type => string,
                 description => <<"Name of event">>
             },
+            namespace => #{
+                type => string,
+                default => <<"default">>,
+                description => <<"Separate events into distinct namespaces">>
+            },
             user_id => #{
                 type => string,
                 description => <<"ID of the user">>
@@ -240,6 +245,7 @@ render_single_tag_count(Tag, Count, AccIn) ->
 build_event_call(#{
     ensure_goal := EnsureGoalArg,
     event_name := EventName,
+    namespace := Namespace,
     user_id := UserID,
     value := Value
 }) ->
@@ -252,4 +258,4 @@ build_event_call(#{
         ensure_goal => EnsureGoal,
         value => Value
     },
-    {<<"default">>, EventName, UserID, Opts}.
+    {Namespace, EventName, UserID, Opts}.

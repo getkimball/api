@@ -233,10 +233,13 @@ get_tag_counts_analytics_test() ->
 save_analytic_event_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun save_analytic_event/0,
+        fun save_analytic_event_with_namespace/0,
         fun save_analytic_event_dont_ensure_goal/0,
         fun save_analytic_event_ensure_goal/0,
         fun save_multiple_analytic_events/0,
-        fun save_list_multiple_analytic_events/0
+        fun save_multiple_analytic_events_with_namespaces/0,
+        fun save_list_multiple_analytic_events/0,
+        fun save_list_multiple_analytic_events_with_namespaces/0
     ]}.
 
 save_analytic_event() ->
@@ -257,6 +260,32 @@ save_analytic_event() ->
         1,
         meck:num_calls(features_count_router, add, [
             <<"default">>,
+            EventName,
+            UserID,
+            #{ensure_goal => false}
+        ])
+    ).
+
+save_analytic_event_with_namespace() ->
+    EventName = <<"event_name">>,
+    Namespace = <<"test namespace">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        event_name => EventName,
+        namespace => Namespace,
+        user_id => UserID
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
+
+    % features_count_router:add(feature, userid);
+
+    ?assertEqual(
+        1,
+        meck:num_calls(features_count_router, add, [
+            Namespace,
             EventName,
             UserID,
             #{ensure_goal => false}
@@ -332,6 +361,34 @@ save_multiple_analytic_events() ->
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])).
 
+save_multiple_analytic_events_with_namespaces() ->
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = #{
+        events => [
+            #{namespace => <<"ns1">>, event_name => EventName, user_id => UserID},
+            #{event_name => EventName, user_id => UserID, ensure_goal => false},
+            #{
+                namespace => <<"ns2">>,
+                event_name => EventName,
+                user_id => UserID,
+                ensure_goal => true
+            }
+        ]
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
+
+    Expected = [
+        {<<"ns1">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"default">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"ns2">>, EventName, UserID, #{ensure_goal => true}}
+    ],
+
+    assertNCalls(1, features_count_router, add, [Expected]).
+
 save_list_multiple_analytic_events() ->
     EventName = <<"event_name">>,
     UserID = <<"user_id">>,
@@ -352,6 +409,27 @@ save_list_multiple_analytic_events() ->
     ],
 
     ?assertEqual(1, meck:num_calls(features_count_router, add, [Expected])).
+
+save_list_multiple_analytic_events_with_namespaces() ->
+    EventName = <<"event_name">>,
+    UserID = <<"user_id">>,
+    Doc = [
+        #{event_name => EventName, user_id => UserID},
+        #{namespace => <<"ns1">>, event_name => EventName, user_id => UserID, ensure_goal => false},
+        #{namespace => <<"ns2">>, event_name => EventName, user_id => UserID, ensure_goal => true}
+    ],
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
+
+    Expected = [
+        {<<"default">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"ns1">>, EventName, UserID, #{ensure_goal => false}},
+        {<<"ns2">>, EventName, UserID, #{ensure_goal => true}}
+    ],
+
+    assertNCalls(1, features_count_router, add, [Expected]).
 
 value_test_() ->
     {foreach, fun load/0, fun unload/1, [
@@ -501,3 +579,7 @@ assert_added(Event, UserID, Opts, Num) ->
         Num,
         meck:num_calls(features_count_router, add, [<<"default">>, Event, UserID, Opts])
     ).
+
+assertNCalls(Num, Mod, Fun, Args) ->
+    io:format("Mod calls ~p: ~p~n", [Mod, meck:history(Mod)]),
+    ?assertEqual(Num, meck:num_calls(Mod, Fun, Args)).

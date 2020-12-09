@@ -297,7 +297,9 @@ match_schema(Schema = #{properties := Properties}, Data) when is_map(Data) ->
     Fun = fun(K, PropSpec, AccIn) ->
         % Data in from jsx will be binaries, not atoms
         KBin = erlang:atom_to_binary(K, utf8),
-        DataValue = maps:get(KBin, Data, undefined),
+        io:format("Match ~p~n", [{K, PropSpec, Data}]),
+        DefaultValue = maps:get(default, PropSpec, undefined),
+        DataValue = maps:get(KBin, Data, DefaultValue),
         ValidDataValue = validate_property_spec(DataValue, PropSpec),
         ok = validate_enum(ValidDataValue, PropSpec),
         maps:put(K, ValidDataValue, AccIn)
