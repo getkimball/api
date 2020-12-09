@@ -18,6 +18,19 @@ trails() ->
             operationId => getAnalytics,
             tags => ["Analytics"],
             description => "Gets features analytics",
+            parameters => [
+                #{
+                    name => namespace,
+                    description =>
+                        <<"Namespace of events">>,
+                    in => query,
+                    schema => #{
+                        type => string,
+                        default => <<"default">>
+                    },
+                    required => false
+                }
+            ],
             responses => #{
                 200 => #{
                     description => <<"Bayesian predictions">>,
@@ -60,11 +73,12 @@ init(Req, Opts) ->
 
 handle_req(
     Req = #{method := <<"GET">>},
-    _Params,
+    Params,
     _Body = undefined,
     State
 ) ->
-    Predictions = features_bayesian_predictor:for_goal_counts(<<"default">>),
+    Namespace = proplists:get_value(namespace, Params),
+    Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
     RenderedPredictions = maps:map(
         fun render_bayes_as_predictions/2,
         Predictions
