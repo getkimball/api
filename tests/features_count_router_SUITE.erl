@@ -39,7 +39,8 @@ groups() ->
             eb_test_triggering_a_goal_registered_after_goal_added,
             ec_test_triggering_a_goal_from_another_namespace,
             fa_test_event_no_persistence,
-            ga_test_with_value
+            ga_test_with_value,
+            ha_test_namespaces
         ]}
     ].
 
@@ -849,6 +850,24 @@ ga_test_with_value(Config) ->
 
     ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
     ?assertEqual(1, meck:num_calls(?COUNTER_MOD, add, [User, ExpectedOtherCounters, Value, '_'])),
+
+    Config.
+
+ha_test_namespaces(Config) ->
+    NS1 = <<"default">>,
+    NS2 = <<"not default">>,
+    CID1 = features_counter_id:create(NS1, <<"feature">>, named),
+    CID2 = features_counter_id:create(NS2, <<"feature">>, named),
+    ?MUT:register_counter(CID1, self()),
+    ?MUT:register_counter(CID2, self()),
+
+    % Used for syncronization / processing messages
+    ?MUT:goals(<<"default">>),
+
+    RoutedNamespaces = lists:sort(?MUT:namespaces()),
+    ExpectedNamespaces = lists:sort([NS1, NS2]),
+
+    ?assertEqual(ExpectedNamespaces, RoutedNamespaces),
 
     Config.
 

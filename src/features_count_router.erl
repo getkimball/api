@@ -34,6 +34,7 @@
     count_map/1,
     counter_pids/0,
     goals/1,
+    namespaces/0,
     register_counter/2
 ]).
 
@@ -161,6 +162,16 @@ counter_pids() ->
         [Pid | Acc0]
     end,
     ets:foldl(PidFun, [], ?COUNTER_REGISTRY).
+
+namespaces() ->
+    NSFun = fun(#counter_registration{id = CounterID}, Acc0) ->
+        NS = features_counter_id:namespace(CounterID),
+        case lists:member(NS, Acc0) of
+            true -> Acc0;
+            false -> [NS | Acc0]
+        end
+    end,
+    ets:foldl(NSFun, [], ?COUNTER_REGISTRY).
 
 %%%===================================================================
 %%% gen_server callbacks
