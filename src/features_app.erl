@@ -67,6 +67,7 @@ trails_handlers() ->
         features_handler_v0_features,
         features_handler_v0_feature_specs,
         features_handler_v0_goals,
+        features_handler_v0_namespaces,
         features_handler_v0_predictions,
         cowboy_swagger_handler
     ],
