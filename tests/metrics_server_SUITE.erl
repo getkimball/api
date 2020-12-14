@@ -25,7 +25,7 @@ init_meck(Config) ->
     meck:expect(timer, apply_interval, ['_', '_', '_', '_'], {ok, tref}),
 
     ok = meck:new(features_bayesian_predictor),
-    ok = meck:expect(features_bayesian_predictor, for_goal_counts, [], #{}),
+    ok = meck:expect(features_bayesian_predictor, for_goal_counts, ['_'], #{}),
 
     Config.
 
@@ -76,7 +76,7 @@ ac_test_prediction_metrics(Config) ->
     Predictions = #{
         <<"goal_1">> => #{<<"feature_1">> => 0.5}
     },
-    ok = meck:expect(features_bayesian_predictor, for_goal_counts, [], Predictions),
+    ok = meck:expect(features_bayesian_predictor, for_goal_counts, ['_'], Predictions),
 
     ?MUT:tick(),
 

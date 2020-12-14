@@ -18,6 +18,19 @@ trails() ->
             operationId => getAnalytics,
             tags => ["Analytics"],
             description => "Gets features analytics",
+            parameters => [
+                #{
+                    name => namespace,
+                    description =>
+                        <<"Namespace of events">>,
+                    in => query,
+                    schema => #{
+                        type => string,
+                        default => <<"default">>
+                    },
+                    required => false
+                }
+            ],
             responses => #{
                 200 => #{
                     description => <<"Features">>,
@@ -94,6 +107,11 @@ analytic_event_input_schema() ->
                 type => string,
                 description => <<"Name of event">>
             },
+            namespace => #{
+                type => string,
+                default => <<"default">>,
+                description => <<"Separate events into distinct namespaces">>
+            },
             user_id => #{
                 type => string,
                 description => <<"ID of the user">>
@@ -130,11 +148,12 @@ init(Req, Opts) ->
 
 handle_req(
     Req = #{method := <<"GET">>},
-    _Params,
+    Params,
     _Body = undefined,
     #{analytics_event_mod := features_count_router}
 ) ->
-    Counts = features_count_router:counts(),
+    Namespace = proplists:get_value(namespace, Params),
+    Counts = features_count_router:counts(Namespace),
     RenderedCounts = lists:map(fun render_count_map/1, Counts),
     Data = #{<<"counts">> => RenderedCounts},
     ?LOG_DEBUG(#{
@@ -171,7 +190,7 @@ handle_req(
     Body,
     State = #{analytics_event_mod := AnalyticsEventMod}
 ) ->
-    {EventName, UserID, Opts} = build_event_call(Body),
+    {Namespace, EventName, UserID, Opts} = build_event_call(Body),
 
     ?LOG_DEBUG(#{
         what => "Analytic event",
@@ -180,7 +199,7 @@ handle_req(
         event_name => EventName
     }),
 
-    AnalyticsEventMod:add(EventName, UserID, Opts),
+    AnalyticsEventMod:add(Namespace, EventName, UserID, Opts),
 
     {Req, 204, <<"">>, State};
 handle_req(Req = #{method := <<"GET">>}, Params, Body, State) ->
@@ -240,6 +259,7 @@ render_single_tag_count(Tag, Count, AccIn) ->
 build_event_call(#{
     ensure_goal := EnsureGoalArg,
     event_name := EventName,
+    namespace := Namespace,
     user_id := UserID,
     value := Value
 }) ->
@@ -252,4 +272,4 @@ build_event_call(#{
         ensure_goal => EnsureGoal,
         value => Value
     },
-    {EventName, UserID, Opts}.
+    {Namespace, EventName, UserID, Opts}.

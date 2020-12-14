@@ -54,7 +54,7 @@ read_counter_name_test() ->
     load(),
     Name = <<"test">>,
     ID = features_counter_id:create(Name),
-    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name),
+    ExpectedPath = ?BASE_PATH ++ "/default/" ++ binary_to_list(Name),
 
     Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     DataBin = erlang:term_to_binary(Data),
@@ -74,8 +74,8 @@ read_counter_name_test() ->
 read_counter_name_weekly_test() ->
     load(),
     Name = <<"test">>,
-    ID = features_counter_id:create(Name, weekly, {2020, 1}),
-    ExpectedPath = ?BASE_PATH ++ "/" ++ binary_to_list(Name) ++ "/2020/1",
+    ID = features_counter_id:create(<<"default">>, Name, weekly, {2020, 1}),
+    ExpectedPath = ?BASE_PATH ++ "/default/" ++ binary_to_list(Name) ++ "/2020/1",
 
     Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     DataBin = erlang:term_to_binary(Data),
@@ -117,8 +117,8 @@ read_counter_name_weekly_with_type_test() ->
     load(),
     Name = <<"test">>,
     Type = "type",
-    ID = features_counter_id:create(Name, weekly, {2020, 1}),
-    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/" ++ binary_to_list(Name) ++ "/2020/1",
+    ID = features_counter_id:create(<<"default">>, Name, weekly, {2020, 1}),
+    ExpectedPath = ?BASE_PATH ++ "/" ++ Type ++ "/default/" ++ binary_to_list(Name) ++ "/2020/1",
 
     Data = [#{<<"name">> => <<"name">>, <<"status">> => <<"status">>}],
     DataBin = erlang:term_to_binary(Data),

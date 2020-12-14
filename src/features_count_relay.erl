@@ -12,7 +12,7 @@
 -export([
     add/1,
     add/2,
-    add/3,
+    add/4,
     send/2
 ]).
 
@@ -22,27 +22,29 @@ add(Items) when is_list(Items) ->
     ok.
 
 add(EventName, Key) ->
-    add(EventName, Key, #{}).
+    add(<<"default">>, EventName, Key, #{}).
 
-add(EventName, Key, Opts) when is_binary(EventName), is_integer(Key) ->
+add(Namespace, EventName, Key, Opts) when is_binary(EventName), is_integer(Key) ->
     KeyB = list_to_binary(integer_to_list(Key)),
-    add(EventName, KeyB, Opts);
-add(EventName, Key, Opts) when is_binary(EventName), is_binary(Key) ->
+    add(Namespace, EventName, KeyB, Opts);
+add(Namespace, EventName, Key, Opts) when is_binary(EventName), is_binary(Key) ->
     AnalyticsURL = persistent_term:get({features, analytics_url}),
-    send_event(AnalyticsURL, EventName, Key, Opts),
+    send_event(AnalyticsURL, Namespace, EventName, Key, Opts),
     ok.
 
-send_event(undefined, EventName, Key, Opts) ->
+send_event(undefined, Namespace, EventName, Key, Opts) ->
     ?LOG_INFO(#{
         what => <<"ANALYTICS_HOST not set">>,
         feature_name => EventName,
+        namespace => Namespace,
         user_id => Key,
         opts => Opts
     }),
     ok;
-send_event(URL, EventName, Key, Opts) ->
+send_event(URL, Namespace, EventName, Key, Opts) ->
     Data = #{
         <<"event_name">> => EventName,
+        <<"namespace">> => Namespace,
         <<"user_id">> => Key,
         <<"ensure_goal">> => maps:get(ensure_goal, Opts, false)
     },
@@ -50,6 +52,7 @@ send_event(URL, EventName, Key, Opts) ->
     ?LOG_INFO(#{
         what => <<"count_relay forwarding">>,
         feature_name => EventName,
+        namespace => Namespace,
         user_id => Key,
         opts => Opts
     }),
@@ -109,9 +112,10 @@ send(URL, ReqBody) ->
 
     ok.
 
-event_add_to_api_event({Event, User, Opts}) ->
+event_add_to_api_event({Namespace, Event, User, Opts}) ->
     #{
         <<"event_name">> => Event,
+        <<"namespace">> => Namespace,
         <<"user_id">> => User,
         <<"ensure_goal">> => maps:get(ensure_goal, Opts)
     }.

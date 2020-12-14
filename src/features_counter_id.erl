@@ -4,12 +4,13 @@
 
 -export([
     create/1,
-    create/2,
     create/3,
-    global_counter_id/0,
+    create/4,
+    global_counter_id/1,
     name/1,
-    pattern_matcher_name/1,
-    pattern_matcher_type/1,
+    namespace/1,
+    pattern_matcher_name/2,
+    pattern_matcher_type/2,
     to_file_path/1,
     to_full_name/1,
     to_prometheus_label_keys/1,
@@ -19,41 +20,45 @@
 ]).
 
 -record(id, {
+    namespace :: binary() | '_',
     name :: binary() | '_',
     type :: internal | named | weekly | '_',
     data :: undefined | {integer(), integer()} | '_'
 }).
 
 create(Name) ->
-    create(Name, named).
+    create(<<"default">>, Name, named).
 
-create(Name, internal) ->
-    #id{name = Name, type = internal};
-create(Name, named) ->
-    #id{name = Name, type = named}.
+create(Namespace, Name, internal) ->
+    #id{namespace = Namespace, name = Name, type = internal};
+create(Namespace, Name, named) ->
+    #id{namespace = Namespace, name = Name, type = named}.
 
-create(Name, weekly, {Year, Month}) ->
-    #id{name = Name, type = weekly, data = {Year, Month}}.
+create(Namespace, Name, weekly, {Year, Month}) ->
+    #id{namespace = Namespace, name = Name, type = weekly, data = {Year, Month}}.
 
-global_counter_id() ->
-    create(<<"global_counter">>, internal).
+global_counter_id(Namespace) ->
+    create(Namespace, <<"global_counter">>, internal).
 
 name(#id{name = Name}) ->
     Name.
 
-pattern_matcher_name(Name) ->
-    #id{name = Name, type = '_', data = '_'}.
+namespace(#id{namespace = Namespace}) ->
+    Namespace.
 
-pattern_matcher_type(Type) ->
-    #id{name = '_', type = Type, data = '_'}.
+pattern_matcher_name(Namespace, Name) ->
+    #id{namespace = Namespace, name = Name, type = '_', data = '_'}.
+
+pattern_matcher_type(Namespace, Type) ->
+    #id{namespace = Namespace, name = '_', type = Type, data = '_'}.
 
 type(#id{type = Type}) ->
     Type.
 
-to_file_path(#id{name = Name, type = weekly, data = {Year, Week}}) ->
-    filename:join([Name, integer_to_list(Year), integer_to_list(Week)]);
-to_file_path(#id{name = Name}) ->
-    Name.
+to_file_path(#id{namespace = Namespace, name = Name, type = weekly, data = {Year, Week}}) ->
+    filename:join([Namespace, Name, integer_to_list(Year), integer_to_list(Week)]);
+to_file_path(#id{namespace = Namespace, name = Name}) ->
+    filename:join([Namespace, Name]).
 
 to_full_name(#id{name = Name, type = weekly, data = {Year, Week}}) ->
     YearBin = list_to_binary(integer_to_list(Year)),
@@ -64,14 +69,19 @@ to_full_name(#id{name = Name}) ->
     Name.
 
 to_prometheus_label_keys(#id{type = weekly}) ->
-    [name, year, week];
+    [kimball_namespace, name, year, week];
 to_prometheus_label_keys(#id{}) ->
-    [name].
+    [kimball_namespace, name].
 
-to_prometheus_label_values(#id{name = Name, type = weekly, data = {Year, Week}}) ->
-    [Name, Year, Week];
-to_prometheus_label_values(#id{name = Name}) ->
-    [Name].
+to_prometheus_label_values(#id{
+    namespace = Namespace,
+    name = Name,
+    type = weekly,
+    data = {Year, Week}
+}) ->
+    [Namespace, Name, Year, Week];
+to_prometheus_label_values(#id{namespace = Namespace, name = Name}) ->
+    [Namespace, Name].
 
 to_prometheus_name(#id{type = weekly}) ->
     kimball_counter_weekly;
