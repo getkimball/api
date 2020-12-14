@@ -254,7 +254,8 @@ match_params(
     ],
     Req
 ) ->
-    #{Name := Value} = cowboy_req:match_qs([{Name, [], undefined}], Req),
+    DefaultValue = maps:get(default, Schema, undefined),
+    #{Name := Value} = cowboy_req:match_qs([{Name, [], DefaultValue}], Req),
     Param = validate_property_spec(Value, Schema),
     [{Name, Param} | match_params(T, Req)].
 
@@ -293,6 +294,7 @@ match_schema(Schema = #{properties := Properties}, Data) when is_map(Data) ->
         schema => Schema,
         data => Data
     }),
+
     Required = maps:get(required, Schema, []),
     Fun = fun(K, PropSpec, AccIn) ->
         % Data in from jsx will be binaries, not atoms
