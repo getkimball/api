@@ -1,5 +1,7 @@
 -module(features_bayesian_predictor).
 
+-include_lib("kernel/include/logger.hrl").
+
 -export([
     bayes/3,
     for_goal_counts/1
@@ -11,7 +13,13 @@ bayes(BGivenA, A, B) ->
 for_goal_counts(Namespace) ->
     CountMap = features_count_router:count_map(Namespace),
     GoalCounts = maps:filter(fun filter_goals_with_tagged_events/2, CountMap),
-    GlobalCounterId = features_counter_id:global_counter_id(<<"default">>),
+    GlobalCounterId = features_counter_id:global_counter_id(Namespace),
+
+    ?LOG_DEBUG(#{
+        what => "Prediction data",
+        count_map => CountMap
+    }),
+
     #{GlobalCounterId := #{count := GlobalCount}} = CountMap,
 
     CalcFun = fun(

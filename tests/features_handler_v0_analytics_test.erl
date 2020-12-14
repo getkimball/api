@@ -61,7 +61,7 @@ get_basic_analytics() ->
     Feature = <<"feature">>,
     ID = features_counter_id:create(Feature),
     Count = 4,
-    ok = meck:expect(features_count_router, counts, ['_'], [
+    ok = meck:expect(features_count_router, counts, [<<"default">>], [
         #{
             id => ID,
             count => Count,

@@ -54,7 +54,6 @@ namespacess_return_schema() ->
         }
     }.
 
-
 init(Req, Opts) ->
     {swagger_specified_handler, Req, Opts}.
 

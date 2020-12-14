@@ -55,7 +55,7 @@ get_goals_test_() ->
 
 get_goals() ->
     Goal = <<"test_goal">>,
-    ok = meck:expect(features_count_router, goals, ['_'], [Goal]),
+    ok = meck:expect(features_count_router, goals, [<<"default">>], [Goal]),
 
     ExpectedData = #{<<"goals">> => [Goal]},
 
