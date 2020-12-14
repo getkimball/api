@@ -1,6 +1,8 @@
 <script>
     import { onMount } from "svelte";
     import { Col,
+             Input,
+             Label,
              Row,
              Table} from "sveltestrap";
 
@@ -9,14 +11,21 @@
     let analytics = [];
     let analyticLookup = {};
     let goals = [];
+    let namespace = "default";
+    let namespaces = ["default"];
     let predictions = {};
 
-    onMount(async () => {
-        const res = await fetch(`v0/analytics`);
-        const json = await res.json();
-        const prediction_res = await fetch(`v0/predictions`);
+    async function update_from_api() {
+        const ns_res = await fetch('v0/namespaces?namespace=' + namespace);
+        const ns_json = await ns_res.json();
+        namespaces = ns_json['namespaces'].sort();
+
+        const analytics_res = await fetch(`v0/analytics?namespace=` + namespace);
+        const analytics_json = await analytics_res.json();
+
+        const prediction_res = await fetch(`v0/predictions?namespace=`+ namespace);
         const prediction_json = await prediction_res.json();
-        analytics = json.counts.sort((a, b) => a.count < b.count)
+        analytics = analytics_json.counts.sort((a, b) => a.count < b.count)
 
         goals = analytics.filter(obj => obj.single_event_counts.length > 0);
 
@@ -33,16 +42,35 @@
         for (goal of goals) {
           predictions[goal.name] = {};
           for (event of goal.single_event_counts) {
-
-            console.log(prediction_json["goals"][goal.name]["events"]);
             predictions[goal.name][event.name] = prediction_json["goals"][goal.name]["events"][event.name]["bayes"];
           }
 
         }
 
+    };
+
+    onMount(async () => {
+        update_from_api();
+
     });
 
+    function namespace_update(ns) {
+        update_from_api();
+
+    }
+    $: namespace_update(namespace);
+
 </script>
+<Row><Col>
+    <Label for="namespaceSelect">Namespace</Label>
+    <Input type="select" name="select" id="namespaceSelect" bind:value={namespace}>
+    {#each namespaces as namespaceItem }
+      <option value={namespaceItem}>{namespaceItem}</option>
+    {/each}
+    </Input>
+
+</Col></Row>
+
 
 <Row>
 
