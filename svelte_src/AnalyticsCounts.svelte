@@ -16,7 +16,7 @@
     let predictions = {};
 
     async function update_from_api() {
-        const ns_res = await fetch('v0/namespaces?namespace=' + namespace);
+        const ns_res = await fetch('v0/namespaces');
         const ns_json = await ns_res.json();
         namespaces = ns_json['namespaces'].sort();
 
