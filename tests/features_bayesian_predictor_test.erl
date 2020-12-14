@@ -50,10 +50,10 @@ goal_predictions() ->
 goal_predictions_namespace() ->
     Namespace = <<"test namespace">>,
     FeatureName = <<"feature_1">>,
-    FeatureID = features_counter_id:create(FeatureName),
+    FeatureID = features_counter_id:create(Namespace, FeatureName, named),
 
     GoalName = <<"goal_1">>,
-    GoalID = features_counter_id:create(GoalName),
+    GoalID = features_counter_id:create(Namespace, GoalName, named),
 
     GlobalCounterID = features_counter_id:global_counter_id(Namespace),
 

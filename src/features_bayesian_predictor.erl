@@ -33,7 +33,7 @@ for_goal_counts(Namespace) ->
         GoalName = features_counter_id:name(GoalID),
 
         TagMapFun = fun(Tag, GoalTagCount) ->
-            TagID = features_counter_id:create(Tag),
+            TagID = features_counter_id:create(Namespace, Tag, named),
             #{TagID := #{count := TagCount}} = CountMap,
             bayes_for_counts(GlobalCount, GoalCount, TagCount, GoalTagCount)
         end,
