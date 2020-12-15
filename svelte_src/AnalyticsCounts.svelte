@@ -27,6 +27,10 @@
         const prediction_json = await prediction_res.json();
         analytics = analytics_json.counts.sort((a, b) => a.count < b.count)
 
+
+        goals = [];
+        predictions = {};
+
         goals = analytics.filter(obj => obj.single_event_counts.length > 0);
 
         analyticLookup = analytics.reduce(function(map, obj) {
@@ -100,8 +104,8 @@
     <Row><Col><h2>Goals</h2></Col></Row>
 
     <Row><Col>
-   {#each goals as analyticItem }
-       <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
+   {#each goals as analyticItem (analyticItem) }
+       <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]} />
    {/each}
     </Col></Row>
 </Col>
