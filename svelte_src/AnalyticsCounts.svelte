@@ -90,9 +90,9 @@
     <tbody>
         {#each analytics as analyticItem }
         <tr>
-        <td>{analyticItem.name}</td>
-        <td>{analyticItem.count}</td>
-
+          <td>{analyticItem.name}</td>
+          <td>{analyticItem.count}</td>
+        </tr>
         {/each}
     </tbody>
     </Table>
