@@ -16,7 +16,7 @@
     let predictions = {};
 
     async function update_from_api() {
-        const ns_res = await fetch('v0/namespaces?namespace=' + namespace);
+        const ns_res = await fetch('v0/namespaces');
         const ns_json = await ns_res.json();
         namespaces = ns_json['namespaces'].sort();
 
@@ -26,6 +26,10 @@
         const prediction_res = await fetch(`v0/predictions?namespace=`+ namespace);
         const prediction_json = await prediction_res.json();
         analytics = analytics_json.counts.sort((a, b) => a.count < b.count)
+
+
+        goals = [];
+        predictions = {};
 
         goals = analytics.filter(obj => obj.single_event_counts.length > 0);
 
@@ -86,9 +90,9 @@
     <tbody>
         {#each analytics as analyticItem }
         <tr>
-        <td>{analyticItem.name}</td>
-        <td>{analyticItem.count}</td>
-
+          <td>{analyticItem.name}</td>
+          <td>{analyticItem.count}</td>
+        </tr>
         {/each}
     </tbody>
     </Table>
@@ -100,8 +104,8 @@
     <Row><Col><h2>Goals</h2></Col></Row>
 
     <Row><Col>
-   {#each goals as analyticItem }
-       <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]}/>
+   {#each goals as analyticItem (analyticItem) }
+       <AnalyticsCountItem item={analyticItem} probabilities={predictions[analyticItem.name]} />
    {/each}
     </Col></Row>
 </Col>

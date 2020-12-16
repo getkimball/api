@@ -49,49 +49,52 @@ RAND_MOD=50
 # Generic example
 
 generic_example () {
+    NS=default
+
     for i in $(seq 1 $END); do
         R=$(( ( RANDOM % $RAND_MOD )  + 1 ))
         echo $i - $R of $RAND_MOD
-        send_event default analytics_post "${i}"
-        send_event_value default value "${i}" 1
+        send_event "${NS}" analytics_post "${i}"
+        send_event_value "${NS}" value "${i}" 1
 
         curl -f -H "content-type: application/json" \
                 -d "{ \"events\": [{\"event_name\": \"multi_submit_1\", \"user_id\": \"$i\"},{\"event_name\": \"multi_submit_2\", \"user_id\": \"$i\"}]}" \
                 "${HOST}/v0/analytics"
 
-        send_event default "step ${R}" ${i}
-        send_goal_event default "analytics_post_goal" "${i}"
-        send_event default "goal" "${i}"
+        send_event "${NS}" "step ${R}" ${i}
+        send_goal_event "${NS}" "analytics_post_goal" "${i}"
+        send_event "${NS}" "goal" "${i}"
 
         if (( RANDOM % 2 )); then
-            send_goal_event default "chance_goal" "${i}"
+            send_goal_event "${NS}" "chance_goal" "${i}"
         fi
 
     done
 }
 
 saas_example() {
+    NS=saas_example
 
     for i in $(seq 1 $END); do
         P=$(( ( RANDOM % 100 )  + 1 ))
         echo "${i}"
 
-        send_event saas_example view_any_page "${i}"
+        send_event "${NS}" view_any_page "${i}"
 
         if [[ $P -le 80 ]]; then
-            send_goal_event saas_example "signup" "${i}"
+            send_goal_event "${NS}" "signup" "${i}"
         fi
 
         if [[ $P -le 75 ]]; then
-            send_goal_event saas_example "login" "${i}"
+            send_goal_event "${NS}" "login" "${i}"
         fi
 
         if [[ $P -le 60 ]]; then
-            send_goal_event saas_example "feature_a" "${i}"
+            send_goal_event "${NS}" "feature_a" "${i}"
         fi
 
         if [[ $P -ge 50 ]]; then
-            send_goal_event saas_example "feature_b" "${i}"
+            send_goal_event "${NS}" "feature_b" "${i}"
         fi
 
     done
@@ -99,6 +102,7 @@ saas_example() {
 
 
 non_user_example() {
+    NS=invoice_example
 
     for i in $(seq 1 $END); do
         P=$(( ( RANDOM % 100 )  + 1 ))
@@ -106,21 +110,21 @@ non_user_example() {
         OTHER=$(( ( RANDOM % 3 )  + 1 ))
         echo "${i}" "${CUSTOMER}" "${OTHER}"
 
-        send_event invoice_example created "${i}"
-        send_event invoice_example "object-type: invoice" "${i}"
-        send_event invoice_example "customer-id: ${CUSTOMER}" "${i}"
+        send_event "${NS}" created "${i}"
+        send_event "${NS}" "object-type: invoice" "${i}"
+        send_event "${NS}" "customer-id: ${CUSTOMER}" "${i}"
 
         if [[ $OTHER = 1 ]]; then
-            send_event invoice_example "status: created" "${i}"
+            send_event "${NS}" "status: created" "${i}"
         fi
         if [[ $OTHER = 2 ]]; then
-            send_event invoice_example "status: created" "${i}"
-            send_event invoice_example "status: sent" "${i}"
+            send_event "${NS}" "status: created" "${i}"
+            send_event "${NS}" "status: sent" "${i}"
         fi
         if [[ $OTHER = 3 ]]; then
-            send_event invoice_example "status: created" "${i}"
-            send_event invoice_example "status: sent" "${i}"
-            send_goal_event invoice_example "status: paid" "${i}"
+            send_event "${NS}" "status: created" "${i}"
+            send_event "${NS}" "status: sent" "${i}"
+            send_goal_event "${NS}" "status: paid" "${i}"
         fi
 
     done
