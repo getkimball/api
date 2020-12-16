@@ -142,7 +142,7 @@
           <br />
           {#if item.single_event_counts.length > 0 }
             <br />
-            {#each events as event }
+            {#each events as event (event) }
                 <Card><CardBody>
                 <Row><Col>{event.name}: </Col></Row>
                 <Row>

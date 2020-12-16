@@ -68,7 +68,7 @@
 <Row><Col>
     <Label for="namespaceSelect">Namespace</Label>
     <Input type="select" name="select" id="namespaceSelect" bind:value={namespace}>
-    {#each namespaces as namespaceItem }
+    {#each namespaces as namespaceItem (namespaceItem) }
       <option value={namespaceItem}>{namespaceItem}</option>
     {/each}
     </Input>
@@ -88,7 +88,7 @@
         <th>Count</th>
     </thead>
     <tbody>
-        {#each analytics as analyticItem }
+        {#each analytics as analyticItem (analyticItem) }
         <tr>
           <td>{analyticItem.name}</td>
           <td>{analyticItem.count}</td>
