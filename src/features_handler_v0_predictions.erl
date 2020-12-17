@@ -40,7 +40,8 @@ trails() ->
                     schema => #{
                         type => string,
                         default => <<"default">>
-                    }
+                    },
+                    required => false
                 }
             ],
             responses => #{
@@ -91,7 +92,8 @@ handle_req(
 ) ->
     Namespace = proplists:get_value(namespace, Params),
     Events = proplists:get_value(event, Params),
-    RenderedPredictions = case Events of
+    RenderedPredictions =
+        case Events of
             [] ->
                 Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
                 RP = maps:map(
@@ -102,7 +104,7 @@ handle_req(
             Else ->
                 Predictions = features_bayesian_predictor:for_events(Namespace, Else),
                 Predictions
-    end,
+        end,
     Data = #{<<"goals">> => RenderedPredictions},
     {Req, 200, Data, State}.
 

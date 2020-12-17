@@ -254,12 +254,14 @@ match_params(
     ],
     Req
 ) ->
+    % Pick the default value to use based on type
     DefaultLookupTable = #{
         string => undefined,
         array => []
     },
-
     #{Type := DefaultDefault} = DefaultLookupTable,
+
+    % Get the value, falling back to a default if needed
     DefaultValue = maps:get(default, Schema, DefaultDefault),
     #{Name := Value} = cowboy_req:match_qs([{Name, [], DefaultValue}], Req),
 
