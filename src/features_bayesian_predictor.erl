@@ -16,29 +16,24 @@ for_events(_Namespace, []) ->
 for_events(Namespace, Events) ->
     GlobalPredictions = for_goal_counts(Namespace),
 
-    % Iterate over all the events and grab predictions for a each goal that has
-    % a prediction for that event. Then accumulate those predictions, taking
-    % just the prediction from one event (for now).
-    EventMFFun = fun(MapEvent, GlobalAccIn) ->
-        % Match event name to the predictions and build a goal => prediction map
-        AccumFun = fun
-            (Goal, #{MapEvent := Prediction}, AccIn) ->
-                AccIn#{Goal => Prediction};
-            (_Goal, _NoMatchPredictions, AccIn) ->
-                AccIn
+    GlobalFun = fun(FoldGoal, FoldPredictions, GoalAccIn) ->
+        % Iterating all predictions, maps goals => #{event => val}
+        PredictionFun = fun(PredictionEvent, PredictionVal, PredictionAccIn) ->
+            % Iterating #{event => val} map, accumulating the #{goal => val} so they can be merged later
+            case lists:member(PredictionEvent, Events) of
+                true ->
+                    PreviousPrediction = maps:get(FoldGoal, PredictionAccIn, 1),
+                    PredictionAccIn#{FoldGoal => PreviousPrediction * PredictionVal};
+                false ->
+                    PredictionAccIn
+            end
         end,
-
-        % Grab predictions for each event
-        EventPredictions = maps:fold(AccumFun, #{}, GlobalPredictions),
-
-        % Merge with predictions from previous events
-        MergedPredictions = maps:merge(GlobalAccIn, EventPredictions),
-
-        {EventPredictions, MergedPredictions}
+        GoalPredictionMap = maps:fold(PredictionFun, #{}, FoldPredictions),
+        maps:merge(GoalAccIn, GoalPredictionMap)
     end,
+    GlobalGoalPredictions = maps:fold(GlobalFun, #{}, GlobalPredictions),
 
-    {_PerEventPredictions, FinalPredictions} = lists:mapfoldl(EventMFFun, #{}, Events),
-    FinalPredictions.
+    GlobalGoalPredictions.
 
 for_goal_counts(Namespace) ->
     CountMap = features_count_router:count_map(Namespace),
