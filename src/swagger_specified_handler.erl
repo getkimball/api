@@ -256,14 +256,14 @@ match_params(
 ) ->
     % Pick the default value to use based on type
     DefaultLookupTable = #{
-        string => undefined,
-        array => []
+        string => {undefined, fun noop/1},
+        array => {[], fun wrap_list_if_needed/1}
     },
-    #{Type := DefaultDefault} = DefaultLookupTable,
+    #{Type := {DefaultDefault, PostFunc}} = DefaultLookupTable,
 
-    % Get the value, falling back to a default if needed
     DefaultValue = maps:get(default, Schema, DefaultDefault),
-    #{Name := Value} = cowboy_req:match_qs([{Name, [], DefaultValue}], Req),
+    #{Name := CowboyValue} = cowboy_req:match_qs([{Name, [], DefaultValue}], Req),
+    Value = PostFunc(CowboyValue),
 
     Param = validate_property_spec(Value, Schema),
     [{Name, Param} | match_params(T, Req)].
@@ -493,3 +493,8 @@ tuples_to_lists([]) ->
 tuples_to_lists([H | T]) when is_tuple(H) ->
     NewH = [element(I, H) || I <- lists:seq(1, tuple_size(H))],
     [NewH | tuples_to_lists(T)].
+
+noop(X) -> X.
+
+wrap_list_if_needed(X) when is_list(X) -> X;
+wrap_list_if_needed(X) -> [X].

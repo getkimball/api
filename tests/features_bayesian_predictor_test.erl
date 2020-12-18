@@ -23,7 +23,9 @@ for_events_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun for_events_empty/0,
         fun for_events_one_match/0,
-        fun for_events_no_match/0,
+        fun for_events_that_is_the_goal/0,
+        fun for_events_that_includes_the_goal/0,
+        fun for_events_not_in_namespace/0,
         fun for_events_multiple/0
     ]}.
 
@@ -121,14 +123,14 @@ for_events_one_match() ->
     ok = meck:expect(features_count_router, count_map, [Namespace], CountMap),
 
     ExpectedPredictions = #{
-        <<"goal_1">> => 0.5
+        GoalName => #{yes => 0.25, no => 0.25}
     },
 
     Predictions = ?MUT:for_events(Namespace, [FeatureName]),
 
     ?assertEqual(ExpectedPredictions, Predictions).
 
-for_events_no_match() ->
+for_events_that_is_the_goal() ->
     Namespace = <<"test namespace">>,
     FeatureName = <<"feature_1">>,
     FeatureID = features_counter_id:create(Namespace, FeatureName, named),
@@ -145,11 +147,60 @@ for_events_no_match() ->
     },
     ok = meck:expect(features_count_router, count_map, [Namespace], CountMap),
 
-    ExpectedPredictions = #{},
+    ExpectedPredictions = #{
+        GoalName => #{note => <<"Submitted events included this goal, no prediction made">>}
+    },
 
-    Predictions = ?MUT:for_events(Namespace, [<<"No match">>]),
+    Predictions = ?MUT:for_events(Namespace, [GoalName]),
 
     ?assertEqual(ExpectedPredictions, Predictions).
+
+for_events_that_includes_the_goal() ->
+    Namespace = <<"test namespace">>,
+    FeatureName = <<"feature_1">>,
+    FeatureID = features_counter_id:create(Namespace, FeatureName, named),
+
+    GoalName = <<"goal_1">>,
+    GoalID = features_counter_id:create(Namespace, GoalName, named),
+
+    GlobalCounterID = features_counter_id:global_counter_id(Namespace),
+
+    CountMap = #{
+        FeatureID => #{count => 2, single_tag_counts => #{}},
+        GoalID => #{count => 4, single_tag_counts => #{FeatureName => 1}},
+        GlobalCounterID => #{count => 6, single_tag_counts => #{}}
+    },
+    ok = meck:expect(features_count_router, count_map, [Namespace], CountMap),
+
+    ExpectedPredictions = #{
+        GoalName => #{note => <<"Submitted events included this goal, no prediction made">>}
+    },
+
+    Predictions = ?MUT:for_events(Namespace, [FeatureName, GoalName]),
+
+    ?assertEqual(ExpectedPredictions, Predictions).
+
+for_events_not_in_namespace() ->
+    Namespace = <<"test namespace">>,
+    FeatureName = <<"feature_1">>,
+    FeatureID = features_counter_id:create(Namespace, FeatureName, named),
+
+    GoalName = <<"goal_1">>,
+    GoalID = features_counter_id:create(Namespace, GoalName, named),
+
+    GlobalCounterID = features_counter_id:global_counter_id(Namespace),
+
+    CountMap = #{
+        FeatureID => #{count => 2, single_tag_counts => #{}},
+        GoalID => #{count => 4, single_tag_counts => #{FeatureName => 1}},
+        GlobalCounterID => #{count => 6, single_tag_counts => #{}}
+    },
+    ok = meck:expect(features_count_router, count_map, [Namespace], CountMap),
+
+    UnknownEvent = <<"No Match">>,
+    ExpectedThrow = {unknown_event, UnknownEvent},
+
+    ?assertThrow(ExpectedThrow, ?MUT:for_events(Namespace, [UnknownEvent])).
 
 for_events_multiple() ->
     Namespace = <<"test namespace">>,
@@ -177,24 +228,27 @@ for_events_multiple() ->
     CountMap = #{
         ERedID => #{count => 5, single_tag_counts => #{}},
         EYellowID => #{count => 5, single_tag_counts => #{}},
-        ESportsID => #{count => 5, single_tag_counts => #{}},
-        ESUVID => #{count => 5, single_tag_counts => #{}},
+        ESportsID => #{count => 6, single_tag_counts => #{}},
+        ESUVID => #{count => 4, single_tag_counts => #{}},
         EDomesticID => #{count => 5, single_tag_counts => #{}},
         EImportedID => #{count => 5, single_tag_counts => #{}},
-        GoalID => #{count => 5, single_tag_counts => #{
-            ERed => 3,
-            EYellow => 2,
-            ESports => 4,
-            ESUV => 1,
-            EDomestic => 2,
-            EImported => 3
-        }},
+        GoalID => #{
+            count => 5,
+            single_tag_counts => #{
+                ERed => 3,
+                EYellow => 2,
+                ESports => 4,
+                ESUV => 1,
+                EDomestic => 2,
+                EImported => 3
+            }
+        },
         GlobalCounterID => #{count => 10, single_tag_counts => #{}}
     },
     ok = meck:expect(features_count_router, count_map, [Namespace], CountMap),
 
     ExpectedPredictions = #{
-        GoalStolen => 0.048
+        GoalStolen => #{yes => 0.048, no => 0.144}
     },
 
     Predictions = ?MUT:for_events(Namespace, [ERed, ESUV, EDomestic]),

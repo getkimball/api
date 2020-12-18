@@ -92,24 +92,36 @@ handle_req(
 ) ->
     Namespace = proplists:get_value(namespace, Params),
     Events = proplists:get_value(event, Params),
-    RenderedPredictions =
-        case Events of
-            [] ->
-                Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
-                RP = maps:map(
-                    fun render_bayes_as_predictions/2,
-                    Predictions
-                ),
-                RP;
-            Else ->
-                Predictions = features_bayesian_predictor:for_events(Namespace, Else),
-                Predictions
+    Resp =
+        try get_predictions(Namespace, Events) of
+            Predictions ->
+                Data = #{<<"goals">> => Predictions},
+                {Req, 200, Data, State}
+        catch
+            {unknown_event, Event} ->
+                Response = #{
+                    error => #{
+                        what => <<"Event is not known in this namespace">>,
+                        event => Event
+                    }
+                },
+                {Req, 400, Response, State}
         end,
-    Data = #{<<"goals">> => RenderedPredictions},
-    {Req, 200, Data, State}.
+    Resp.
 
 post_req(_Response, _State) ->
     ok.
+
+get_predictions(Namespace, []) ->
+    Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
+    RP = maps:map(
+        fun render_bayes_as_predictions/2,
+        Predictions
+    ),
+    RP;
+get_predictions(Namespace, Events) ->
+    Predictions = features_bayesian_predictor:for_events(Namespace, Events),
+    Predictions.
 
 render_bayes_as_predictions(_K, V) ->
     RenderedEvents = maps:map(fun render_events_to_bayes_maps/2, V),
