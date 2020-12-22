@@ -35,7 +35,11 @@ get_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun get_empty_predictions/0,
         fun get_single_prediction/0,
-        fun get_namespaced_prediction/0
+        fun get_namespaced_prediction/0,
+        fun get_event_predictions/0,
+        fun get_event_predictions_multiple_events/0,
+        fun get_namespaced_event_predictions/0,
+        fun get_event_predictions_with_unknown_event/0
     ]}.
 
 get_empty_predictions() ->
@@ -96,3 +100,93 @@ get_namespaced_prediction() ->
     State = #{},
     ?CTH:http_get(?MUT, State, Req, 200, ExpectedData),
     test_utils:assertNCalls(1, features_bayesian_predictor, for_goal_counts, [Namespace]).
+
+get_event_predictions() ->
+    Predictions = #{
+        <<"goal_1">> => 0.5
+    },
+
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [<<"default">>, [<<"foo">>]],
+        Predictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => 0.5
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"event">>, <<"foo">>}]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_event_predictions_multiple_events() ->
+    Predictions = #{
+        <<"goal_1">> => 0.5
+    },
+
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [<<"default">>, [<<"bar">>, <<"foo">>]],
+        Predictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => 0.5
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"event">>, <<"foo">>}, {<<"event">>, <<"bar">>}]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_namespaced_event_predictions() ->
+    Namespace = <<"test namespace">>,
+    Predictions = #{
+        <<"goal_1">> => 0.5
+    },
+
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [Namespace, [<<"bar">>, <<"foo">>]],
+        Predictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => 0.5
+        }
+    },
+
+    Req = ?CTH:req(get, [
+        {<<"namespace">>, Namespace},
+        {<<"event">>, <<"foo">>},
+        {<<"event">>, <<"bar">>}
+    ]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_event_predictions_with_unknown_event() ->
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [<<"default">>, [<<"bar">>, <<"foo">>]],
+        meck:raise(throw, {unknown_event, <<"foo">>})
+    ),
+
+    ExpectedData = #{
+        <<"error">> => #{
+            <<"what">> => <<"Event is not known in this namespace">>,
+            <<"event">> => <<"foo">>
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"event">>, <<"foo">>}, {<<"event">>, <<"bar">>}]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 400, ExpectedData).
