@@ -136,8 +136,10 @@ validate_config_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun validate_empty_config/0,
         fun validate_valid_config/0,
+        fun validate_valid_date_cohort_config/0,
         fun validate_config_missing_keys/0,
-        fun validate_config_invalid_filter/0
+        fun validate_config_invalid_filter/0,
+        fun validate_config_invalid_date_cohort_filter/0
     ]}.
 
 validate_empty_config() ->
@@ -147,6 +149,17 @@ validate_empty_config() ->
 validate_valid_config() ->
     Config = #{
         type => bloom_fixed_size,
+        pattern => ".*",
+        size => 10000
+    },
+    set_filter_initial_config([Config]),
+
+    ?assertEqual(ok, ?MUT:validate_config()).
+
+validate_valid_date_cohort_config() ->
+    Config = #{
+        type => bloom_fixed_size,
+        date_cohort => weekly,
         pattern => ".*",
         size => 10000
     },
@@ -175,7 +188,19 @@ validate_config_invalid_filter() ->
     Error =
         {invalid_bloom_filter_config, Config,
             "Config is missing required keys or size/error proability does not work"},
+    ?assertThrow(Error, ?MUT:validate_config()).
 
+validate_config_invalid_date_cohort_filter() ->
+    Config = #{
+        type => fixed,
+        date_cohort => invalid_type,
+        pattern => ".*",
+        size => 10
+    },
+    set_filter_initial_config([Config]),
+
+    Error =
+        {invalid_bloom_filter_config, Config, "date_cohort must be omitted or `weekly`."},
     ?assertThrow(Error, ?MUT:validate_config()).
 
 set_filter_initial_config(Config) ->

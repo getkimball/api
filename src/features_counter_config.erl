@@ -48,6 +48,12 @@ validate_individual_config(Config) ->
 
 init_filter(undefined) ->
     default_filter();
+init_filter(Config = #{date_cohort := weekly}) ->
+    NewConfig = maps:remove(date_cohort, Config),
+    init_filter(NewConfig);
+init_filter(Config = #{date_cohort := _DateCohort}) ->
+    Msg = "date_cohort must be omitted or `weekly`.",
+    throw({invalid_bloom_filter_config, Config, Msg});
 init_filter(#{type := bloom_scalable, size := Size, error_probability := EP}) ->
     etbloom:sbf(Size, EP);
 init_filter(#{type := bloom_fixed_size, size := Size, error_probability := EP}) ->
