@@ -35,7 +35,8 @@
     counter_pids/0,
     goals/1,
     namespaces/0,
-    register_counter/2
+    register_counter/2,
+    stop_counter/1
 ]).
 
 -record(state, {
@@ -61,6 +62,7 @@
 
 -define(COUNTER_CONFIG, feature_counter_config_table).
 -define(COUNTER_REGISTRY, feature_counter_registry_table).
+-define(COUNTER_SUP, features_counter_sup).
 -define(DEFAULT_NAMESPACE, <<"default">>).
 -define(PROM_COUNTER_NAME, kimball_counters).
 -define(PROM_ADD_DURATION, kimball_event_add_duration_microseconds).
@@ -131,6 +133,9 @@ goals(Namespace) ->
 
 register_counter(CounterID, Pid) ->
     gen_server:cast(?MODULE, {register_counter, CounterID, Pid}).
+
+stop_counter(CounterID) ->
+    gen_server:cast(?MODULE, {stop_counter, CounterID}).
 
 counts(Namespace) ->
     CountFun = fun(#counter_registration{id = CounterID, pid = Pid}, Acc0) ->
@@ -334,6 +339,12 @@ handle_cast(
     update_prom_ets_counter(?COUNTER_REGISTRY, ?PROM_COUNTER_NAME),
 
     {noreply, State1};
+handle_cast({stop_counter, CounterID}, State = #state{counters = _Counters}) ->
+    ID = supervisor_child_id_for_counter_id(CounterID),
+    ok = supervisor:terminate_child(?COUNTER_SUP, ID),
+    ok = supervisor:delete_child(?COUNTER_SUP, ID),
+    true = ets:delete(?COUNTER_REGISTRY, CounterID),
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -427,10 +438,10 @@ ensure_child_started(CounterID) ->
         counter_id => CounterID
     }),
     Spec = #{
-        id => {features_counter, CounterID},
+        id => supervisor_child_id_for_counter_id(CounterID),
         start => {features_counter, start_link, [StoreLibMod, CounterID]}
     },
-    StartInfo = supervisor:start_child(features_counter_sup, Spec),
+    StartInfo = supervisor:start_child(?COUNTER_SUP, Spec),
     ?LOG_DEBUG(#{
         what => "Ensure Starting info",
         counter_id => CounterID,
@@ -492,6 +503,9 @@ named_counters_for_key(Namespace, Key) ->
 counter_id_to_tag(ID) ->
     Name = features_counter_id:name(ID),
     Name.
+
+supervisor_child_id_for_counter_id(CounterID) ->
+    {features_counter, CounterID}.
 
 pid_from_child_start({_, Pid}) when is_pid(Pid) ->
     Pid;
