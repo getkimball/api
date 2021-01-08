@@ -339,12 +339,29 @@ handle_cast(
     update_prom_ets_counter(?COUNTER_REGISTRY, ?PROM_COUNTER_NAME),
 
     {noreply, State1};
-handle_cast({stop_counter, CounterID}, State = #state{counters = _Counters}) ->
+handle_cast({stop_counter, CounterID}, State = #state{counters = Counters}) ->
+    State1 =
+        case lists:member(CounterID, Counters) of
+            false ->
+                State;
+            true ->
+                NewCounters = lists:delete(CounterID, Counters),
+                persist_state(State#state{counters = NewCounters})
+        end,
+    update_prom_ets_counter(?COUNTER_REGISTRY, ?PROM_COUNTER_NAME),
     ID = supervisor_child_id_for_counter_id(CounterID),
-    ok = supervisor:terminate_child(?COUNTER_SUP, ID),
-    ok = supervisor:delete_child(?COUNTER_SUP, ID),
+
+    case supervisor:terminate_child(?COUNTER_SUP, ID) of
+        ok -> ok;
+        {error, not_found} -> ok
+    end,
+    case supervisor:delete_child(?COUNTER_SUP, ID) of
+        ok -> ok;
+        {error, not_found} -> ok
+    end,
+
     true = ets:delete(?COUNTER_REGISTRY, CounterID),
-    {noreply, State};
+    {noreply, State1};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
