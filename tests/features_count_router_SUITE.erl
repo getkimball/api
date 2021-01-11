@@ -40,7 +40,10 @@ groups() ->
             ec_test_triggering_a_goal_from_another_namespace,
             fa_test_event_no_persistence,
             ga_test_with_value,
-            ha_test_namespaces
+            ha_test_namespaces,
+            ia_stop_counter,
+            ib_stop_unregistered_counter,
+            ic_stop_counter_not_found
         ]}
     ].
 
@@ -64,6 +67,8 @@ init_meck(Config) ->
 
     meck:new(supervisor, [unstick]),
     meck:expect(supervisor, start_child, [features_counter_sup, '_'], {ok, self()}),
+    meck:expect(supervisor, terminate_child, [features_counter_sup, '_'], ok),
+    meck:expect(supervisor, delete_child, [features_counter_sup, '_'], ok),
     [{store_lib_state, StoreLibState} | Config].
 
 init_per_testcase(ca_test_start_with_existing_counters, Config) ->
@@ -868,6 +873,89 @@ ha_test_namespaces(Config) ->
     ExpectedNamespaces = lists:sort([NS1, NS2]),
 
     ?assertEqual(ExpectedNamespaces, RoutedNamespaces),
+
+    Config.
+
+ia_stop_counter(Config) ->
+    Namespace = <<"default">>,
+    Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Namespace, Feature, named),
+    Pid = self(),
+
+    ?MUT:register_counter(CounterID, Pid),
+    % Used for syncronization / processing messages
+    ?MUT:goals(Namespace),
+
+    InitialCounts = ?MUT:counts(Namespace),
+    ?assertNotEqual([], InitialCounts),
+
+    ?MUT:stop_counter(CounterID),
+
+    ID = {features_counter, CounterID},
+    meck:wait(supervisor, delete_child, '_', 1000),
+    test_utils:assertNCalls(1, supervisor, terminate_child, [features_counter_sup, ID]),
+    test_utils:assertNCalls(1, supervisor, delete_child, [features_counter_sup, ID]),
+
+    ExpectedData = expected_stored_data(#{counters => [CounterID]}),
+    ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
+
+    CountsAfterStopping = ?MUT:counts(Namespace),
+
+    ?assertEqual([], CountsAfterStopping),
+
+    Config.
+
+ib_stop_unregistered_counter(Config) ->
+    Namespace = <<"default">>,
+    Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Namespace, Feature, named),
+
+    ?MUT:goals(Namespace),
+
+    InitialCounts = ?MUT:counts(Namespace),
+    ?assertEqual([], InitialCounts),
+
+    ?MUT:stop_counter(CounterID),
+
+    ID = {features_counter, CounterID},
+    meck:wait(supervisor, delete_child, '_', 1000),
+    test_utils:assertNCalls(1, supervisor, terminate_child, [features_counter_sup, ID]),
+    test_utils:assertNCalls(1, supervisor, delete_child, [features_counter_sup, ID]),
+
+    CountsAfterStopping = ?MUT:counts(Namespace),
+
+    ?assertEqual([], CountsAfterStopping),
+
+    Config.
+
+ic_stop_counter_not_found(Config) ->
+    Namespace = <<"default">>,
+    Feature = <<"feature_name">>,
+    CounterID = features_counter_id:create(Namespace, Feature, named),
+    Pid = self(),
+    meck:expect(supervisor, terminate_child, [features_counter_sup, '_'], {error, not_found}),
+    meck:expect(supervisor, delete_child, [features_counter_sup, '_'], {error, not_found}),
+
+    ?MUT:register_counter(CounterID, Pid),
+    % Used for syncronization / processing messages
+    ?MUT:goals(Namespace),
+
+    InitialCounts = ?MUT:counts(Namespace),
+    ?assertNotEqual([], InitialCounts),
+
+    ?MUT:stop_counter(CounterID),
+
+    ID = {features_counter, CounterID},
+    meck:wait(supervisor, delete_child, '_', 1000),
+    test_utils:assertNCalls(1, supervisor, terminate_child, [features_counter_sup, ID]),
+    test_utils:assertNCalls(1, supervisor, delete_child, [features_counter_sup, ID]),
+
+    ExpectedData = expected_stored_data(#{counters => [CounterID]}),
+    ?assertEqual(ExpectedData, meck:capture(first, features_store_lib, store, '_', 1)),
+
+    CountsAfterStopping = ?MUT:counts(Namespace),
+
+    ?assertEqual([], CountsAfterStopping),
 
     Config.
 

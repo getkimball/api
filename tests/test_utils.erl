@@ -10,7 +10,7 @@
 ]).
 
 assertNCalls(Num, Mod, Fun, Args) ->
-    io:format("Mod calls ~p: ~p~n", [Mod, meck:history(Mod)]),
+    io:format("Expected ~p~nMod calls ~p: ~p~n", [{Num, Mod, Fun, Args}, Mod, meck:history(Mod)]),
     ?assertEqual(Num, meck:num_calls(Mod, Fun, Args)).
 
 defaulted_feature_spec(Name, Spec) ->
