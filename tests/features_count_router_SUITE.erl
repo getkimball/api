@@ -43,7 +43,8 @@ groups() ->
             ha_test_namespaces,
             ia_stop_counter,
             ib_stop_unregistered_counter,
-            ic_stop_counter_not_found
+            ic_stop_counter_not_found,
+            ja_test_events_for_key
         ]}
     ].
 
@@ -957,6 +958,34 @@ ic_stop_counter_not_found(Config) ->
 
     ?assertEqual([], CountsAfterStopping),
 
+    Config.
+
+ja_test_events_for_key(Config) ->
+    Namespace = <<"default">>,
+    Feature = <<"feature_name">>,
+    User = <<"user_id">>,
+    CounterID1 = features_counter_id:create(Feature),
+    CounterID2 = features_counter_id:create(<<"unused feature">>),
+    CounterID3 = features_counter_id:create(<<"other namespace">>, <<"unused feature">>, named),
+    Pid1 = erlang:list_to_pid("<0.0.0>"),
+    Pid2 = erlang:list_to_pid("<0.0.1>"),
+    Pid3 = erlang:list_to_pid("<0.0.2>"),
+
+    meck:expect(features_counter, includes_key, [
+        {[User, Pid1], true},
+        {[User, Pid2], false}
+    ]),
+
+    ?MUT:register_counter(CounterID1, Pid1),
+    ?MUT:register_counter(CounterID2, Pid2),
+    ?MUT:register_counter(CounterID3, Pid3),
+
+    % Run to synchronize/handle all messages
+    ?MUT:goals(Namespace),
+
+    Events = ?MUT:events_for_key(Namespace, User),
+
+    ?assertEqual([Feature], Events),
     Config.
 
 expected_stored_data(Data) ->
