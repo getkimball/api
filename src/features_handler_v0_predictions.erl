@@ -42,6 +42,16 @@ trails() ->
                         default => <<"default">>
                     },
                     required => false
+                },
+                #{
+                    name => user_id,
+                    description =>
+                        <<"User id to predict goal values">>,
+                    in => query,
+                    schema => #{
+                        type => string
+                    },
+                    required => false
                 }
             ],
             responses => #{
@@ -91,7 +101,9 @@ handle_req(
     State
 ) ->
     Namespace = proplists:get_value(namespace, Params),
-    Events = proplists:get_value(event, Params),
+    RequestedEvents = proplists:get_value(event, Params),
+    RequestedUserID = proplists:get_value(user_id, Params),
+    Events = determine_events_for_predictions(Namespace, RequestedUserID, RequestedEvents),
     Resp =
         try get_predictions(Namespace, Events) of
             Predictions ->
@@ -111,6 +123,16 @@ handle_req(
 
 post_req(_Response, _State) ->
     ok.
+
+%%%
+%%% Internal functions
+%%%
+
+determine_events_for_predictions(Namespace, UserID, []) when is_binary(UserID) ->
+    Events = features_count_router:events_for_key(Namespace, UserID),
+    Events;
+determine_events_for_predictions(_Namespace, _UserID, Events) ->
+    Events.
 
 get_predictions(Namespace, []) ->
     Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
