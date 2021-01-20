@@ -265,11 +265,8 @@ get_namespaced_user_predictions() ->
     ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
 
 get_user_predictions_with_no_events() ->
-    Predictions = #{
-        <<"goal_1">> => 0.5
-    },
     Namespace = <<"default">>,
-    Events = [<<"foo_event">>],
+    Events = [],
     UserID = <<"user_id">>,
 
     ok = meck:expect(
@@ -279,19 +276,13 @@ get_user_predictions_with_no_events() ->
         Events
     ),
 
-    ok = meck:expect(
-        features_bayesian_predictor,
-        for_events,
-        [Namespace, Events],
-        Predictions
-    ),
-
     ExpectedData = #{
-        <<"goals">> => #{
-            <<"goal_1">> => 0.5
+        <<"error">> => #{
+            <<"what">> => <<"No events found for user">>,
+            <<"user">> => UserID
         }
     },
 
     Req = ?CTH:req(get, [{<<"user_id">>, UserID}]),
     State = #{},
-    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+    ?CTH:http_get(?MUT, State, Req, 404, ExpectedData).

@@ -103,9 +103,11 @@ handle_req(
     Namespace = proplists:get_value(namespace, Params),
     RequestedEvents = proplists:get_value(event, Params),
     RequestedUserID = proplists:get_value(user_id, Params),
-    Events = determine_events_for_predictions(Namespace, RequestedUserID, RequestedEvents),
     Resp =
-        try get_predictions(Namespace, Events) of
+        try
+            Events = determine_events_for_predictions(Namespace, RequestedUserID, RequestedEvents),
+            get_predictions(Namespace, Events)
+        of
             Predictions ->
                 Data = #{<<"goals">> => Predictions},
                 {Req, 200, Data, State}
@@ -117,7 +119,15 @@ handle_req(
                         event => Event
                     }
                 },
-                {Req, 400, Response, State}
+                {Req, 400, Response, State};
+            {no_events_for_user, ErrorUser} ->
+                Response = #{
+                    <<"error">> => #{
+                        <<"what">> => <<"No events found for user">>,
+                        <<"user">> => ErrorUser
+                    }
+                },
+                {Req, 404, Response, State}
         end,
     Resp.
 
@@ -130,7 +140,10 @@ post_req(_Response, _State) ->
 
 determine_events_for_predictions(Namespace, UserID, []) when is_binary(UserID) ->
     Events = features_count_router:events_for_key(Namespace, UserID),
-    Events;
+    case Events of
+        [] -> throw({no_events_for_user, UserID});
+        _ -> Events
+    end;
 determine_events_for_predictions(_Namespace, _UserID, Events) ->
     Events.
 
