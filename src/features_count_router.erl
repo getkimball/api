@@ -171,8 +171,11 @@ counter_pids() ->
 
 events_for_key(Namespace, Key) ->
     FoldFun = fun(#counter_registration{id = CounterID, pid = Pid}, Acc0) ->
-        case features_counter_id:namespace(CounterID) of
-            Namespace ->
+        RegistrationNS = features_counter_id:namespace(CounterID),
+        RegistrationType = features_counter_id:type(CounterID),
+
+        case {RegistrationType, RegistrationNS} of
+            {named, Namespace} ->
                 case features_counter:includes_key(Key, Pid) of
                     true ->
                         EventName = features_counter_id:name(CounterID),

@@ -198,7 +198,6 @@ get_event_predictions_with_unknown_event() ->
     State = #{},
     ?CTH:http_get(?MUT, State, Req, 400, ExpectedData).
 
-
 get_user_predictions() ->
     Predictions = #{
         <<"goal_1">> => 0.5
