@@ -45,6 +45,7 @@ get_test_() ->
         fun get_namespaced_event_predictions/0,
         fun get_event_predictions_with_unknown_event/0,
         fun get_user_predictions/0,
+        fun get_user_predictions_with_api_events/0,
         fun get_namespaced_user_predictions/0,
         fun get_user_predictions_with_no_events/0
     ]}.
@@ -228,6 +229,20 @@ get_user_predictions() ->
     Req = ?CTH:req(get, [{<<"user_id">>, UserID}]),
     State = #{},
     ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_user_predictions_with_api_events() ->
+    UserID = <<"user_id">>,
+
+    ExpectedData = #{
+        <<"error">> => #{
+            <<"what">> => <<"user_id and event cannot both be specified">>,
+            <<"user">> => UserID
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"user_id">>, UserID}, {<<"event">>, <<"foo">>}]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 400, ExpectedData).
 
 get_namespaced_user_predictions() ->
     Namespace = <<"test namespace">>,

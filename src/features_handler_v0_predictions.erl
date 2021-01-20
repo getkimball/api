@@ -120,6 +120,14 @@ handle_req(
                     }
                 },
                 {Req, 400, Response, State};
+            {user_id_and_events_specified, ErrorUser} ->
+                Response = #{
+                    <<"error">> => #{
+                        <<"what">> => <<"user_id and event cannot both be specified">>,
+                        <<"user">> => ErrorUser
+                    }
+                },
+                {Req, 400, Response, State};
             {no_events_for_user, ErrorUser} ->
                 Response = #{
                     <<"error">> => #{
@@ -144,6 +152,8 @@ determine_events_for_predictions(Namespace, UserID, []) when is_binary(UserID) -
         [] -> throw({no_events_for_user, UserID});
         _ -> Events
     end;
+determine_events_for_predictions(_Namespace, UserID, _Events) when is_binary(UserID) ->
+    throw({user_id_and_events_specified, UserID});
 determine_events_for_predictions(_Namespace, _UserID, Events) ->
     Events.
 
