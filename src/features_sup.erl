@@ -26,7 +26,7 @@ init([Mode, StoreLib, MetricsOpts]) ->
                 [
                     #{
                         id => features_store,
-                        start => {features_store, start_link, [features_store_lib_configmap]}
+                        start => {features_store, start_link, [StoreLib]}
                     },
                     #{
                         id => features_counter_sup,
@@ -40,7 +40,7 @@ init([Mode, StoreLib, MetricsOpts]) ->
                         id => features_store,
                         start =>
                             {features_store, start_link, [
-                                features_store_lib_file,
+                                StoreLib,
                                 [{refresh_interval, 15000}]
                             ]}
                     }
