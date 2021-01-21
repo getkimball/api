@@ -33,6 +33,7 @@
     counts/1,
     count_map/1,
     counter_pids/0,
+    events_for_key/2,
     goals/1,
     namespaces/0,
     register_counter/2,
@@ -167,6 +168,27 @@ counter_pids() ->
         [Pid | Acc0]
     end,
     ets:foldl(PidFun, [], ?COUNTER_REGISTRY).
+
+events_for_key(Namespace, Key) ->
+    FoldFun = fun(#counter_registration{id = CounterID, pid = Pid}, Acc0) ->
+        RegistrationNS = features_counter_id:namespace(CounterID),
+        RegistrationType = features_counter_id:type(CounterID),
+
+        case {RegistrationType, RegistrationNS} of
+            {named, Namespace} ->
+                case features_counter:includes_key(Key, Pid) of
+                    true ->
+                        EventName = features_counter_id:name(CounterID),
+                        Acc0#{EventName => true};
+                    _ ->
+                        Acc0
+                end;
+            _ ->
+                Acc0
+        end
+    end,
+    EventsMap = ets:foldl(FoldFun, #{}, ?COUNTER_REGISTRY),
+    maps:keys(EventsMap).
 
 namespaces() ->
     NSFun = fun(#counter_registration{id = CounterID}, Acc0) ->

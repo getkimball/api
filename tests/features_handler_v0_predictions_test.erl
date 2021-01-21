@@ -9,12 +9,16 @@ load() ->
     ok = ?CTH:setup(),
 
     ok = meck:new(features_bayesian_predictor),
+    ok = meck:new(features_count_router),
 
     ok.
 
 unload(_) ->
     ?assert(meck:validate(features_bayesian_predictor)),
     ok = meck:unload(features_bayesian_predictor),
+
+    ?assert(meck:validate(features_count_router)),
+    ok = meck:unload(features_count_router),
 
     ok = ?CTH:cleanup(),
     ok.
@@ -39,7 +43,11 @@ get_test_() ->
         fun get_event_predictions/0,
         fun get_event_predictions_multiple_events/0,
         fun get_namespaced_event_predictions/0,
-        fun get_event_predictions_with_unknown_event/0
+        fun get_event_predictions_with_unknown_event/0,
+        fun get_user_predictions/0,
+        fun get_user_predictions_with_api_events/0,
+        fun get_namespaced_user_predictions/0,
+        fun get_user_predictions_with_no_events/0
     ]}.
 
 get_empty_predictions() ->
@@ -190,3 +198,106 @@ get_event_predictions_with_unknown_event() ->
     Req = ?CTH:req(get, [{<<"event">>, <<"foo">>}, {<<"event">>, <<"bar">>}]),
     State = #{},
     ?CTH:http_get(?MUT, State, Req, 400, ExpectedData).
+
+get_user_predictions() ->
+    Predictions = #{
+        <<"goal_1">> => 0.5
+    },
+    Events = [<<"foo_event">>],
+    UserID = <<"user_id">>,
+
+    ok = meck:expect(
+        features_count_router,
+        events_for_key,
+        [<<"default">>, UserID],
+        Events
+    ),
+
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [<<"default">>, Events],
+        Predictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => 0.5
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"user_id">>, UserID}]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_user_predictions_with_api_events() ->
+    UserID = <<"user_id">>,
+
+    ExpectedData = #{
+        <<"error">> => #{
+            <<"what">> => <<"user_id and event cannot both be specified">>,
+            <<"user">> => UserID
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"user_id">>, UserID}, {<<"event">>, <<"foo">>}]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 400, ExpectedData).
+
+get_namespaced_user_predictions() ->
+    Namespace = <<"test namespace">>,
+    Predictions = #{
+        <<"goal_1">> => 0.5
+    },
+    Events = [<<"foo_event">>],
+    UserID = <<"user_id">>,
+
+    ok = meck:expect(
+        features_count_router,
+        events_for_key,
+        [Namespace, UserID],
+        Events
+    ),
+
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [Namespace, Events],
+        Predictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => 0.5
+        }
+    },
+
+    Req = ?CTH:req(get, [
+        {<<"namespace">>, Namespace},
+        {<<"user_id">>, UserID}
+    ]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_user_predictions_with_no_events() ->
+    Namespace = <<"default">>,
+    Events = [],
+    UserID = <<"user_id">>,
+
+    ok = meck:expect(
+        features_count_router,
+        events_for_key,
+        [Namespace, UserID],
+        Events
+    ),
+
+    ExpectedData = #{
+        <<"error">> => #{
+            <<"what">> => <<"No events found for user">>,
+            <<"user">> => UserID
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"user_id">>, UserID}]),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 404, ExpectedData).

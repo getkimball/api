@@ -42,6 +42,16 @@ trails() ->
                         default => <<"default">>
                     },
                     required => false
+                },
+                #{
+                    name => user_id,
+                    description =>
+                        <<"User id to predict goal values">>,
+                    in => query,
+                    schema => #{
+                        type => string
+                    },
+                    required => false
                 }
             ],
             responses => #{
@@ -91,9 +101,13 @@ handle_req(
     State
 ) ->
     Namespace = proplists:get_value(namespace, Params),
-    Events = proplists:get_value(event, Params),
+    RequestedEvents = proplists:get_value(event, Params),
+    RequestedUserID = proplists:get_value(user_id, Params),
     Resp =
-        try get_predictions(Namespace, Events) of
+        try
+            Events = determine_events_for_predictions(Namespace, RequestedUserID, RequestedEvents),
+            get_predictions(Namespace, Events)
+        of
             Predictions ->
                 Data = #{<<"goals">> => Predictions},
                 {Req, 200, Data, State}
@@ -105,12 +119,43 @@ handle_req(
                         event => Event
                     }
                 },
-                {Req, 400, Response, State}
+                {Req, 400, Response, State};
+            {user_id_and_events_specified, ErrorUser} ->
+                Response = #{
+                    <<"error">> => #{
+                        <<"what">> => <<"user_id and event cannot both be specified">>,
+                        <<"user">> => ErrorUser
+                    }
+                },
+                {Req, 400, Response, State};
+            {no_events_for_user, ErrorUser} ->
+                Response = #{
+                    <<"error">> => #{
+                        <<"what">> => <<"No events found for user">>,
+                        <<"user">> => ErrorUser
+                    }
+                },
+                {Req, 404, Response, State}
         end,
     Resp.
 
 post_req(_Response, _State) ->
     ok.
+
+%%%
+%%% Internal functions
+%%%
+
+determine_events_for_predictions(Namespace, UserID, []) when is_binary(UserID) ->
+    Events = features_count_router:events_for_key(Namespace, UserID),
+    case Events of
+        [] -> throw({no_events_for_user, UserID});
+        _ -> Events
+    end;
+determine_events_for_predictions(_Namespace, UserID, _Events) when is_binary(UserID) ->
+    throw({user_id_and_events_specified, UserID});
+determine_events_for_predictions(_Namespace, _UserID, Events) ->
+    Events.
 
 get_predictions(Namespace, []) ->
     Predictions = features_bayesian_predictor:for_goal_counts(Namespace),
