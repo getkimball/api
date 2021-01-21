@@ -129,7 +129,7 @@ init([StoreLib, Opts]) ->
     }}.
 
 init_store_lib(StoreLib) ->
-    features_store_lib:init(StoreLib, "features_store").
+    features_store_lib:init(StoreLib, <<"features_store">>).
 
 %%--------------------------------------------------------------------
 %% @private

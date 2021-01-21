@@ -29,7 +29,7 @@ init_per_testcase(ba_external_store_init, Config) ->
     StoreLibState = make_ref(),
 
     meck:new(features_store_lib),
-    meck:expect(features_store_lib, init, ['_', "features_store"], StoreLibState),
+    meck:expect(features_store_lib, init, ['_', <<"features_store">>], StoreLibState),
 
     meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
@@ -46,7 +46,7 @@ init_per_testcase(_, Config) ->
     StoreLibState = make_ref(),
 
     meck:new(features_store_lib),
-    meck:expect(features_store_lib, init, ['_', "features_store"], StoreLibState),
+    meck:expect(features_store_lib, init, ['_', <<"features_store">>], StoreLibState),
 
     meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
