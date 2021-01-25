@@ -30,6 +30,14 @@ make deps app shell
 make live-js
 ```
 
+## Running locally with Docker
+
+```
+export TAG=kimball
+docker build -t $TAG .
+docker run -v ${PWD}/config/example.config:/kimball/app.config $(PWD)/config/example.config:/kimball/app.config -it -e LOG_LEVEL=debug $TAG
+```
+
 ## Configuration
 
 ### Config file

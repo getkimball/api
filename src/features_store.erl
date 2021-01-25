@@ -129,7 +129,7 @@ init([StoreLib, Opts]) ->
     }}.
 
 init_store_lib(StoreLib) ->
-    features_store_lib:init(StoreLib, "features_store").
+    features_store_lib:init(StoreLib, <<"features_store">>).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -188,7 +188,11 @@ handle_cast(
 ) ->
     {Data, NewStoreLibState} = features_store_lib:get(StoreLibState),
     LoadedState = State#state{store_lib_state = NewStoreLibState},
-    AllFeatures = maps:get(feature_maps, Data, []),
+    AllFeatures =
+        case Data of
+            not_supported -> [];
+            _ -> maps:get(feature_maps, Data, [])
+        end,
     store_features(AllFeatures),
 
     trigger_refresh_get(RefreshInterval),

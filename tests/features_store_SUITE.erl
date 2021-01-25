@@ -21,6 +21,7 @@ groups() ->
             ba_external_store_init,
             bb_external_store_store_data,
             bc_external_store_not_supporting_store,
+            bd_external_store_not_supporting_get,
             ca_write_read_rollout
         ]}
     ].
@@ -29,7 +30,7 @@ init_per_testcase(ba_external_store_init, Config) ->
     StoreLibState = make_ref(),
 
     meck:new(features_store_lib),
-    meck:expect(features_store_lib, init, ['_', "features_store"], StoreLibState),
+    meck:expect(features_store_lib, init, ['_', <<"features_store">>], StoreLibState),
 
     meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
@@ -42,11 +43,18 @@ init_per_testcase(ba_external_store_init, Config) ->
     end),
 
     [{store_lib_state, StoreLibState} | Config];
+init_per_testcase(bd_external_store_not_supporting_get, Config) ->
+    StoreLibState = make_ref(),
+
+    meck:new(features_store_lib),
+    meck:expect(features_store_lib, init, ['_', <<"features_store">>], StoreLibState),
+
+    [{store_lib_state, StoreLibState} | Config];
 init_per_testcase(_, Config) ->
     StoreLibState = make_ref(),
 
     meck:new(features_store_lib),
-    meck:expect(features_store_lib, init, ['_', "features_store"], StoreLibState),
+    meck:expect(features_store_lib, init, ['_', <<"features_store">>], StoreLibState),
 
     meck:expect(features_store_lib, get, fun(Ref) ->
         ?assertEqual(StoreLibState, Ref),
@@ -265,6 +273,23 @@ bc_external_store_not_supporting_store(Config) ->
     ?assertEqual(not_supported, Resp),
 
     Config.
+
+bd_external_store_not_supporting_get(Config) ->
+    StoreLibState = make_ref(),
+    ok = meck:expect(features_store_lib, get, ['_'], {not_supported, StoreLibState}),
+    ok = meck:expect(features_store_lib, store, ['_', '_'], {not_supported, StoreLibState}),
+
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
+    meck:wait(features_store_lib, get, '_', 1000),
+
+    % There isn't a synchronization point as getting features reads from ets,
+    % some sync point should be added instead of sleeping
+    timer:sleep(100),
+    Resp = features_store:get_features(),
+
+    ?assertEqual([], Resp),
+
+    [{pid, Pid} | Config].
 
 ca_write_read_rollout(Config) ->
     Name = <<"feature">>,
