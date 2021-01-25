@@ -7,6 +7,7 @@ RUN npm run build
 FROM erlang:23.0.2 AS builder
 WORKDIR /app/src
 ADD . /app/src
+RUN rm -rf /app/src/deps /app/src/_rel
 
 COPY --from=NODE_BUILDER /app/src/priv/public/ /app/src/priv/public/
 RUN make deps app
