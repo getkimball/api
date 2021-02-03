@@ -10,6 +10,7 @@ DEPS = \
 	eraven \
 	erlcloud \
 	etbloom \
+	grpc_client \
 	hackney \
 	jsx \
 	kuberlnetes \
@@ -36,6 +37,7 @@ dep_eraven = git https://github.com/getkimball/eraven.git 2020-05-20
 dep_erlcloud = git https://github.com/erlcloud/erlcloud.git 3.3.3
 dep_etbloom = git https://github.com/getkimball/etbloom.git 1.0.1
 dep_hackney = hex 1.16.0
+dep_grpc_client = git https://github.com/getkimball/grpc_client.git 20200128
 dep_jesse = git https://github.com/for-GET/jesse.git 1.5.5
 
 # Jiffy is used by other deps, forcing an update here to make R23 compatible.

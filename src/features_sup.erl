@@ -29,6 +29,10 @@ init([Mode, StoreLib, MetricsOpts]) ->
                         start => {features_store, start_link, [StoreLib]}
                     },
                     #{
+                        id => features_grpc_gen_event_forwarder,
+                        start => {features_grpc_gen_event_forwarder, start_link, []}
+                    },
+                    #{
                         id => features_counter_sup,
                         type => supervisor,
                         start => {features_counter_sup, start_link, [StoreLib]}
@@ -48,6 +52,12 @@ init([Mode, StoreLib, MetricsOpts]) ->
         end,
 
     AlwaysProcs = [
+
+                    #{
+                        id => features_grpc_sup,
+                        type => supervisor,
+                        start => {features_grpc_sup, start_link, []}
+                    },
         #{
             id => metrics_server,
             start => {metrics_server, start_link, [MetricsOpts]}

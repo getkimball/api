@@ -114,6 +114,7 @@ add(Namespace, CounterName, Key, Opts) ->
 
     Duration = End - Start,
     prometheus_summary:observe(?PROM_ADD_DURATION, Duration),
+    features_grpc_gen_event_forwarder:notify({Namespace, CounterName, Key}),
     ok.
 
 ensure_goal(Namespace, Goal) ->

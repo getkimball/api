@@ -60,6 +60,9 @@ init_meck(Config) ->
     meck:new(features_counter_config),
     meck:expect(features_counter_config, config_for_counter, ['_', init], undefined),
 
+    meck:new(features_grpc_gen_event_forwarder),
+    meck:expect(features_grpc_gen_event_forwarder, notify, ['_'], undefined),
+
     StoreLibState = {store_lib_state, make_ref()},
     meck:new(features_store_lib),
     meck:expect(features_store_lib, init, ['_', <<"count_router">>], StoreLibState),
@@ -94,6 +97,9 @@ end_per_testcase(_, Config) ->
 
     ?assert(meck:validate(features_counter_config)),
     meck:unload(features_counter_config),
+
+    ?assert(meck:validate(features_grpc_gen_event_forwarder)),
+    meck:unload(features_grpc_gen_event_forwarder),
 
     ?assert(meck:validate(features_store_lib)),
     meck:unload(features_store_lib),

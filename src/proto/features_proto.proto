@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+message KimballEvent {
+  string namespace = 1;
+  string name = 2;
+  string key = 3;
+}
+
+message Response {
+  int32 code =1;
+}
+
+service KimballIntegration {
+
+    rpc EventStream(stream KimballEvent) returns (Response) {}
+
+}

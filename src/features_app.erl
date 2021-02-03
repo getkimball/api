@@ -49,7 +49,9 @@ start(_Type, _Args) ->
     Port = list_to_integer(os:getenv("API_PORT", "8080")),
 
     {ok, _} = cowboy:start_clear(http, [{port, Port}], HTTPOpts),
-    features_sup:start_link(Mode, StoreLib, MetricsOpts).
+    Start = features_sup:start_link(Mode, StoreLib, MetricsOpts),
+    add_grpc_handlers(),
+    Start.
 
 stop(_State) ->
     ok.
@@ -239,3 +241,13 @@ get_features_mode() ->
         "api" -> api_server;
         _ -> api_server
     end.
+
+add_grpc_handlers() ->
+    Targets = application:get_env(features, external_grpc_event_targets, []),
+    lists:foreach(fun add_grpc_handler/1, Targets).
+
+add_grpc_handler({Host, Port}) ->
+    ?LOG_INFO(#{what=>external_grpc_target,
+                host=>Host,
+                port=>Port}),
+    features_grpc_sup:start_relay(Host, Port).
