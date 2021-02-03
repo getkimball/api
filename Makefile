@@ -22,7 +22,7 @@ DEPS = \
 	swaggerl \
 	trails
 
-BUILD_DEPS = version.mk erlfmt
+BUILD_DEPS = version.mk gpb erlfmt
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
