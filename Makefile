@@ -22,13 +22,13 @@ DEPS = \
 	swaggerl \
 	trails
 
-BUILD_DEPS = version.mk sync erlfmt
+BUILD_DEPS = version.mk erlfmt
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
 DIALYZER_DIRS = --src src tests
 
-dep_cortex_remote_write = git https://github.com/getkimball/cortex_remote_write 0.1.4
+dep_cortex_remote_write = git https://github.com/getkimball/cortex_remote_write 0.1.6
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.8.0
 dep_cowboy_swagger = hex 2.2.0
 dep_enenra = git https://github.com/nlfiedler/enenra.git 0.4.1
