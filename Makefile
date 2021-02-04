@@ -61,6 +61,8 @@ DEP_PLUGINS = version.mk
 
 SHELL_OPTS = -eval 'application:ensure_all_started(features).' -config sys +S2
 
+.DEFAULT_GOAL = all
+
 .PHONY: live-js
 live-js:
 	npm run dev
