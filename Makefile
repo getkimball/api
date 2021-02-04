@@ -71,4 +71,10 @@ erlfmt:
 erlfmt_check:
 	$(gen_verbose) $(SHELL_ERL) -pa $(SHELL_PATHS) -eval 'erlfmt_cli:do("erlfmt", [check, {files, ["src/*.erl", "tests/*.erl"]} ]), halt(0)'
 
+.PHONY: proto # TODO, make this more intelligent
+proto:
+	deps/gpb/bin/protoc-erl -modsuffix "_pb" -maps -o-erl src src/proto/*
+
+$(PROJECT).d:: proto
+
 include erlang.mk
