@@ -67,11 +67,6 @@ for_goal_counts(Namespace) ->
     GoalCounts = goal_counts_from_count_map(CountMap),
     GlobalCounterId = features_counter_id:global_counter_id(Namespace),
 
-    ?LOG_DEBUG(#{
-        what => "Prediction data",
-        count_map => CountMap
-    }),
-
     #{GlobalCounterId := #{count := GlobalCount}} = CountMap,
 
     CalcFun = fun(
