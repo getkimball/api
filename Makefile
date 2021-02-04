@@ -22,7 +22,7 @@ DEPS = \
 	swaggerl \
 	trails
 
-BUILD_DEPS = version.mk gpb erlfmt
+BUILD_DEPS = version.mk gpb erlfmt # sync
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
@@ -59,7 +59,7 @@ dep_version.mk = git https://github.com/manifest/version.mk.git v0.2.0
 
 DEP_PLUGINS = version.mk
 
-SHELL_OPTS = -eval 'application:ensure_all_started(features), sync:go().' -config sys +S2
+SHELL_OPTS = -eval 'application:ensure_all_started(features).' -config sys +S2
 
 .PHONY: live-js
 live-js:
