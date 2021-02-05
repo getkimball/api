@@ -10,6 +10,7 @@ DEPS = \
 	eraven \
 	erlcloud \
 	etbloom \
+	grpc_client \
 	hackney \
 	jsx \
 	kuberlnetes \
@@ -21,13 +22,13 @@ DEPS = \
 	swaggerl \
 	trails
 
-BUILD_DEPS = version.mk sync erlfmt
+BUILD_DEPS = version.mk erlfmt # sync
 LOCAL_DEPS = sasl
 TEST_DEPS = meck jesse
 TEST_DIR = tests
 DIALYZER_DIRS = --src src tests
 
-dep_cortex_remote_write = git https://github.com/getkimball/cortex_remote_write 0.1.4
+dep_cortex_remote_write = git https://github.com/getkimball/cortex_remote_write 0.1.7
 dep_cowboy = git https://github.com/ninenines/cowboy.git 2.8.0
 dep_cowboy_swagger = hex 2.2.0
 dep_enenra = git https://github.com/nlfiedler/enenra.git 0.4.1
@@ -36,6 +37,7 @@ dep_eraven = git https://github.com/getkimball/eraven.git 2020-05-20
 dep_erlcloud = git https://github.com/erlcloud/erlcloud.git 3.3.3
 dep_etbloom = git https://github.com/getkimball/etbloom.git 1.0.1
 dep_hackney = hex 1.16.0
+dep_grpc_client = git https://github.com/getkimball/grpc_client.git 20200128
 dep_jesse = git https://github.com/for-GET/jesse.git 1.5.5
 
 # Jiffy is used by other deps, forcing an update here to make R23 compatible.
@@ -57,7 +59,9 @@ dep_version.mk = git https://github.com/manifest/version.mk.git v0.2.0
 
 DEP_PLUGINS = version.mk
 
-SHELL_OPTS = -eval 'application:ensure_all_started(features), sync:go().' -config sys +S2
+SHELL_OPTS = -eval 'application:ensure_all_started(features).' -config sys +S2
+
+.DEFAULT_GOAL = all
 
 .PHONY: live-js
 live-js:
@@ -68,5 +72,11 @@ erlfmt:
 
 erlfmt_check:
 	$(gen_verbose) $(SHELL_ERL) -pa $(SHELL_PATHS) -eval 'erlfmt_cli:do("erlfmt", [check, {files, ["src/*.erl", "tests/*.erl"]} ]), halt(0)'
+
+.PHONY: proto # TODO, make this more intelligent
+proto:
+	deps/gpb/bin/protoc-erl -modsuffix "_pb" -maps -o-erl src src/proto/*
+
+$(PROJECT).d:: proto
 
 include erlang.mk

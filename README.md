@@ -82,6 +82,20 @@ Example
 ]}].
 ```
 
+#### *Experimental* Event forwarding via GRPC Streams
+
+The application can forward event streams via GRPC to external services. This is currently experimental, not well tested, and may incur significant performance concerns.
+
+Proto file available at `src/proto/features_proto.proto`.
+
+Configure such as
+
+```
+[{features, [
+    {external_grpc_event_targets, [{"127.0.0.1", 8079}]}
+]}].
+```
+
 ### Environment variables
 
 * `ADDITIONAL_NAMESPACES` - A comma separated list of namespaces to sync feature config to. This should include any namespaces where you intend to run sidecars
