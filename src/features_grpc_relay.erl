@@ -46,14 +46,14 @@ init([Host, Port]) ->
     try_to_connect(),
     {ok, connecting, #data{host=Host, port=Port}}.
 
-handle_event(cast, connect, connecting, Data=#data{host=Host, port=Port}) ->
+handle_event(cast, connect, State=connecting, Data=#data{host=Host, port=Port}) ->
     NewConnectionStatus = grpc_client:connect(tcp, Host, Port),
     ?LOG_INFO(#{what=>grpc_event_handler,
                 host=>Host,
                 connection_status=>NewConnectionStatus,
                 port=>Port}),
 
-    handle_connect_response(NewConnectionStatus, Data);
+    handle_connect_response(NewConnectionStatus, State, Data);
 
 
 handle_event(cast, connect_stream, connected, Data=#data{host=Host, port=Port, conn=Connection}) ->
@@ -95,14 +95,14 @@ handle_event(info, {'EXIT', _HTTPPid, closed_by_peer}, stream_connected, Data) -
 handle_event(info, {'EXIT', _HTTPPid, _Msg}, connected, Data) ->
     {keep_state, Data#data{event_stream=undefined}}.
 
-handle_connect_response({error, Err}, Data=#data{host=Host, port=Port}) ->
+handle_connect_response({error, Err}, connecting, Data=#data{host=Host, port=Port}) ->
     ?LOG_INFO(#{what => grpc_connection_failed,
                 why => Err,
                 host=>Host,
                 port=>Port}),
             {ok, _TRef} = timer:apply_after(5000, gen_statem, cast, [self(), connect]),
-    {connecting, Data};
-handle_connect_response({ok, Conn}, Data=#data{}) ->
+    {keep_state, Data};
+handle_connect_response({ok, Conn}, connecting, Data=#data{}) ->
     gen_statem:cast(self(), connect_stream),
     {next_state, connected, Data#data{conn=Conn, event_stream=undefined}}.
 
