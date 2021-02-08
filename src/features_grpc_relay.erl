@@ -53,11 +53,8 @@ handle_event(cast, connect, connecting, Data=#data{host=Host, port=Port}) ->
                 connection_status=>NewConnectionStatus,
                 port=>Port}),
 
-    case NewConnectionStatus of
-        {ok, Connection} ->
-            gen_statem:cast(self(), connect_stream),
-            {next_state, connected, Data#data{conn=Connection, event_stream=undefined}}
-    end;
+    handle_connect_response(NewConnectionStatus, Data);
+
 
 handle_event(cast, connect_stream, connected, Data=#data{host=Host, port=Port, conn=Connection}) ->
     NewStreamStatus = grpc_client:new_stream(Connection, 'KimballIntegration', 'EventStream', features_proto_pb),
@@ -90,9 +87,24 @@ handle_event(cast, {notify, {NS, Event, Key}}, stream_connected, Data=#data{even
                 key=>Key}),
     {keep_state, Data};
 
-
-handle_event(info, {'EXIT', _HTTPPid, <<"failed to create stream">>}, connected, Data) ->
+handle_event(info, {'EXIT', _HTTPPid, econnrefused}, _State, Data) ->
+    {next_state, connecting, Data#data{conn=undefined, event_stream=undefined}};
+handle_event(info, {'EXIT', _HTTPPid, closed_by_peer}, stream_connected, Data) ->
+    try_to_connect(),
+    {next_state, connecting, Data#data{conn=undefined, event_stream=undefined}};
+handle_event(info, {'EXIT', _HTTPPid, _Msg}, connected, Data) ->
     {keep_state, Data#data{event_stream=undefined}}.
+
+handle_connect_response({error, Err}, Data=#data{host=Host, port=Port}) ->
+    ?LOG_INFO(#{what => grpc_connection_failed,
+                why => Err,
+                host=>Host,
+                port=>Port}),
+            {ok, _TRef} = timer:apply_after(5000, gen_statem, cast, [self(), connect]),
+    {connecting, Data};
+handle_connect_response({ok, Conn}, Data=#data{}) ->
+    gen_statem:cast(self(), connect_stream),
+    {next_state, connected, Data#data{conn=Conn, event_stream=undefined}}.
 
 try_to_connect() ->
     gen_statem:cast(self(), connect).
