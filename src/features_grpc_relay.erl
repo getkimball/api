@@ -71,7 +71,7 @@ handle_event(cast, connect_stream, connected, Data=#data{host=Host, port=Port, c
     end;
 
 handle_event(cast, {notify, {NS, Event, Key}}, stream_connected, Data=#data{event_stream=ES}) ->
-    ?LOG_INFO(#{what => grpc_event_sending,
+    ?LOG_DEBUG(#{what => grpc_event_sending,
                 event_stream=>ES,
                 namespace => NS,
                 event=>Event,
@@ -80,11 +80,21 @@ handle_event(cast, {notify, {NS, Event, Key}}, stream_connected, Data=#data{even
                                 name=>Event,
                                 key=>Key}),
 
-    ?LOG_INFO(#{what => grpc_event_sent,
+    ?LOG_DEBUG(#{what => grpc_event_sent,
                 event_stream=>ES,
                 namespace => NS,
                 event=>Event,
                 key=>Key}),
+    {keep_state, Data};
+
+handle_event(cast, {notify, {NS, Event, Key}}, _State, Data=#data{host=Host, port=Port}) ->
+    ?LOG_DEBUG(#{what => grpc_stream_missed_event,
+                host=>Host,
+                why => <<"stream not connected">>,
+                namespace => NS,
+                event=>Event,
+                key=>Key,
+                port=>Port}),
     {keep_state, Data};
 
 handle_event(info, {'EXIT', _HTTPPid, econnrefused}, _State, Data) ->
