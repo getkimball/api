@@ -28,8 +28,23 @@ in stdenv.mkDerivation {
                   pinned_pkgs.kubernetes-helm
                   pinned_pkgs.kustomize
                   pinned_pkgs.nodejs-14_x
+
+                  pinned_pkgs.python38
+                  pinned_pkgs.python38Packages.pip
+                  pinned_pkgs.python38Packages.virtualenv
+                  pinned_pkgs.python38Packages.numpy
+                  pinned_pkgs.wget
                 ];
   shellHook = ''
+            set -e
+            alias pip="PIP_PREFIX='$(pwd)/_build/pip_packages' \pip"
+            export PYTHONPATH="$(pwd)/_build/pip_packages/lib/python3.8/site-packages:$PYTHONPATH"
+            unset SOURCE_DATE_EPOCH
+            virtualenv .venv
+            source .venv/bin/activate
+            python3 -m pip install -r pymodels/requirements.txt
+            source .env
+
             npm install
   '';
 
