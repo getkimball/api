@@ -1,0 +1,6 @@
+grpcio-tools
+
+grpcio
+
+scikit-learn
+git+https://github.com/online-ml/river
