@@ -11,6 +11,9 @@ load() ->
     ok = meck:new(features_bayesian_predictor),
     ok = meck:new(features_count_router),
 
+    ok = meck:new(features_grpc_rpc),
+    ok = meck:expect(features_grpc_rpc, predict, ['_', '_'], []),
+
     ok.
 
 unload(_) ->
@@ -19,6 +22,9 @@ unload(_) ->
 
     ?assert(meck:validate(features_count_router)),
     ok = meck:unload(features_count_router),
+
+    ?assert(meck:validate(features_grpc_rpc)),
+    ok = meck:unload(features_grpc_rpc),
 
     ok = ?CTH:cleanup(),
     ok.
@@ -47,7 +53,9 @@ get_test_() ->
         fun get_user_predictions/0,
         fun get_user_predictions_with_api_events/0,
         fun get_namespaced_user_predictions/0,
-        fun get_user_predictions_with_no_events/0
+        fun get_user_predictions_with_no_events/0,
+        fun get_external_predictions_for_events/0,
+        fun get_external_predictions_for_goal_counts/0
     ]}.
 
 get_empty_predictions() ->
@@ -301,3 +309,108 @@ get_user_predictions_with_no_events() ->
     Req = ?CTH:req(get, [{<<"user_id">>, UserID}]),
     State = #{},
     ?CTH:http_get(?MUT, State, Req, 404, ExpectedData).
+
+get_external_predictions_for_events() ->
+    Namespace = <<"default">>,
+    Events = [<<"foo">>],
+    UserID = <<"user_id">>,
+    Predictions = #{
+        <<"goal_1">> => #{
+            <<"yes">> => 0.1,
+            <<"no">> => 0.2
+        }
+    },
+    ExternalPredictions = [
+        #{
+            <<"prediction_name">> => <<"goal_1">>,
+            <<"model_name_yes">> => 0.5,
+            <<"model_name_no">> => 0.25
+        }
+    ],
+
+    ok = meck:expect(
+        features_count_router,
+        events_for_key,
+        [Namespace, UserID],
+        Events
+    ),
+
+    ok = meck:expect(
+        features_bayesian_predictor,
+        for_events,
+        [<<"default">>, [<<"foo">>]],
+        Predictions
+    ),
+
+    ok = meck:expect(
+        features_grpc_rpc,
+        predict,
+        [Namespace, Events],
+        ExternalPredictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => #{
+                <<"model_name_yes">> => 0.5,
+                <<"model_name_no">> => 0.25,
+                <<"yes">> => 0.1,
+                <<"no">> => 0.2
+            }
+        }
+    },
+
+    Req = ?CTH:req(get, [{<<"event">>, <<"foo">>}]),
+
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).
+
+get_external_predictions_for_goal_counts() ->
+    Namespace = <<"default">>,
+    Events = [],
+    UserID = <<"user_id">>,
+    ExternalPredictions = [
+        #{
+            <<"prediction_name">> => <<"goal_1">>,
+            <<"model_name_yes">> => 0.5,
+            <<"model_name_no">> => 0.25
+        }
+    ],
+
+    ok = meck:expect(
+        features_count_router,
+        events_for_key,
+        [Namespace, UserID],
+        Events
+    ),
+
+    Predictions = #{
+        <<"goal_1">> => #{<<"feature_1">> => 0.5}
+    },
+
+    ok = meck:expect(features_bayesian_predictor, for_goal_counts, [Namespace], Predictions),
+
+    ok = meck:expect(
+        features_grpc_rpc,
+        predict,
+        [Namespace, Events],
+        ExternalPredictions
+    ),
+
+    ExpectedData = #{
+        <<"goals">> => #{
+            <<"goal_1">> => #{
+                <<"events">> => #{
+                    <<"feature_1">> => #{
+                        <<"bayes">> => 0.5
+                    }
+                },
+                <<"model_name_yes">> => 0.5,
+                <<"model_name_no">> => 0.25
+            }
+        }
+    },
+
+    Req = ?CTH:req(),
+    State = #{},
+    ?CTH:http_get(?MUT, State, Req, 200, ExpectedData).

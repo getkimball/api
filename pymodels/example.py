@@ -24,6 +24,17 @@ class KimballIntegrationServer(pb2_grpc.KimballIntegrationServicer):
             self.q.put((ed, Goal))
             print('q size', self.q.qsize())
 
+    def Prediction(self, request, context):
+        print(request)
+
+        prediction = pb2.Prediction(
+            prediction_name = "example_prediction",
+            yes = 0.55,
+            no = 0.257
+        )
+
+        return pb2.PredictionResponse(predictions=[prediction])
+
 def modeler(q):
     model = linear_model.LogisticRegression()
     print('Modeler started')

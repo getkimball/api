@@ -106,7 +106,10 @@ handle_req(
     Resp =
         try
             Events = determine_events_for_predictions(Namespace, RequestedUserID, RequestedEvents),
-            get_predictions(Namespace, Events)
+            io:format("Go for prediction~n"),
+            ExternalPredictions = features_grpc_rpc:predict(Namespace, Events),
+            InternalPredictions = get_predictions(Namespace, Events),
+            merge_predictions(InternalPredictions, ExternalPredictions)
         of
             Predictions ->
                 Data = #{<<"goals">> => Predictions},
@@ -174,3 +177,12 @@ render_bayes_as_predictions(_K, V) ->
 
 render_events_to_bayes_maps(_K, V) ->
     #{<<"bayes">> => V}.
+
+merge_predictions(Predictions, []) ->
+    Predictions;
+merge_predictions(Predictions, [P | ExternalPredictions]) ->
+    {Name, Prediction} = maps:take(<<"prediction_name">>, P),
+    Existing = maps:get(Name, Predictions, #{}),
+    MergedPrediction = maps:merge(Existing, Prediction),
+    NewPredictionMap = Predictions#{Name => MergedPrediction},
+    merge_predictions(NewPredictionMap, ExternalPredictions).

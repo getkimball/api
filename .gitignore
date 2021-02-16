@@ -38,3 +38,6 @@ _checkouts/
 
 # MacOS
 .DS_Store
+
+# Python
+*.pyc

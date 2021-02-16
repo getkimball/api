@@ -6,22 +6,27 @@
 %%%-------------------------------------------------------------------
 
 -module(features_grpc_gen_event_forwarder).
+
 -include_lib("kernel/include/logger.hrl").
 
 -behaviour(gen_event).
 
 %% API functions
--export([start_link/0,
-         add_grpc_relay/1,
-         notify/1]).
+-export([
+    start_link/0,
+    add_grpc_relay/1,
+    notify/1
+]).
 
 %% gen_event callbacks
--export([init/1,
-         handle_event/2,
-         handle_call/2,
-         handle_info/2,
-         terminate/2,
-         code_change/3]).
+-export([
+    init/1,
+    handle_event/2,
+    handle_call/2,
+    handle_info/2,
+    terminate/2,
+    code_change/3
+]).
 
 -record(state, {pid}).
 
@@ -48,7 +53,6 @@ start_link() ->
 %%--------------------------------------------------------------------
 add_grpc_relay(Pid) ->
     gen_event:add_handler(?MODULE, {?MODULE, Pid}, [Pid]).
-
 
 notify({Namespace, CounterName, Key}) ->
     gen_event:notify(?MODULE, {Namespace, CounterName, Key}).

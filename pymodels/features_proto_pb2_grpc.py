@@ -19,12 +19,23 @@ class KimballIntegrationStub(object):
                 request_serializer=features__proto__pb2.KimballEvent.SerializeToString,
                 response_deserializer=features__proto__pb2.Response.FromString,
                 )
+        self.Prediction = channel.unary_unary(
+                '/KimballIntegration/Prediction',
+                request_serializer=features__proto__pb2.PredictionRequest.SerializeToString,
+                response_deserializer=features__proto__pb2.PredictionResponse.FromString,
+                )
 
 
 class KimballIntegrationServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def EventStream(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Prediction(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -37,6 +48,11 @@ def add_KimballIntegrationServicer_to_server(servicer, server):
                     servicer.EventStream,
                     request_deserializer=features__proto__pb2.KimballEvent.FromString,
                     response_serializer=features__proto__pb2.Response.SerializeToString,
+            ),
+            'Prediction': grpc.unary_unary_rpc_method_handler(
+                    servicer.Prediction,
+                    request_deserializer=features__proto__pb2.PredictionRequest.FromString,
+                    response_serializer=features__proto__pb2.PredictionResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -62,5 +78,22 @@ class KimballIntegration(object):
         return grpc.experimental.stream_unary(request_iterator, target, '/KimballIntegration/EventStream',
             features__proto__pb2.KimballEvent.SerializeToString,
             features__proto__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Prediction(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/KimballIntegration/Prediction',
+            features__proto__pb2.PredictionRequest.SerializeToString,
+            features__proto__pb2.PredictionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
