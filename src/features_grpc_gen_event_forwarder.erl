@@ -71,9 +71,11 @@ notify({Namespace, CounterName, Key}) ->
 %% @end
 %%--------------------------------------------------------------------
 init([Pid]) ->
-    ?LOG_INFO(#{what=>grpc_event_handler,
-                pid=>Pid}),
-    {ok, #state{pid=Pid}}.
+    ?LOG_INFO(#{
+        what => grpc_event_handler,
+        pid => Pid
+    }),
+    {ok, #state{pid = Pid}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -88,11 +90,13 @@ init([Pid]) ->
 %%                          remove_handler
 %% @end
 %%--------------------------------------------------------------------
-handle_event({Namespace, CounterName, Key}, State=#state{pid=Pid}) ->
-    ?LOG_INFO(#{what=>grpc_event,
-                 namespace=>Namespace,
-                 counter_name=>CounterName,
-                 key=>Key}),
+handle_event({Namespace, CounterName, Key}, State = #state{pid = Pid}) ->
+    ?LOG_INFO(#{
+        what => grpc_event,
+        namespace => Namespace,
+        counter_name => CounterName,
+        key => Key
+    }),
     features_grpc_relay:notify(Pid, {Namespace, CounterName, Key}),
     {ok, State};
 handle_event(_Event, State) ->

@@ -106,7 +106,6 @@ handle_req(
     Resp =
         try
             Events = determine_events_for_predictions(Namespace, RequestedUserID, RequestedEvents),
-            io:format("Go for prediction~n"),
             ExternalPredictions = features_grpc_rpc:predict(Namespace, Events),
             InternalPredictions = get_predictions(Namespace, Events),
             merge_predictions(InternalPredictions, ExternalPredictions)

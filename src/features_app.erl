@@ -247,7 +247,9 @@ add_grpc_handlers() ->
     lists:foreach(fun add_grpc_handler/1, Targets).
 
 add_grpc_handler({Host, Port}) ->
-    ?LOG_INFO(#{what=>external_grpc_target,
-                host=>Host,
-                port=>Port}),
+    ?LOG_INFO(#{
+        what => external_grpc_target,
+        host => Host,
+        port => Port
+    }),
     features_grpc_sup:start_relay(Host, Port).
