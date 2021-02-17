@@ -56,16 +56,32 @@
         key                     => iodata()         % = 3, optional
        }.
 
+-type 'PredictionRequest'() ::
+      #{namespace               => iodata(),        % = 1, optional
+        user_id                 => iodata(),        % = 2, optional
+        event_names             => [iodata()]       % = 3, repeated
+       }.
+
+-type 'Prediction'() ::
+      #{prediction_name         => iodata(),        % = 1, optional
+        yes                     => float() | integer() | infinity | '-infinity' | nan, % = 2, optional
+        no                      => float() | integer() | infinity | '-infinity' | nan % = 3, optional
+       }.
+
+-type 'PredictionResponse'() ::
+      #{predictions             => ['Prediction'()] % = 1, repeated
+       }.
+
 -type 'Response'() ::
       #{code                    => integer()        % = 1, optional, 32 bits
        }.
 
--export_type(['KimballEvent'/0, 'Response'/0]).
+-export_type(['KimballEvent'/0, 'PredictionRequest'/0, 'Prediction'/0, 'PredictionResponse'/0, 'Response'/0]).
 
--spec encode_msg('KimballEvent'() | 'Response'(), atom()) -> binary().
+-spec encode_msg('KimballEvent'() | 'PredictionRequest'() | 'Prediction'() | 'PredictionResponse'() | 'Response'(), atom()) -> binary().
 encode_msg(Msg, MsgName) when is_atom(MsgName) -> encode_msg(Msg, MsgName, []).
 
--spec encode_msg('KimballEvent'() | 'Response'(), atom(), list()) -> binary().
+-spec encode_msg('KimballEvent'() | 'PredictionRequest'() | 'Prediction'() | 'PredictionResponse'() | 'Response'(), atom(), list()) -> binary().
 encode_msg(Msg, MsgName, Opts) ->
     case proplists:get_bool(verify, Opts) of
         true -> verify_msg(Msg, MsgName, Opts);
@@ -74,6 +90,9 @@ encode_msg(Msg, MsgName, Opts) ->
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
         'KimballEvent' -> encode_msg_KimballEvent(id(Msg, TrUserData), TrUserData);
+        'PredictionRequest' -> encode_msg_PredictionRequest(id(Msg, TrUserData), TrUserData);
+        'Prediction' -> encode_msg_Prediction(id(Msg, TrUserData), TrUserData);
+        'PredictionResponse' -> encode_msg_PredictionResponse(id(Msg, TrUserData), TrUserData);
         'Response' -> encode_msg_Response(id(Msg, TrUserData), TrUserData)
     end.
 
@@ -116,6 +135,90 @@ encode_msg_KimballEvent(#{} = M, Bin, TrUserData) ->
         _ -> B2
     end.
 
+encode_msg_PredictionRequest(Msg, TrUserData) -> encode_msg_PredictionRequest(Msg, <<>>, TrUserData).
+
+
+encode_msg_PredictionRequest(#{} = M, Bin, TrUserData) ->
+    B1 = case M of
+             #{namespace := F1} ->
+                 begin
+                     TrF1 = id(F1, TrUserData),
+                     case is_empty_string(TrF1) of
+                         true -> Bin;
+                         false -> e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+                     end
+                 end;
+             _ -> Bin
+         end,
+    B2 = case M of
+             #{user_id := F2} ->
+                 begin
+                     TrF2 = id(F2, TrUserData),
+                     case is_empty_string(TrF2) of
+                         true -> B1;
+                         false -> e_type_string(TrF2, <<B1/binary, 18>>, TrUserData)
+                     end
+                 end;
+             _ -> B1
+         end,
+    case M of
+        #{event_names := F3} ->
+            TrF3 = id(F3, TrUserData),
+            if TrF3 == [] -> B2;
+               true -> e_field_PredictionRequest_event_names(TrF3, B2, TrUserData)
+            end;
+        _ -> B2
+    end.
+
+encode_msg_Prediction(Msg, TrUserData) -> encode_msg_Prediction(Msg, <<>>, TrUserData).
+
+
+encode_msg_Prediction(#{} = M, Bin, TrUserData) ->
+    B1 = case M of
+             #{prediction_name := F1} ->
+                 begin
+                     TrF1 = id(F1, TrUserData),
+                     case is_empty_string(TrF1) of
+                         true -> Bin;
+                         false -> e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+                     end
+                 end;
+             _ -> Bin
+         end,
+    B2 = case M of
+             #{yes := F2} ->
+                 begin
+                     TrF2 = id(F2, TrUserData),
+                     if TrF2 =:= 0.0 -> B1;
+                        true -> e_type_float(TrF2, <<B1/binary, 21>>, TrUserData)
+                     end
+                 end;
+             _ -> B1
+         end,
+    case M of
+        #{no := F3} ->
+            begin
+                TrF3 = id(F3, TrUserData),
+                if TrF3 =:= 0.0 -> B2;
+                   true -> e_type_float(TrF3, <<B2/binary, 29>>, TrUserData)
+                end
+            end;
+        _ -> B2
+    end.
+
+encode_msg_PredictionResponse(Msg, TrUserData) -> encode_msg_PredictionResponse(Msg, <<>>, TrUserData).
+
+
+encode_msg_PredictionResponse(#{} = M, Bin, TrUserData) ->
+    case M of
+        #{predictions := F1} ->
+            TrF1 = id(F1, TrUserData),
+            if TrF1 == [] -> Bin;
+               true -> e_field_PredictionResponse_predictions(TrF1, Bin, TrUserData)
+            end;
+        _ -> Bin
+    end.
+
 encode_msg_Response(Msg, TrUserData) -> encode_msg_Response(Msg, <<>>, TrUserData).
 
 
@@ -130,6 +233,23 @@ encode_msg_Response(#{} = M, Bin, TrUserData) ->
             end;
         _ -> Bin
     end.
+
+e_field_PredictionRequest_event_names([Elem | Rest], Bin, TrUserData) ->
+    Bin2 = <<Bin/binary, 26>>,
+    Bin3 = e_type_string(id(Elem, TrUserData), Bin2, TrUserData),
+    e_field_PredictionRequest_event_names(Rest, Bin3, TrUserData);
+e_field_PredictionRequest_event_names([], Bin, _TrUserData) -> Bin.
+
+e_mfield_PredictionResponse_predictions(Msg, Bin, TrUserData) ->
+    SubBin = encode_msg_Prediction(Msg, <<>>, TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
+
+e_field_PredictionResponse_predictions([Elem | Rest], Bin, TrUserData) ->
+    Bin2 = <<Bin/binary, 10>>,
+    Bin3 = e_mfield_PredictionResponse_predictions(id(Elem, TrUserData), Bin2, TrUserData),
+    e_field_PredictionResponse_predictions(Rest, Bin3, TrUserData);
+e_field_PredictionResponse_predictions([], Bin, _TrUserData) -> Bin.
 
 -compile({nowarn_unused_function,e_type_sint/3}).
 e_type_sint(Value, Bin, _TrUserData) when Value >= 0 -> e_varint(Value * 2, Bin);
@@ -263,6 +383,9 @@ decode_msg_1_catch(Bin, MsgName, TrUserData) ->
 -endif.
 
 decode_msg_2_doit('KimballEvent', Bin, TrUserData) -> id(decode_msg_KimballEvent(Bin, TrUserData), TrUserData);
+decode_msg_2_doit('PredictionRequest', Bin, TrUserData) -> id(decode_msg_PredictionRequest(Bin, TrUserData), TrUserData);
+decode_msg_2_doit('Prediction', Bin, TrUserData) -> id(decode_msg_Prediction(Bin, TrUserData), TrUserData);
+decode_msg_2_doit('PredictionResponse', Bin, TrUserData) -> id(decode_msg_PredictionResponse(Bin, TrUserData), TrUserData);
 decode_msg_2_doit('Response', Bin, TrUserData) -> id(decode_msg_Response(Bin, TrUserData), TrUserData).
 
 
@@ -324,6 +447,174 @@ skip_group_KimballEvent(Bin, _, Z2, FNum, F@_1, F@_2, F@_3, TrUserData) ->
 skip_32_KimballEvent(<<_:32, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_KimballEvent(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
 
 skip_64_KimballEvent(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_KimballEvent(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+decode_msg_PredictionRequest(Bin, TrUserData) -> dfp_read_field_def_PredictionRequest(Bin, 0, 0, 0, id([], TrUserData), id([], TrUserData), id([], TrUserData), TrUserData).
+
+dfp_read_field_def_PredictionRequest(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_PredictionRequest_namespace(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_PredictionRequest(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_PredictionRequest_user_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_PredictionRequest(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_PredictionRequest_event_names(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_PredictionRequest(<<>>, 0, 0, _, F@_1, F@_2, R1, TrUserData) -> #{namespace => F@_1, user_id => F@_2, event_names => lists_reverse(R1, TrUserData)};
+dfp_read_field_def_PredictionRequest(Other, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dg_read_field_def_PredictionRequest(Other, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+dg_read_field_def_PredictionRequest(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 32 - 7 -> dg_read_field_def_PredictionRequest(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+dg_read_field_def_PredictionRequest(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, F@_3, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+        10 -> d_field_PredictionRequest_namespace(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        18 -> d_field_PredictionRequest_user_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        26 -> d_field_PredictionRequest_event_names(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        _ ->
+            case Key band 7 of
+                0 -> skip_varint_PredictionRequest(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                1 -> skip_64_PredictionRequest(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                2 -> skip_length_delimited_PredictionRequest(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                3 -> skip_group_PredictionRequest(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                5 -> skip_32_PredictionRequest(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData)
+            end
+    end;
+dg_read_field_def_PredictionRequest(<<>>, 0, 0, _, F@_1, F@_2, R1, TrUserData) -> #{namespace => F@_1, user_id => F@_2, event_names => lists_reverse(R1, TrUserData)}.
+
+d_field_PredictionRequest_namespace(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_PredictionRequest_namespace(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+d_field_PredictionRequest_namespace(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, TrUserData) ->
+    {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Utf8:Len/binary, Rest2/binary>> = Rest, {id(unicode:characters_to_list(Utf8, unicode), TrUserData), Rest2} end,
+    dfp_read_field_def_PredictionRequest(RestF, 0, 0, F, NewFValue, F@_2, F@_3, TrUserData).
+
+d_field_PredictionRequest_user_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_PredictionRequest_user_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+d_field_PredictionRequest_user_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3, TrUserData) ->
+    {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Utf8:Len/binary, Rest2/binary>> = Rest, {id(unicode:characters_to_list(Utf8, unicode), TrUserData), Rest2} end,
+    dfp_read_field_def_PredictionRequest(RestF, 0, 0, F, F@_1, NewFValue, F@_3, TrUserData).
+
+d_field_PredictionRequest_event_names(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_PredictionRequest_event_names(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+d_field_PredictionRequest_event_names(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Utf8:Len/binary, Rest2/binary>> = Rest, {id(unicode:characters_to_list(Utf8, unicode), TrUserData), Rest2} end,
+    dfp_read_field_def_PredictionRequest(RestF, 0, 0, F, F@_1, F@_2, cons(NewFValue, Prev, TrUserData), TrUserData).
+
+skip_varint_PredictionRequest(<<1:1, _:7, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> skip_varint_PredictionRequest(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+skip_varint_PredictionRequest(<<0:1, _:7, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_PredictionRequest(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+skip_length_delimited_PredictionRequest(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> skip_length_delimited_PredictionRequest(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+skip_length_delimited_PredictionRequest(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_PredictionRequest(Rest2, 0, 0, F, F@_1, F@_2, F@_3, TrUserData).
+
+skip_group_PredictionRequest(Bin, _, Z2, FNum, F@_1, F@_2, F@_3, TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_PredictionRequest(Rest, 0, Z2, FNum, F@_1, F@_2, F@_3, TrUserData).
+
+skip_32_PredictionRequest(<<_:32, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_PredictionRequest(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+skip_64_PredictionRequest(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_PredictionRequest(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+decode_msg_Prediction(Bin, TrUserData) -> dfp_read_field_def_Prediction(Bin, 0, 0, 0, id([], TrUserData), id(0.0, TrUserData), id(0.0, TrUserData), TrUserData).
+
+dfp_read_field_def_Prediction(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_Prediction_prediction_name(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_Prediction(<<21, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_Prediction_yes(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_Prediction(<<29, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_Prediction_no(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_Prediction(<<>>, 0, 0, _, F@_1, F@_2, F@_3, _) -> #{prediction_name => F@_1, yes => F@_2, no => F@_3};
+dfp_read_field_def_Prediction(Other, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dg_read_field_def_Prediction(Other, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+dg_read_field_def_Prediction(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 32 - 7 -> dg_read_field_def_Prediction(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+dg_read_field_def_Prediction(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, F@_3, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+        10 -> d_field_Prediction_prediction_name(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        21 -> d_field_Prediction_yes(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        29 -> d_field_Prediction_no(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        _ ->
+            case Key band 7 of
+                0 -> skip_varint_Prediction(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                1 -> skip_64_Prediction(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                2 -> skip_length_delimited_Prediction(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                3 -> skip_group_Prediction(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
+                5 -> skip_32_Prediction(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData)
+            end
+    end;
+dg_read_field_def_Prediction(<<>>, 0, 0, _, F@_1, F@_2, F@_3, _) -> #{prediction_name => F@_1, yes => F@_2, no => F@_3}.
+
+d_field_Prediction_prediction_name(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_Prediction_prediction_name(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+d_field_Prediction_prediction_name(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, TrUserData) ->
+    {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Utf8:Len/binary, Rest2/binary>> = Rest, {id(unicode:characters_to_list(Utf8, unicode), TrUserData), Rest2} end,
+    dfp_read_field_def_Prediction(RestF, 0, 0, F, NewFValue, F@_2, F@_3, TrUserData).
+
+d_field_Prediction_yes(<<0:16, 128, 127, Rest/binary>>, Z1, Z2, F, F@_1, _, F@_3, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, id(infinity, TrUserData), F@_3, TrUserData);
+d_field_Prediction_yes(<<0:16, 128, 255, Rest/binary>>, Z1, Z2, F, F@_1, _, F@_3, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, id('-infinity', TrUserData), F@_3, TrUserData);
+d_field_Prediction_yes(<<_:16, 1:1, _:7, _:1, 127:7, Rest/binary>>, Z1, Z2, F, F@_1, _, F@_3, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, id(nan, TrUserData), F@_3, TrUserData);
+d_field_Prediction_yes(<<Value:32/little-float, Rest/binary>>, Z1, Z2, F, F@_1, _, F@_3, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, id(Value, TrUserData), F@_3, TrUserData).
+
+d_field_Prediction_no(<<0:16, 128, 127, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, _, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, id(infinity, TrUserData), TrUserData);
+d_field_Prediction_no(<<0:16, 128, 255, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, _, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, id('-infinity', TrUserData), TrUserData);
+d_field_Prediction_no(<<_:16, 1:1, _:7, _:1, 127:7, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, _, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, id(nan, TrUserData), TrUserData);
+d_field_Prediction_no(<<Value:32/little-float, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, _, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, id(Value, TrUserData), TrUserData).
+
+skip_varint_Prediction(<<1:1, _:7, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> skip_varint_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+skip_varint_Prediction(<<0:1, _:7, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+skip_length_delimited_Prediction(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> skip_length_delimited_Prediction(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+skip_length_delimited_Prediction(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_Prediction(Rest2, 0, 0, F, F@_1, F@_2, F@_3, TrUserData).
+
+skip_group_Prediction(Bin, _, Z2, FNum, F@_1, F@_2, F@_3, TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_Prediction(Rest, 0, Z2, FNum, F@_1, F@_2, F@_3, TrUserData).
+
+skip_32_Prediction(<<_:32, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+skip_64_Prediction(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dfp_read_field_def_Prediction(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
+
+decode_msg_PredictionResponse(Bin, TrUserData) -> dfp_read_field_def_PredictionResponse(Bin, 0, 0, 0, id([], TrUserData), TrUserData).
+
+dfp_read_field_def_PredictionResponse(<<10, Rest/binary>>, Z1, Z2, F, F@_1, TrUserData) -> d_field_PredictionResponse_predictions(Rest, Z1, Z2, F, F@_1, TrUserData);
+dfp_read_field_def_PredictionResponse(<<>>, 0, 0, _, R1, TrUserData) ->
+    S1 = #{},
+    if R1 == '$undef' -> S1;
+       true -> S1#{predictions => lists_reverse(R1, TrUserData)}
+    end;
+dfp_read_field_def_PredictionResponse(Other, Z1, Z2, F, F@_1, TrUserData) -> dg_read_field_def_PredictionResponse(Other, Z1, Z2, F, F@_1, TrUserData).
+
+dg_read_field_def_PredictionResponse(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, TrUserData) when N < 32 - 7 -> dg_read_field_def_PredictionResponse(Rest, N + 7, X bsl N + Acc, F, F@_1, TrUserData);
+dg_read_field_def_PredictionResponse(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, TrUserData) ->
+    Key = X bsl N + Acc,
+    case Key of
+        10 -> d_field_PredictionResponse_predictions(Rest, 0, 0, 0, F@_1, TrUserData);
+        _ ->
+            case Key band 7 of
+                0 -> skip_varint_PredictionResponse(Rest, 0, 0, Key bsr 3, F@_1, TrUserData);
+                1 -> skip_64_PredictionResponse(Rest, 0, 0, Key bsr 3, F@_1, TrUserData);
+                2 -> skip_length_delimited_PredictionResponse(Rest, 0, 0, Key bsr 3, F@_1, TrUserData);
+                3 -> skip_group_PredictionResponse(Rest, 0, 0, Key bsr 3, F@_1, TrUserData);
+                5 -> skip_32_PredictionResponse(Rest, 0, 0, Key bsr 3, F@_1, TrUserData)
+            end
+    end;
+dg_read_field_def_PredictionResponse(<<>>, 0, 0, _, R1, TrUserData) ->
+    S1 = #{},
+    if R1 == '$undef' -> S1;
+       true -> S1#{predictions => lists_reverse(R1, TrUserData)}
+    end.
+
+d_field_PredictionResponse_predictions(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, TrUserData) when N < 57 -> d_field_PredictionResponse_predictions(Rest, N + 7, X bsl N + Acc, F, F@_1, TrUserData);
+d_field_PredictionResponse_predictions(<<0:1, X:7, Rest/binary>>, N, Acc, F, Prev, TrUserData) ->
+    {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bs:Len/binary, Rest2/binary>> = Rest, {id(decode_msg_Prediction(Bs, TrUserData), TrUserData), Rest2} end,
+    dfp_read_field_def_PredictionResponse(RestF, 0, 0, F, cons(NewFValue, Prev, TrUserData), TrUserData).
+
+skip_varint_PredictionResponse(<<1:1, _:7, Rest/binary>>, Z1, Z2, F, F@_1, TrUserData) -> skip_varint_PredictionResponse(Rest, Z1, Z2, F, F@_1, TrUserData);
+skip_varint_PredictionResponse(<<0:1, _:7, Rest/binary>>, Z1, Z2, F, F@_1, TrUserData) -> dfp_read_field_def_PredictionResponse(Rest, Z1, Z2, F, F@_1, TrUserData).
+
+skip_length_delimited_PredictionResponse(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, TrUserData) when N < 57 -> skip_length_delimited_PredictionResponse(Rest, N + 7, X bsl N + Acc, F, F@_1, TrUserData);
+skip_length_delimited_PredictionResponse(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, TrUserData) ->
+    Length = X bsl N + Acc,
+    <<_:Length/binary, Rest2/binary>> = Rest,
+    dfp_read_field_def_PredictionResponse(Rest2, 0, 0, F, F@_1, TrUserData).
+
+skip_group_PredictionResponse(Bin, _, Z2, FNum, F@_1, TrUserData) ->
+    {_, Rest} = read_group(Bin, FNum),
+    dfp_read_field_def_PredictionResponse(Rest, 0, Z2, FNum, F@_1, TrUserData).
+
+skip_32_PredictionResponse(<<_:32, Rest/binary>>, Z1, Z2, F, F@_1, TrUserData) -> dfp_read_field_def_PredictionResponse(Rest, Z1, Z2, F, F@_1, TrUserData).
+
+skip_64_PredictionResponse(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, TrUserData) -> dfp_read_field_def_PredictionResponse(Rest, Z1, Z2, F, F@_1, TrUserData).
 
 decode_msg_Response(Bin, TrUserData) -> dfp_read_field_def_Response(Bin, 0, 0, 0, id(0, TrUserData), TrUserData).
 
@@ -433,6 +724,9 @@ merge_msgs(Prev, New, MsgName, Opts) ->
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
         'KimballEvent' -> merge_msg_KimballEvent(Prev, New, TrUserData);
+        'PredictionRequest' -> merge_msg_PredictionRequest(Prev, New, TrUserData);
+        'Prediction' -> merge_msg_Prediction(Prev, New, TrUserData);
+        'PredictionResponse' -> merge_msg_PredictionResponse(Prev, New, TrUserData);
         'Response' -> merge_msg_Response(Prev, New, TrUserData)
     end.
 
@@ -455,6 +749,55 @@ merge_msg_KimballEvent(PMsg, NMsg, _) ->
         _ -> S3
     end.
 
+-compile({nowarn_unused_function,merge_msg_PredictionRequest/3}).
+merge_msg_PredictionRequest(PMsg, NMsg, TrUserData) ->
+    S1 = #{},
+    S2 = case {PMsg, NMsg} of
+             {_, #{namespace := NFnamespace}} -> S1#{namespace => NFnamespace};
+             {#{namespace := PFnamespace}, _} -> S1#{namespace => PFnamespace};
+             _ -> S1
+         end,
+    S3 = case {PMsg, NMsg} of
+             {_, #{user_id := NFuser_id}} -> S2#{user_id => NFuser_id};
+             {#{user_id := PFuser_id}, _} -> S2#{user_id => PFuser_id};
+             _ -> S2
+         end,
+    case {PMsg, NMsg} of
+        {#{event_names := PFevent_names}, #{event_names := NFevent_names}} -> S3#{event_names => 'erlang_++'(PFevent_names, NFevent_names, TrUserData)};
+        {_, #{event_names := NFevent_names}} -> S3#{event_names => NFevent_names};
+        {#{event_names := PFevent_names}, _} -> S3#{event_names => PFevent_names};
+        {_, _} -> S3
+    end.
+
+-compile({nowarn_unused_function,merge_msg_Prediction/3}).
+merge_msg_Prediction(PMsg, NMsg, _) ->
+    S1 = #{},
+    S2 = case {PMsg, NMsg} of
+             {_, #{prediction_name := NFprediction_name}} -> S1#{prediction_name => NFprediction_name};
+             {#{prediction_name := PFprediction_name}, _} -> S1#{prediction_name => PFprediction_name};
+             _ -> S1
+         end,
+    S3 = case {PMsg, NMsg} of
+             {_, #{yes := NFyes}} -> S2#{yes => NFyes};
+             {#{yes := PFyes}, _} -> S2#{yes => PFyes};
+             _ -> S2
+         end,
+    case {PMsg, NMsg} of
+        {_, #{no := NFno}} -> S3#{no => NFno};
+        {#{no := PFno}, _} -> S3#{no => PFno};
+        _ -> S3
+    end.
+
+-compile({nowarn_unused_function,merge_msg_PredictionResponse/3}).
+merge_msg_PredictionResponse(PMsg, NMsg, TrUserData) ->
+    S1 = #{},
+    case {PMsg, NMsg} of
+        {#{predictions := PFpredictions}, #{predictions := NFpredictions}} -> S1#{predictions => 'erlang_++'(PFpredictions, NFpredictions, TrUserData)};
+        {_, #{predictions := NFpredictions}} -> S1#{predictions => NFpredictions};
+        {#{predictions := PFpredictions}, _} -> S1#{predictions => PFpredictions};
+        {_, _} -> S1
+    end.
+
 -compile({nowarn_unused_function,merge_msg_Response/3}).
 merge_msg_Response(PMsg, NMsg, _) ->
     S1 = #{},
@@ -471,6 +814,9 @@ verify_msg(Msg, MsgName, Opts) ->
     TrUserData = proplists:get_value(user_data, Opts),
     case MsgName of
         'KimballEvent' -> v_msg_KimballEvent(Msg, [MsgName], TrUserData);
+        'PredictionRequest' -> v_msg_PredictionRequest(Msg, [MsgName], TrUserData);
+        'Prediction' -> v_msg_Prediction(Msg, [MsgName], TrUserData);
+        'PredictionResponse' -> v_msg_PredictionResponse(Msg, [MsgName], TrUserData);
         'Response' -> v_msg_Response(Msg, [MsgName], TrUserData);
         _ -> mk_type_error(not_a_known_message, Msg, [])
     end.
@@ -501,6 +847,81 @@ v_msg_KimballEvent(#{} = M, Path, TrUserData) ->
 v_msg_KimballEvent(M, Path, _TrUserData) when is_map(M) -> mk_type_error({missing_fields, [] -- maps:keys(M), 'KimballEvent'}, M, Path);
 v_msg_KimballEvent(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'KimballEvent'}, X, Path).
 
+-compile({nowarn_unused_function,v_msg_PredictionRequest/3}).
+-dialyzer({nowarn_function,v_msg_PredictionRequest/3}).
+v_msg_PredictionRequest(#{} = M, Path, TrUserData) ->
+    case M of
+        #{namespace := F1} -> v_type_string(F1, [namespace | Path], TrUserData);
+        _ -> ok
+    end,
+    case M of
+        #{user_id := F2} -> v_type_string(F2, [user_id | Path], TrUserData);
+        _ -> ok
+    end,
+    case M of
+        #{event_names := F3} ->
+            if is_list(F3) ->
+                   _ = [v_type_string(Elem, [event_names | Path], TrUserData) || Elem <- F3],
+                   ok;
+               true -> mk_type_error({invalid_list_of, string}, F3, [event_names | Path])
+            end;
+        _ -> ok
+    end,
+    lists:foreach(fun (namespace) -> ok;
+                      (user_id) -> ok;
+                      (event_names) -> ok;
+                      (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
+                  end,
+                  maps:keys(M)),
+    ok;
+v_msg_PredictionRequest(M, Path, _TrUserData) when is_map(M) -> mk_type_error({missing_fields, [] -- maps:keys(M), 'PredictionRequest'}, M, Path);
+v_msg_PredictionRequest(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'PredictionRequest'}, X, Path).
+
+-compile({nowarn_unused_function,v_msg_Prediction/3}).
+-dialyzer({nowarn_function,v_msg_Prediction/3}).
+v_msg_Prediction(#{} = M, Path, TrUserData) ->
+    case M of
+        #{prediction_name := F1} -> v_type_string(F1, [prediction_name | Path], TrUserData);
+        _ -> ok
+    end,
+    case M of
+        #{yes := F2} -> v_type_float(F2, [yes | Path], TrUserData);
+        _ -> ok
+    end,
+    case M of
+        #{no := F3} -> v_type_float(F3, [no | Path], TrUserData);
+        _ -> ok
+    end,
+    lists:foreach(fun (prediction_name) -> ok;
+                      (yes) -> ok;
+                      (no) -> ok;
+                      (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
+                  end,
+                  maps:keys(M)),
+    ok;
+v_msg_Prediction(M, Path, _TrUserData) when is_map(M) -> mk_type_error({missing_fields, [] -- maps:keys(M), 'Prediction'}, M, Path);
+v_msg_Prediction(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'Prediction'}, X, Path).
+
+-compile({nowarn_unused_function,v_msg_PredictionResponse/3}).
+-dialyzer({nowarn_function,v_msg_PredictionResponse/3}).
+v_msg_PredictionResponse(#{} = M, Path, TrUserData) ->
+    case M of
+        #{predictions := F1} ->
+            if is_list(F1) ->
+                   _ = [v_msg_Prediction(Elem, [predictions | Path], TrUserData) || Elem <- F1],
+                   ok;
+               true -> mk_type_error({invalid_list_of, {msg, 'Prediction'}}, F1, [predictions | Path])
+            end;
+        _ -> ok
+    end,
+    lists:foreach(fun (predictions) -> ok;
+                      (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
+                  end,
+                  maps:keys(M)),
+    ok;
+v_msg_PredictionResponse(M, Path, _TrUserData) when is_map(M) -> mk_type_error({missing_fields, [] -- maps:keys(M), 'PredictionResponse'}, M, Path);
+v_msg_PredictionResponse(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'PredictionResponse'}, X, Path).
+
 -compile({nowarn_unused_function,v_msg_Response/3}).
 -dialyzer({nowarn_function,v_msg_Response/3}).
 v_msg_Response(#{} = M, Path, TrUserData) ->
@@ -521,6 +942,15 @@ v_msg_Response(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'Response'}
 v_type_int32(N, _Path, _TrUserData) when -2147483648 =< N, N =< 2147483647 -> ok;
 v_type_int32(N, Path, _TrUserData) when is_integer(N) -> mk_type_error({value_out_of_range, int32, signed, 32}, N, Path);
 v_type_int32(X, Path, _TrUserData) -> mk_type_error({bad_integer, int32, signed, 32}, X, Path).
+
+-compile({nowarn_unused_function,v_type_float/3}).
+-dialyzer({nowarn_function,v_type_float/3}).
+v_type_float(N, _Path, _TrUserData) when is_float(N) -> ok;
+v_type_float(N, _Path, _TrUserData) when is_integer(N) -> ok;
+v_type_float(infinity, _Path, _TrUserData) -> ok;
+v_type_float('-infinity', _Path, _TrUserData) -> ok;
+v_type_float(nan, _Path, _TrUserData) -> ok;
+v_type_float(X, Path, _TrUserData) -> mk_type_error(bad_float_value, X, Path).
 
 -compile({nowarn_unused_function,v_type_string/3}).
 -dialyzer({nowarn_function,v_type_string/3}).
@@ -575,16 +1005,25 @@ get_msg_defs() ->
       [#{name => namespace, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
        #{name => name, fnum => 2, rnum => 3, type => string, occurrence => optional, opts => []},
        #{name => key, fnum => 3, rnum => 4, type => string, occurrence => optional, opts => []}]},
+     {{msg, 'PredictionRequest'},
+      [#{name => namespace, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
+       #{name => user_id, fnum => 2, rnum => 3, type => string, occurrence => optional, opts => []},
+       #{name => event_names, fnum => 3, rnum => 4, type => string, occurrence => repeated, opts => []}]},
+     {{msg, 'Prediction'},
+      [#{name => prediction_name, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
+       #{name => yes, fnum => 2, rnum => 3, type => float, occurrence => optional, opts => []},
+       #{name => no, fnum => 3, rnum => 4, type => float, occurrence => optional, opts => []}]},
+     {{msg, 'PredictionResponse'}, [#{name => predictions, fnum => 1, rnum => 2, type => {msg, 'Prediction'}, occurrence => repeated, opts => []}]},
      {{msg, 'Response'}, [#{name => code, fnum => 1, rnum => 2, type => int32, occurrence => optional, opts => []}]}].
 
 
-get_msg_names() -> ['KimballEvent', 'Response'].
+get_msg_names() -> ['KimballEvent', 'PredictionRequest', 'Prediction', 'PredictionResponse', 'Response'].
 
 
 get_group_names() -> [].
 
 
-get_msg_or_group_names() -> ['KimballEvent', 'Response'].
+get_msg_or_group_names() -> ['KimballEvent', 'PredictionRequest', 'Prediction', 'PredictionResponse', 'Response'].
 
 
 get_enum_names() -> [].
@@ -605,6 +1044,15 @@ find_msg_def('KimballEvent') ->
     [#{name => namespace, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
      #{name => name, fnum => 2, rnum => 3, type => string, occurrence => optional, opts => []},
      #{name => key, fnum => 3, rnum => 4, type => string, occurrence => optional, opts => []}];
+find_msg_def('PredictionRequest') ->
+    [#{name => namespace, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
+     #{name => user_id, fnum => 2, rnum => 3, type => string, occurrence => optional, opts => []},
+     #{name => event_names, fnum => 3, rnum => 4, type => string, occurrence => repeated, opts => []}];
+find_msg_def('Prediction') ->
+    [#{name => prediction_name, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
+     #{name => yes, fnum => 2, rnum => 3, type => float, occurrence => optional, opts => []},
+     #{name => no, fnum => 3, rnum => 4, type => float, occurrence => optional, opts => []}];
+find_msg_def('PredictionResponse') -> [#{name => predictions, fnum => 1, rnum => 2, type => {msg, 'Prediction'}, occurrence => repeated, opts => []}];
 find_msg_def('Response') -> [#{name => code, fnum => 1, rnum => 2, type => int32, occurrence => optional, opts => []}];
 find_msg_def(_) -> error.
 
@@ -624,11 +1072,14 @@ enum_value_by_symbol(E, V) -> erlang:error({no_enum_defs, E, V}).
 get_service_names() -> ['KimballIntegration'].
 
 
-get_service_def('KimballIntegration') -> {{service, 'KimballIntegration'}, [#{name => 'EventStream', input => 'KimballEvent', output => 'Response', input_stream => true, output_stream => false, opts => []}]};
+get_service_def('KimballIntegration') ->
+    {{service, 'KimballIntegration'},
+     [#{name => 'EventStream', input => 'KimballEvent', output => 'Response', input_stream => true, output_stream => false, opts => []},
+      #{name => 'Prediction', input => 'PredictionRequest', output => 'PredictionResponse', input_stream => false, output_stream => false, opts => []}]};
 get_service_def(_) -> error.
 
 
-get_rpc_names('KimballIntegration') -> ['EventStream'];
+get_rpc_names('KimballIntegration') -> ['EventStream', 'Prediction'];
 get_rpc_names(_) -> error.
 
 
@@ -637,6 +1088,7 @@ find_rpc_def(_, _) -> error.
 
 
 find_rpc_def_KimballIntegration('EventStream') -> #{name => 'EventStream', input => 'KimballEvent', output => 'Response', input_stream => true, output_stream => false, opts => []};
+find_rpc_def_KimballIntegration('Prediction') -> #{name => 'Prediction', input => 'PredictionRequest', output => 'PredictionResponse', input_stream => false, output_stream => false, opts => []};
 find_rpc_def_KimballIntegration(_) -> error.
 
 
@@ -663,6 +1115,7 @@ service_name_to_fqbin(X) -> error({gpb_error, {badservice, X}}).
 %% and an rpc name, both as binaries to a service name and an rpc
 %% name, as atoms.
 fqbins_to_service_and_rpc_name(<<"KimballIntegration">>, <<"EventStream">>) -> {'KimballIntegration', 'EventStream'};
+fqbins_to_service_and_rpc_name(<<"KimballIntegration">>, <<"Prediction">>) -> {'KimballIntegration', 'Prediction'};
 fqbins_to_service_and_rpc_name(S, R) -> error({gpb_error, {badservice_or_rpc, {S, R}}}).
 
 
@@ -670,15 +1123,22 @@ fqbins_to_service_and_rpc_name(S, R) -> error({gpb_error, {badservice_or_rpc, {S
 %% to a fully qualified (ie with package name) service name and
 %% an rpc name as binaries.
 service_and_rpc_name_to_fqbins('KimballIntegration', 'EventStream') -> {<<"KimballIntegration">>, <<"EventStream">>};
+service_and_rpc_name_to_fqbins('KimballIntegration', 'Prediction') -> {<<"KimballIntegration">>, <<"Prediction">>};
 service_and_rpc_name_to_fqbins(S, R) -> error({gpb_error, {badservice_or_rpc, {S, R}}}).
 
 
 fqbin_to_msg_name(<<"KimballEvent">>) -> 'KimballEvent';
+fqbin_to_msg_name(<<"PredictionRequest">>) -> 'PredictionRequest';
+fqbin_to_msg_name(<<"Prediction">>) -> 'Prediction';
+fqbin_to_msg_name(<<"PredictionResponse">>) -> 'PredictionResponse';
 fqbin_to_msg_name(<<"Response">>) -> 'Response';
 fqbin_to_msg_name(E) -> error({gpb_error, {badmsg, E}}).
 
 
 msg_name_to_fqbin('KimballEvent') -> <<"KimballEvent">>;
+msg_name_to_fqbin('PredictionRequest') -> <<"PredictionRequest">>;
+msg_name_to_fqbin('Prediction') -> <<"Prediction">>;
+msg_name_to_fqbin('PredictionResponse') -> <<"PredictionResponse">>;
 msg_name_to_fqbin('Response') -> <<"Response">>;
 msg_name_to_fqbin(E) -> error({gpb_error, {badmsg, E}}).
 
@@ -718,7 +1178,7 @@ get_all_source_basenames() -> ["features_proto.proto"].
 get_all_proto_names() -> ["features_proto"].
 
 
-get_msg_containment("features_proto") -> ['KimballEvent', 'Response'];
+get_msg_containment("features_proto") -> ['KimballEvent', 'Prediction', 'PredictionRequest', 'PredictionResponse', 'Response'];
 get_msg_containment(P) -> error({gpb_error, {badproto, P}}).
 
 
@@ -730,7 +1190,7 @@ get_service_containment("features_proto") -> ['KimballIntegration'];
 get_service_containment(P) -> error({gpb_error, {badproto, P}}).
 
 
-get_rpc_containment("features_proto") -> [{'KimballIntegration', 'EventStream'}];
+get_rpc_containment("features_proto") -> [{'KimballIntegration', 'EventStream'}, {'KimballIntegration', 'Prediction'}];
 get_rpc_containment(P) -> error({gpb_error, {badproto, P}}).
 
 
@@ -738,8 +1198,11 @@ get_enum_containment("features_proto") -> [];
 get_enum_containment(P) -> error({gpb_error, {badproto, P}}).
 
 
+get_proto_by_msg_name_as_fqbin(<<"PredictionRequest">>) -> "features_proto";
 get_proto_by_msg_name_as_fqbin(<<"KimballEvent">>) -> "features_proto";
 get_proto_by_msg_name_as_fqbin(<<"Response">>) -> "features_proto";
+get_proto_by_msg_name_as_fqbin(<<"PredictionResponse">>) -> "features_proto";
+get_proto_by_msg_name_as_fqbin(<<"Prediction">>) -> "features_proto";
 get_proto_by_msg_name_as_fqbin(E) -> error({gpb_error, {badmsg, E}}).
 
 

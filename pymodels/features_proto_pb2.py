@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x14\x66\x65\x61tures_proto.proto\"<\n\x0cKimballEvent\x12\x11\n\tnamespace\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0b\n\x03key\x18\x03 \x01(\t\"\x18\n\x08Response\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x32\x41\n\x12KimballIntegration\x12+\n\x0b\x45ventStream\x12\r.KimballEvent\x1a\t.Response\"\x00(\x01\x62\x06proto3'
+  serialized_pb=b'\n\x14\x66\x65\x61tures_proto.proto\"<\n\x0cKimballEvent\x12\x11\n\tnamespace\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0b\n\x03key\x18\x03 \x01(\t\"L\n\x11PredictionRequest\x12\x11\n\tnamespace\x18\x01 \x01(\t\x12\x0f\n\x07user_id\x18\x02 \x01(\t\x12\x13\n\x0b\x65vent_names\x18\x03 \x03(\t\">\n\nPrediction\x12\x17\n\x0fprediction_name\x18\x01 \x01(\t\x12\x0b\n\x03yes\x18\x02 \x01(\x02\x12\n\n\x02no\x18\x03 \x01(\x02\"6\n\x12PredictionResponse\x12 \n\x0bpredictions\x18\x01 \x03(\x0b\x32\x0b.Prediction\"\x18\n\x08Response\x12\x0c\n\x04\x63ode\x18\x01 \x01(\x05\x32z\n\x12KimballIntegration\x12+\n\x0b\x45ventStream\x12\r.KimballEvent\x1a\t.Response\"\x00(\x01\x12\x37\n\nPrediction\x12\x12.PredictionRequest\x1a\x13.PredictionResponse\"\x00\x62\x06proto3'
 )
 
 
@@ -71,6 +71,130 @@ _KIMBALLEVENT = _descriptor.Descriptor(
 )
 
 
+_PREDICTIONREQUEST = _descriptor.Descriptor(
+  name='PredictionRequest',
+  full_name='PredictionRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='namespace', full_name='PredictionRequest.namespace', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='user_id', full_name='PredictionRequest.user_id', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='event_names', full_name='PredictionRequest.event_names', index=2,
+      number=3, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=86,
+  serialized_end=162,
+)
+
+
+_PREDICTION = _descriptor.Descriptor(
+  name='Prediction',
+  full_name='Prediction',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='prediction_name', full_name='Prediction.prediction_name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=b"".decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='yes', full_name='Prediction.yes', index=1,
+      number=2, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='no', full_name='Prediction.no', index=2,
+      number=3, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=164,
+  serialized_end=226,
+)
+
+
+_PREDICTIONRESPONSE = _descriptor.Descriptor(
+  name='PredictionResponse',
+  full_name='PredictionResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  create_key=_descriptor._internal_create_key,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='predictions', full_name='PredictionResponse.predictions', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=228,
+  serialized_end=282,
+)
+
+
 _RESPONSE = _descriptor.Descriptor(
   name='Response',
   full_name='Response',
@@ -98,11 +222,15 @@ _RESPONSE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=86,
-  serialized_end=110,
+  serialized_start=284,
+  serialized_end=308,
 )
 
+_PREDICTIONRESPONSE.fields_by_name['predictions'].message_type = _PREDICTION
 DESCRIPTOR.message_types_by_name['KimballEvent'] = _KIMBALLEVENT
+DESCRIPTOR.message_types_by_name['PredictionRequest'] = _PREDICTIONREQUEST
+DESCRIPTOR.message_types_by_name['Prediction'] = _PREDICTION
+DESCRIPTOR.message_types_by_name['PredictionResponse'] = _PREDICTIONRESPONSE
 DESCRIPTOR.message_types_by_name['Response'] = _RESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
@@ -112,6 +240,27 @@ KimballEvent = _reflection.GeneratedProtocolMessageType('KimballEvent', (_messag
   # @@protoc_insertion_point(class_scope:KimballEvent)
   })
 _sym_db.RegisterMessage(KimballEvent)
+
+PredictionRequest = _reflection.GeneratedProtocolMessageType('PredictionRequest', (_message.Message,), {
+  'DESCRIPTOR' : _PREDICTIONREQUEST,
+  '__module__' : 'features_proto_pb2'
+  # @@protoc_insertion_point(class_scope:PredictionRequest)
+  })
+_sym_db.RegisterMessage(PredictionRequest)
+
+Prediction = _reflection.GeneratedProtocolMessageType('Prediction', (_message.Message,), {
+  'DESCRIPTOR' : _PREDICTION,
+  '__module__' : 'features_proto_pb2'
+  # @@protoc_insertion_point(class_scope:Prediction)
+  })
+_sym_db.RegisterMessage(Prediction)
+
+PredictionResponse = _reflection.GeneratedProtocolMessageType('PredictionResponse', (_message.Message,), {
+  'DESCRIPTOR' : _PREDICTIONRESPONSE,
+  '__module__' : 'features_proto_pb2'
+  # @@protoc_insertion_point(class_scope:PredictionResponse)
+  })
+_sym_db.RegisterMessage(PredictionResponse)
 
 Response = _reflection.GeneratedProtocolMessageType('Response', (_message.Message,), {
   'DESCRIPTOR' : _RESPONSE,
@@ -129,8 +278,8 @@ _KIMBALLINTEGRATION = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=112,
-  serialized_end=177,
+  serialized_start=310,
+  serialized_end=432,
   methods=[
   _descriptor.MethodDescriptor(
     name='EventStream',
@@ -139,6 +288,16 @@ _KIMBALLINTEGRATION = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_KIMBALLEVENT,
     output_type=_RESPONSE,
+    serialized_options=None,
+    create_key=_descriptor._internal_create_key,
+  ),
+  _descriptor.MethodDescriptor(
+    name='Prediction',
+    full_name='KimballIntegration.Prediction',
+    index=1,
+    containing_service=None,
+    input_type=_PREDICTIONREQUEST,
+    output_type=_PREDICTIONRESPONSE,
     serialized_options=None,
     create_key=_descriptor._internal_create_key,
   ),

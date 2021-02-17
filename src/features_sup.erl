@@ -52,12 +52,11 @@ init([Mode, StoreLib, MetricsOpts]) ->
         end,
 
     AlwaysProcs = [
-
-                    #{
-                        id => features_grpc_sup,
-                        type => supervisor,
-                        start => {features_grpc_sup, start_link, []}
-                    },
+        #{
+            id => features_grpc_sup,
+            type => supervisor,
+            start => {features_grpc_sup, start_link, []}
+        },
         #{
             id => metrics_server,
             start => {metrics_server, start_link, [MetricsOpts]}

@@ -96,6 +96,20 @@ Configure such as
 ]}].
 ```
 
+#### *Experimental* Prediction request forwarding via GRPC RCP
+
+API requests for the prediction API can also ask an external service for predictions and include them in the Kimball API response.
+
+Proto file available at `src/proto/features_proto.proto`.
+
+Configure such as
+
+```
+[{features, [
+    {external_grpc_prediction_targets, [{"service name", "127.0.0.1", 8079}]}
+]}].
+```
+
 ### Environment variables
 
 * `ADDITIONAL_NAMESPACES` - A comma separated list of namespaces to sync feature config to. This should include any namespaces where you intend to run sidecars
