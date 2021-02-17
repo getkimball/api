@@ -90,7 +90,7 @@ jobs:
         PROMETHEUS_USERNAME: ${{ secrets.PROMETHEUS_USERNAME }}
         PROMETHEUS_PASSWORD: ${{ secrets.PROMETHEUS_PASSWORD }}
 
-        S3_BUCKET: getkimball-features-app
+        S3_BUCKET: getkimball-api-app
       with:
         command: |
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
