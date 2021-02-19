@@ -2,6 +2,8 @@
 
 [![codecov](https://codecov.io/gh/getkimball/api/branch/trunk/graph/badge.svg?token=gVDJrLnoUY)](https://codecov.io/gh/getkimball/api)
 
+[Docker Images](https://quay.io/repository/getkimball/api).
+
 # Running
 
 ## As a client
@@ -144,7 +146,7 @@ Metrics for goal/event predictions are available at `/metrics/predictions`
 ## Releasing
 
 ```
-git checkout master
+git checkout trunk
 git pull
 TAG=$(date +"%Y.%m.%d")
 git tag ${TAG}
@@ -160,4 +162,4 @@ git push origin ${TAG}
 
 # License
 
-All rights reserved. Copyright [Get Kimball Inc.](https://getkimball.com) 2020
+Apache 2.0. Copyright [Get Kimball Inc.](https://getkimball.com) 2020
