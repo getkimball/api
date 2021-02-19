@@ -90,16 +90,14 @@ jobs:
         PROMETHEUS_USERNAME: ${{ secrets.PROMETHEUS_USERNAME }}
         PROMETHEUS_PASSWORD: ${{ secrets.PROMETHEUS_PASSWORD }}
 
-        S3_BUCKET: getkimball-features-app
+        S3_BUCKET: getkimball-api-app
       with:
         command: |
           if [[ $GITHUB_EVENT_NAME = "pull_request" ]]; then
               SERVICE_TYPE=ClusterIP
-              DAEMONSET_PORT=7233
               CLUSTER=pr
           else
               SERVICE_TYPE=LoadBalancer
-              DAEMONSET_PORT=7232
               CLUSTER=demo
           fi
 
@@ -155,7 +153,7 @@ jobs:
             --set image.tag=${DOCKER_TAG} \
             --set service.type=${SERVICE_TYPE} \
             --set kimball.sentry_dsn=${SENTRY_DSN} \
-            --set kimball.daemonsetPort=${DAEMONSET_PORT} \
+            --set kimball.enableDaemonset=false \
             --set kimball.s3_bucket=${S3_BUCKET} \
             --set-file kimball.app_config=app.config
 

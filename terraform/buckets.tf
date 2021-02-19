@@ -19,7 +19,7 @@ resource "aws_s3_bucket" "api_app_bucket" {
 }
 
 resource "github_actions_secret" "s3_bucket" {
-  repository      = "features"
+  repository      = "api"
   secret_name     = "S3_BUCKET"
   plaintext_value = aws_s3_bucket.api_app_bucket.id
 }
