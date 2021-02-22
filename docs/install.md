@@ -106,7 +106,7 @@ With a no-op config file having the form:
 
 #### Prometheus Remote Write
 
-For more details about metrics see [monitoring](/monitoring.md)
+For more details about metrics see [monitoring](/docs/monitoring.md)
 
 Prometheus metrics are exposed via the `/metrics` path of the application. Metrics can also be forwarded by the application to a remote Prometheus/Cortex. This may be useful if you are deploying this application in a remote location where you are unable to run Prometheus, but still want metrics.
 
