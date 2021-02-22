@@ -1,10 +1,10 @@
-# Get Kimball API
+# Kimball API
 
 [![codecov](https://codecov.io/gh/getkimball/api/branch/trunk/graph/badge.svg?token=gVDJrLnoUY)](https://codecov.io/gh/getkimball/api)
 
-[Docker Images](https://quay.io/repository/getkimball/api).
+The Kimball API is a self-hosted analytics service that takes events from your application and generates predictions about user behaviors.
 
-# Running
+[Talk to us](https://calendly.com/get-kimball/) about how we can help with your analytics/prediction problems!
 
 See our [documentation](/docs/) about how to install and use the Kimball API. The remainder of this file contains information related to developing the Kimball API itself.
 

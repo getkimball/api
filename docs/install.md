@@ -6,11 +6,8 @@ Applications will be installed to your Kubernetes cluster.
 
 Prerequisites:
 
-* Kimball-provided credentials for retrieving Kimball Docker images
-* Kimball-provided configuration
-    * Version
-    * Sentry DSN
-* Your own Docker image repository for private storage of these images
+* Target version of the application (latest `trunk-*` from [Docker Images](https://quay.io/repository/getkimball/api) is a good place to start.
+* Sentry DSN if would like to capture errors to Sentry
 * One or more Kubernetes clusters in which to install the applications
 * [Helm](https://helm.sh/)
 * An S3 Bucket writable from an AWS-instance metadata credential set (or other application storage credentials)
@@ -33,11 +30,6 @@ GCS storage requires a Service Account with read/write access to a GCS bucket
 * Set the name of the bucket with `--set kimball.gcs_bucket=$GCS_BUCKET_NAME`
 
 ## Installation Process
-
-Installation consists of
-
-* Downloading the Kimball app Docker image and uploading to your repository
-* Installing the Kimball API Helm chart.
 
 Applications can then be updated to point to the Daemonset for the Kimball API
 
