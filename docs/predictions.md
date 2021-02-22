@@ -1,6 +1,6 @@
 # Kimball Predictions
 
-Predications in the Kimball App use the [analytics](/analytics.md) data to generate [Bayesian conditional probabilities](https://en.wikipedia.org/wiki/Bayesian_statistics).
+Predications in the Kimball App use the [analytics](/docs/analytics.md) data to generate [Bayesian conditional probabilities](https://en.wikipedia.org/wiki/Bayesian_statistics).
 
 Predictions are available at `/v0/predictions` in your local installation.
 

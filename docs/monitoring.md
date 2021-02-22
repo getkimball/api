@@ -6,8 +6,8 @@ Various system and application metrics are exposed via that endpoint, with helpf
 
 Additional metric exports are available at:
 
-* [`/metrics/counters`](/analytics.md) - Metrics about the individual event counters
-* [`/metrics/predictions`](/predictions.md) - Metrics about predictions for goals
+* [`/metrics/counters`](/docs/analytics.md) - Metrics about the individual event counters
+* [`/metrics/predictions`](/docs/predictions.md) - Metrics about predictions for goals
 
 These metrics are not included in the main metric exports as they can generate a significant number of metrics if there are many events / goals in the system.
 
