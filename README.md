@@ -1,20 +1,19 @@
-# Get Kimball API
+# Kimball API
 
 [![codecov](https://codecov.io/gh/getkimball/api/branch/trunk/graph/badge.svg?token=gVDJrLnoUY)](https://codecov.io/gh/getkimball/api)
 
-[Docker Images](https://quay.io/repository/getkimball/api).
+The Kimball API is a self-hosted analytics service that takes events from your application and generates predictions about user behaviors.
+
+[Talk to us](https://calendly.com/get-kimball/) about how we can help with your analytics/prediction problems!
+
+See our [documentation](/docs/) about how to install and use the Kimball API. The remainder of this file contains information related to developing the Kimball API itself.
 
 # Running
 
-## As a client
 
-The API is available through a Swagger-defined API.
+## Use [nix](https://nixos.org/manual/nix/stable/#chap-installation)!
 
-A Swagger 2.0 spec is available at the path`/api-docs/swagger.json`.
-
-When developing locally you should use the public UI: http://a9a25f850863945aeb2e4da40402e9a6-29786484.us-east-1.elb.amazonaws.com/api-docs
-
-## Use nix!
+The `shell.nix` file contains the required development tools. Use `nix-shell` to get started
 
 ## Running app
 
