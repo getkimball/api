@@ -29,6 +29,8 @@ in stdenv.mkDerivation {
                   pinned_pkgs.kustomize
                   pinned_pkgs.nodejs-14_x
 
+                  pinned_pkgs.heroku
+
                   pinned_pkgs.python38
                   pinned_pkgs.python38Packages.pip
                   pinned_pkgs.python38Packages.virtualenv

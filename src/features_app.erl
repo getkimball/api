@@ -46,9 +46,11 @@ start(_Type, _Args) ->
         stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
     },
 
-    Port = list_to_integer(os:getenv("API_PORT", "8080")),
+    % Heroku uses just "PORT" as an envvar, but we'll leave a more specific version as well
+    Port = os:getenv("PORT", "8080"),
+    APIPort = list_to_integer(os:getenv("API_PORT", Port)),
 
-    {ok, _} = cowboy:start_clear(http, [{port, Port}], HTTPOpts),
+    {ok, _} = cowboy:start_clear(http, [{port, APIPort}], HTTPOpts),
     Start = features_sup:start_link(Mode, StoreLib, MetricsOpts),
     add_grpc_handlers(),
     Start.
