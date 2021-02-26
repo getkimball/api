@@ -16,6 +16,8 @@ RUN mv /app/src/_rel/features_release/features_*.tar.gz /app.tar.gz
 
 FROM debian:buster
 
+ENV LOG_LEVEL=info
+
 RUN apt-get update && apt-get install -y openssl && apt-get clean
 
 COPY --from=builder /app.tar.gz /app.tar.gz
