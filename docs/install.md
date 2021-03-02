@@ -87,6 +87,28 @@ Applications should be configured to make requests to the node-local daemonset.
 
 * Omitting `kimball.sentry_dsn` will disable Sentry error logging. We recommend continuing to use Sentry so we can more easily assist resolving errors, but it may also send sensitive data to Sentry.
 
+
+## Running on Heroku
+
+The Docker images are deployable to Heroku. A starting install should configure the environment variables:
+
+* `AWS_ACCESS_KEY_ID`
+* `AWS_SECRET_ACCESS_KEY`
+* `S3_BUCKET`
+
+With a Docker image version and Heroku App name:
+
+```
+VERSION=...
+QUAY_IMAGE=quay.io/getkimball/api:${VERSION}
+HEROKU_APP=...
+
+
+docker pull QUAY_IMAGE
+docker tag QUAY_IMAGE registry.heroku.com/${HEROKU_APP}/web
+heroku container:release web -a ${HEROKU_APP}
+```
+
 ### Advanced configuration
 
 More advanced configuration is available through the `kimball.app_config` option. The [Erlang Config format](http://erlang.org/doc/man/config.html) is used. Options through this configuration format are typically more complex than single flags would allow.
