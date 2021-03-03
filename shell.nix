@@ -3,39 +3,30 @@ let
   releasedPkgs = sysPkg.fetchFromGitHub {
     owner = "NixOS";
     repo = "nixpkgs";
-    rev = "20.03";
-    sha256 = "12353i02hrdfa6kcla5h1q3j50mx39fchva7z7l32pk699nla4hi";
+    rev = "20.09";
+    sha256 = "1wg61h4gndm3vcprdcg7rc4s1v3jkm5xd7lw8r2f67w502y94gcy";
   };
-  pinnedPkgs = sysPkg.fetchFromGitHub {
-    owner = "NixOS";
-    repo = "nixpkgs";
-    rev = "2b8a7711f63a701d80e1b2047e4e39e00f298165";
-    sha256 = "0z5m47pyc2pyv9nnvf3rrgxj77zlh8zgaif16gicnz02h6llggk3";
-  };
-
-  released_pkgs = import pinnedPkgs {};
-  pinned_pkgs = import pinnedPkgs {};
   stdenv = released_pkgs.stdenv;
 
 in stdenv.mkDerivation {
   name = "env";
   buildInputs = [ released_pkgs.gnumake
-                  pinned_pkgs.erlangR23
-                  pinned_pkgs.aws-iam-authenticator
-                  pinned_pkgs.awscli
-                  pinned_pkgs.kubectl
-                  pinned_pkgs.kubectx
-                  pinned_pkgs.kubernetes-helm
-                  pinned_pkgs.kustomize
-                  pinned_pkgs.nodejs-14_x
+                  released_pkgs.erlangR23
+                  released_pkgs.aws-iam-authenticator
+                  released_pkgs.awscli
+                  released_pkgs.kubectl
+                  released_pkgs.kubectx
+                  released_pkgs.kubernetes-helm
+                  released_pkgs.kustomize
+                  released_pkgs.nodejs-14_x
 
-                  pinned_pkgs.heroku
+                  released_pkgs.heroku
 
-                  pinned_pkgs.python38
-                  pinned_pkgs.python38Packages.pip
-                  pinned_pkgs.python38Packages.virtualenv
-                  pinned_pkgs.python38Packages.numpy
-                  pinned_pkgs.wget
+                  released_pkgs.python38
+                  released_pkgs.python38Packages.pip
+                  released_pkgs.python38Packages.virtualenv
+                  released_pkgs.python38Packages.numpy
+                  released_pkgs.wget
                 ];
   shellHook = ''
             set -e
