@@ -32,27 +32,34 @@ predict(Namespace, Events) ->
             response => Resp
         }),
         case Resp of
-            {ok, #{result := #{ predictions := Predictions}}} -> build_prediction_structure(Name, Predictions);
-            _ -> io:format("No match~n"), []
+            {ok, #{result := #{predictions := Predictions}}} ->
+                build_prediction_structure(Name, Predictions);
+            _ ->
+                io:format("No match~n"),
+                []
         end
     end,
 
     lists:flatten(lists:map(TargetPrediction, Targets)).
 
-
 build_prediction_structure(Name, Predictions) ->
-    Map = fun(#{prediction_name := PredictionName,
-                yes := YesVal,
-                no := NoVal}) ->
+    Map = fun(
+        #{
+            prediction_name := PredictionName,
+            yes := YesVal,
+            no := NoVal
+        }
+    ) ->
         NameBin = ensure_binary(Name),
-        YesKey = << NameBin/binary, <<"_yes">>/binary >>,
-        NoKey = << NameBin/binary, <<"_no">>/binary >>,
-        #{<<"prediction_name">> => ensure_binary(PredictionName),
-          YesKey => YesVal,
-          NoKey => NoVal}
+        YesKey = <<NameBin/binary, <<"_yes">>/binary>>,
+        NoKey = <<NameBin/binary, <<"_no">>/binary>>,
+        #{
+            <<"prediction_name">> => ensure_binary(PredictionName),
+            YesKey => YesVal,
+            NoKey => NoVal
+        }
     end,
     lists:map(Map, Predictions).
-
 
 ensure_binary(Bin) when is_binary(Bin) ->
     Bin;
