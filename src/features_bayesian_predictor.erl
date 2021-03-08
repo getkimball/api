@@ -53,8 +53,8 @@ for_events(Namespace, Events) ->
                     {1, 1},
                     EventCounts
                 ),
-
-                GoalAccIn#{GoalName => #{yes => EventSumYes, no => EventSumNo}}
+                Likelihood = EventSumYes / EventSumNo,
+                GoalAccIn#{GoalName => #{yes => EventSumYes, no => EventSumNo, likelihood => Likelihood}}
         end
     end,
     GlobalGoalPredictions = maps:fold(GlobalFun, #{}, GoalCounts),

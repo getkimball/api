@@ -317,7 +317,8 @@ get_external_predictions_for_events() ->
     Predictions = #{
         <<"goal_1">> => #{
             <<"yes">> => 0.1,
-            <<"no">> => 0.2
+            <<"no">> => 0.2,
+            <<"likelihood">> => 0.5
         }
     },
     ExternalPredictions = [
@@ -355,7 +356,8 @@ get_external_predictions_for_events() ->
                 <<"model_name_yes">> => 0.5,
                 <<"model_name_no">> => 0.25,
                 <<"yes">> => 0.1,
-                <<"no">> => 0.2
+                <<"no">> => 0.2,
+                <<"likelihood">> => 0.5
             }
         }
     },
