@@ -123,7 +123,7 @@ for_events_one_match() ->
     ok = meck:expect(features_count_router, count_map, [Namespace], CountMap),
 
     ExpectedPredictions = #{
-        GoalName => #{yes => 0.25, no => 0.25}
+        GoalName => #{yes => 0.25, no => 0.25, likelihood => 1.0}
     },
 
     Predictions = ?MUT:for_events(Namespace, [FeatureName]),
@@ -248,7 +248,7 @@ for_events_multiple() ->
     ok = meck:expect(features_count_router, count_map, [Namespace], CountMap),
 
     ExpectedPredictions = #{
-        GoalStolen => #{yes => 0.048, no => 0.144}
+        GoalStolen => #{yes => 0.048, no => 0.144, likelihood => 0.048 / 0.144}
     },
 
     Predictions = ?MUT:for_events(Namespace, [ERed, ESUV, EDomestic]),

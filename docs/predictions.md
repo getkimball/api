@@ -49,7 +49,8 @@ This is computed via a [Naive Bayes algorithm](https://en.wikipedia.org/wiki/Nai
   "goals": {
     "Example Goal Event":{
       "no":0.0004,
-      "yes":0.0205
+      "yes":0.0205,
+      "likelihood": 51.25
     }
   }
 }
@@ -70,6 +71,7 @@ This is computed via a [Naive Bayes algorithm](https://en.wikipedia.org/wiki/Nai
     "Example Goal Event":{
       "no":0.0004,
       "yes":0.0205
+      "likelihood": 51.25
     }
   }
 }
