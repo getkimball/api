@@ -25,13 +25,21 @@ start(_Type, _Args) ->
     MetricsOpts = metrics_opts(),
     ok = features_counter_config:validate_config(),
     StoreLib = decide_store_lib(),
+    io:format("Application: ~p~n", [application:get_application()]),
 
     Routes = [
         {"/metrics/[:registry]", prometheus_cowboy2_handler, []}
     ],
+
+    % The priv_dir used by cowboy relies on the Erlang's view of the filesystem
+    % path of this project in order to find priv. This can be problematic if
+    % the directory name doesn't match the application name. Allow overriding
+    % this to manually find the path. During releases the application/path all
+    % lines up... but humans may do it differently than the release!
+    IsLocalDev = application:get_env(features, local_dev, false),
     StaticRoute = [
-        {"/", cowboy_static, {priv_file, App, "public/index.html"}},
-        {"/[...]", cowboy_static, {priv_dir, App, "public"}}
+        {"/", cowboy_static, cowboy_priv_path_for_file(IsLocalDev, App, "public/index.html")},
+        {"/[...]", cowboy_static, cowboy_priv_path_for_dir(IsLocalDev, App, "public")}
     ],
 
     Trails = setup_trails(),
@@ -255,3 +263,13 @@ add_grpc_handler({Host, Port}) ->
         port => Port
     }),
     features_grpc_sup:start_relay(Host, Port).
+
+cowboy_priv_path_for_file(_IsLocalDev = true, _App, Path) ->
+    {file, "priv/" ++ Path};
+cowboy_priv_path_for_file(_IsLocalDev = false, App, Path) ->
+    {priv_file, App, Path}.
+
+cowboy_priv_path_for_dir(_IsLocalDev = true, _App, Path) ->
+    {dir, "priv/" ++ Path};
+cowboy_priv_path_for_dir(_IsLocalDev = false, App, Path) ->
+    {priv_dir, App, Path}.
