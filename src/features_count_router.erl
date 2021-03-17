@@ -328,7 +328,8 @@ handle_cast(load_or_init, State = #state{store_lib_state = StoreLibState}) ->
         end,
     Counters = maps:get(counters, Data, []),
     Goals = maps:get(goals, Data, #{}),
-    _Pids = [ensure_child_started(Counter) || Counter <- Counters],
+    Delay = application:get_env(features, counter_startup_delay, 1),
+    start_counters(Counters, Delay),
     {noreply, State#state{
         counters = Counters,
         goals = Goals,
@@ -577,3 +578,10 @@ update_prom_ets_counter(Tab, GaugeName) ->
     TabInfo = ets:info(Tab),
     Size = proplists:get_value(size, TabInfo),
     prometheus_gauge:set(GaugeName, Size).
+
+start_counters(Counters, Delay) ->
+    StartFun = fun(Counter) ->
+        timer:sleep(Delay),
+        ensure_child_started(Counter)
+    end,
+    lists:foreach(StartFun, Counters).

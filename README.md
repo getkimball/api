@@ -123,6 +123,18 @@ Configure such as
 * `GOOGLE_APPLICATION_CREDENTIALS` - Path to a JSON Service Account Key
 * `STORAGE_PATH_PREFIX` - Path prefix to use when storing files in S3/GCS. Defaults to the installation namespace.
 
+### Additional App Config options
+
+More advanced/less-likely used configuration can be done via additional `app.config` options
+
+`counter_startup_delay` - int - Milliseconds between starting each counter when the application begins/resets. Used to rate limit things to prevent thundering herds as the application starts.
+
+```
+[{features, [
+    {counter_startup_delay, 1}
+]}].
+```
+
 ## Metrics
 
 System metrics are available at `/metrics`
