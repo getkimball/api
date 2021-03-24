@@ -37,11 +37,13 @@
     goals/1,
     namespaces/0,
     register_counter/2,
+    start_enqueued_counters/0,
     stop_counter/1
 ]).
 
 -record(state, {
     counters = [],
+    counters_to_start = [],
     goals = [],
     store_lib = undefined,
     store_lib_state = undefined
@@ -138,6 +140,9 @@ register_counter(CounterID, Pid) ->
 
 stop_counter(CounterID) ->
     gen_server:cast(?MODULE, {stop_counter, CounterID}).
+
+start_enqueued_counters() ->
+    gen_server:cast(?MODULE, start_enqueued_counters).
 
 counts(Namespace) ->
     CountFun = fun(#counter_registration{id = CounterID, pid = Pid}, Acc0) ->
@@ -321,17 +326,24 @@ handle_call({goals, Namespace}, _From, State = #state{goals = Goals}) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast(load_or_init, State = #state{store_lib_state = StoreLibState}) ->
+    io:format("Initting"),
     {Data, StoreLibState1} =
         case features_store_lib:get(StoreLibState) of
             {not_supported, NewState} -> {#{}, NewState};
             Else -> Else
         end,
     Counters = maps:get(counters, Data, []),
+
+    % Put internal counters first as the application assumes they exist
+    {InternalCounters, RemainingCounters} = lists:partition(fun is_counter_internal/1, Counters),
+    CountersToStart = lists:append(InternalCounters, RemainingCounters),
+    enqueue_counter_start_request(),
+
     Goals = maps:get(goals, Data, #{}),
-    Delay = application:get_env(features, counter_startup_delay, 1),
-    start_counters(Counters, Delay),
+
     {noreply, State#state{
         counters = Counters,
+        counters_to_start = CountersToStart,
         goals = Goals,
         store_lib_state = StoreLibState1
     }};
@@ -386,6 +398,12 @@ handle_cast({stop_counter, CounterID}, State = #state{counters = Counters}) ->
 
     true = ets:delete(?COUNTER_REGISTRY, CounterID),
     {noreply, State1};
+handle_cast(start_enqueued_counters, State = #state{counters_to_start = []}) ->
+    {noreply, State};
+handle_cast(start_enqueued_counters, State = #state{counters_to_start = [Counter | Rest]}) ->
+    ensure_child_started(Counter),
+    enqueue_counter_start_request(),
+    {noreply, State#state{counters_to_start = Rest}};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -579,9 +597,13 @@ update_prom_ets_counter(Tab, GaugeName) ->
     Size = proplists:get_value(size, TabInfo),
     prometheus_gauge:set(GaugeName, Size).
 
-start_counters(Counters, Delay) ->
-    StartFun = fun(Counter) ->
-        timer:sleep(Delay),
-        ensure_child_started(Counter)
-    end,
-    lists:foreach(StartFun, Counters).
+is_counter_internal(ID) ->
+    case features_counter_id:type(ID) of
+        internal -> true;
+        _ -> false
+    end.
+
+enqueue_counter_start_request() ->
+    Delay = application:get_env(features, counter_startup_delay, 1),
+    {ok, _} = timer:apply_after(Delay, features_count_router, start_enqueued_counters, []),
+    ok.
