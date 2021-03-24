@@ -57,6 +57,9 @@ init_meck(Config) ->
     meck:expect(?COUNTER_MOD, count, ['_'], counts(#{count => -1})),
     meck:expect(?COUNTER_MOD, includes_key, ['_', '_'], false),
 
+    meck:new(timer, [unstick, passthrough]),
+    meck:expect(timer, apply_after, ['_', '_', '_', '_'], {ok, make_ref()}),
+
     meck:new(features_counter_config),
     meck:expect(features_counter_config, config_for_counter, ['_', init], undefined),
 
@@ -103,6 +106,9 @@ end_per_testcase(_, Config) ->
 
     ?assert(meck:validate(features_store_lib)),
     meck:unload(features_store_lib),
+
+    ?assert(meck:validate(timer)),
+    meck:unload(timer),
 
     ?assert(meck:validate(supervisor)),
     meck:unload(supervisor),
@@ -422,10 +428,16 @@ ca_test_start_with_existing_counters(Config) ->
     {ok, Pid} = ?MUT:start_link(?STORE_LIB),
     Config1 = [{pid, Pid} | Config],
 
-    meck:wait(features_store_lib, get, '_', 1000),
-    timer:sleep(500),
+    meck:wait(features_store_lib, get, '_', 100),
+    % test_utils:assertNCalls(1, timer, apply_after, ['_', features_count_router, start_enqueued_counters, []]),
 
-    ?assertEqual(Spec, meck:capture(first, supervisor, start_child, ['_', Spec], 2)),
+    % apply_after would normally handle calling this but it's mocked, so do it manually
+    ?MUT:start_enqueued_counters(),
+    ?MUT:start_enqueued_counters(),
+    ?MUT:start_enqueued_counters(),
+
+    meck:wait(supervisor, start_child, ['_', Spec], 100),
+    test_utils:assertNCalls(1, supervisor, start_child, ['_', Spec]),
 
     Config1.
 
@@ -598,6 +610,14 @@ ea_test_triggering_a_goal(Config) ->
         {Year, Week}
     ),
 
+    % The global counter will start up before we do anything, wait for that to
+    % happen before we break supervisor as a mock just below
+    meck:wait(
+        supervisor,
+        start_child,
+        [features_counter_sup, spec_for_feature(GlobalCounterID)],
+        100
+    ),
     meck:expect(
         supervisor,
         start_child,
@@ -680,6 +700,14 @@ eb_test_triggering_a_goal_registered_after_goal_added(Config) ->
     NonGoalCounterID = features_counter_id:create(NonGoalFeature),
     GoalCounterID = features_counter_id:create(GoalFeature),
 
+    % The global counter will start up before we do anything, wait for that to
+    % happen before we break supervisor as a mock just below
+    meck:wait(
+        supervisor,
+        start_child,
+        [features_counter_sup, spec_for_feature(GlobalCounterID)],
+        100
+    ),
     meck:expect(
         supervisor,
         start_child,
@@ -758,6 +786,14 @@ ec_test_triggering_a_goal_from_another_namespace(Config) ->
     NonGoalCounterID = features_counter_id:create(NonGoalFeature),
     GoalCounterID = features_counter_id:create(<<"not default">>, GoalFeature, named),
 
+    % The global counter will start up before we do anything, wait for that to
+    % happen before we break supervisor as a mock just below
+    meck:wait(
+        supervisor,
+        start_child,
+        [features_counter_sup, spec_for_feature(GlobalCounterID)],
+        100
+    ),
     meck:expect(
         supervisor,
         start_child,
