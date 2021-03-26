@@ -245,7 +245,7 @@ match_params(
         _Spec = #{
             name := Name,
             in := query,
-            required := false,
+            required := IsRequired,
             schema := #{
                 type := Type
             } = Schema
@@ -260,10 +260,21 @@ match_params(
         array => {[], fun wrap_list_if_needed/1}
     },
     #{Type := {DefaultDefault, PostFunc}} = DefaultLookupTable,
-
     DefaultValue = maps:get(default, Schema, DefaultDefault),
-    #{Name := CowboyValue} = cowboy_req:match_qs([{Name, [], DefaultValue}], Req),
+
+    Matcher =
+        case IsRequired of
+            false -> [{Name, [], DefaultValue}];
+            true -> [{Name, [nonempty], undefined}]
+        end,
+
+    #{Name := CowboyValue} = cowboy_req:match_qs(Matcher, Req),
     Value = PostFunc(CowboyValue),
+
+    case {IsRequired, Value} of
+        {true, undefined} -> throw({missing_required_key, Name});
+        _ -> ok
+    end,
 
     Param = validate_property_spec(Value, Schema),
     [{Name, Param} | match_params(T, Req)].
