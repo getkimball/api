@@ -178,7 +178,7 @@ feature_input_schema() ->
     }.
 
 init(Req, Opts) ->
-    {swagger_specified_handler, Req, Opts}.
+    {specified_handler, Req, Opts}.
 
 handle_req(Req = #{method := <<"GET">>}, _Params, _Body, Opts) ->
     InternalFeatures = features_store:get_features(),

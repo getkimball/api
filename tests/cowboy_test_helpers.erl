@@ -82,7 +82,7 @@ http_get(Mod, State, Req, ExpectedCode, ExpectedData) ->
     Data = jsx:decode(GetBody, [return_maps]),
     ?assertEqual({ExpectedCode, ExpectedData}, {GetCode, Data}),
 
-    GetSpec = swagger_specified_handler:response_spec(Mod, <<"get">>, ExpectedCode),
+    GetSpec = specified_handler:response_spec(Mod, <<"get">>, ExpectedCode),
     ok = cowboy_test_helpers:validate_response_against_spec(GetSpec, GetHeaders, Data),
     ok.
 

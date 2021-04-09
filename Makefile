@@ -19,6 +19,7 @@ DEPS = \
 	ranch \
 	recon \
 	snappy \
+	specified_handler \
 	swaggerl \
 	trails
 
@@ -52,6 +53,7 @@ dep_prometheus_cowboy = hex 0.1.8
 dep_ranch = git https://github.com/ninenines/ranch.git 1.7.1
 dep_recon = git https://github.com/ferd/recon.git 2.5.1
 dep_snappy = git https://github.com/skunkwerks/snappy-erlang-nif.git master
+dep_specified_handler = git https://github.com/getkimball/specified_handler.git 0.1.1
 dep_swaggerl = git https://github.com/philipcristiano/swaggerl.git v0.0.7
 dep_sync = git https://github.com/rustyio/sync.git master
 dep_trails = hex 2.0.0

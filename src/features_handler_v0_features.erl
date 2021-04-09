@@ -99,7 +99,7 @@ init(Req, InitialState) ->
     % Cowboy will eventually come around and try to kill the process afterwards
     % aafter a timeout
     process_flag(trap_exit, true),
-    {swagger_specified_handler, Req, InitialState}.
+    {specified_handler, Req, InitialState}.
 
 handle_req(Req = #{method := <<"GET">>}, Params, _Body = undefined, State) ->
     UserObj = decode_json_param(user_obj, Params),

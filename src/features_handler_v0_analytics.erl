@@ -144,7 +144,7 @@ analytic_event_input_schema() ->
     }.
 
 init(Req, Opts) ->
-    {swagger_specified_handler, Req, Opts}.
+    {specified_handler, Req, Opts}.
 
 handle_req(
     Req = #{method := <<"GET">>},
