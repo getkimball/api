@@ -25,14 +25,8 @@
 init(Name) ->
     {ok, Bucket} = application:get_env(features, s3_bucket),
     {ok, BasePath} = application:get_env(features, s3_base_path),
-    {ok, AutoAWSConfig} = erlcloud_aws:auto_config(),
 
-    AWSConfig =
-        case application:get_env(features, s3_host) of
-            {ok, ""} -> AutoAWSConfig;
-            {ok, Host} -> AutoAWSConfig#aws_config{s3_host = Host}
-        end,
-
+    AWSConfig = create_aws_config(),
     {ok, BasePath} = application:get_env(features, s3_base_path),
     Path = ensure_list(features_store_lib_lib:name_to_path(BasePath, Name)),
     #state{
@@ -58,10 +52,23 @@ get_all(State = #state{bucket = Bucket, path = Path, aws_config = AWSConfig}) ->
     Data = Obj,
     {Data, State}.
 
-store(Data, State = #state{bucket = Bucket, path = Path, aws_config = AWSConfig}) ->
+store(Data, State = #state{bucket = Bucket, path = Path}) ->
     Encoded = erlang:term_to_binary(Data),
-    _Resp = erlcloud_s3:put_object(Bucket, Path, Encoded, AWSConfig),
-    {ok, State}.
+
+    % There is a chance that the AWS credentials have expired, refresh the
+    % config and try again.
+    %
+    NewAWSConfig = create_aws_config(),
+    NewState = State#state{aws_config = NewAWSConfig},
+    _Resp = erlcloud_s3:put_object(Bucket, Path, Encoded, NewAWSConfig),
+    {ok, NewState}.
 
 aws_config(#state{aws_config = AWSConfig}) ->
     AWSConfig.
+
+create_aws_config() ->
+    {ok, AutoAWSConfig} = erlcloud_aws:auto_config(),
+    case application:get_env(features, s3_host) of
+        {ok, ""} -> AutoAWSConfig;
+        {ok, Host} -> AutoAWSConfig#aws_config{s3_host = Host}
+    end.
