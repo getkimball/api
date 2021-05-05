@@ -99,6 +99,12 @@ analytic_event_input_schema() ->
         type => object,
         required => [event_name, user_id],
         properties => #{
+            datetime => #{
+                type => string,
+                format => 'date-time',
+                description =>
+                    <<"Time event occured. Only used for internal counter organize, this cannot be used to submit events out of order">>
+            },
             ensure_goal => #{
                 type => boolean,
                 description => <<"Ensure this is a goal counter">>
@@ -257,6 +263,7 @@ render_single_tag_count(Tag, Count, AccIn) ->
     ].
 
 build_event_call(#{
+    datetime := Datetime,
     ensure_goal := EnsureGoalArg,
     event_name := EventName,
     namespace := Namespace,
@@ -272,4 +279,9 @@ build_event_call(#{
         ensure_goal => EnsureGoal,
         value => Value
     },
-    {Namespace, EventName, UserID, Opts}.
+    DatedOpts = case Datetime of
+        undefined -> Opts;
+        Seconds -> {YMD, _Time} = calendar:system_time_to_universal_time(Seconds, seconds),
+                    Opts#{date => YMD}
+    end,
+    {Namespace, EventName, UserID, DatedOpts}.

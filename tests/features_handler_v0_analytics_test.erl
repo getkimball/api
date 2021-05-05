@@ -263,6 +263,8 @@ save_analytic_event_test_() ->
     {foreach, fun load/0, fun unload/1, [
         fun save_analytic_event/0,
         fun save_analytic_event_with_namespace/0,
+        fun save_analytic_event_with_datetime/0,
+        fun save_analytic_event_with_invalid_datetime/0,
         fun save_analytic_event_dont_ensure_goal/0,
         fun save_analytic_event_ensure_goal/0,
         fun save_multiple_analytic_events/0,
@@ -320,6 +322,70 @@ save_analytic_event_with_namespace() ->
             #{ensure_goal => false}
         ])
     ).
+
+save_analytic_event_with_datetime() ->
+    Namespace = <<"default">>,
+    EventName = <<"event_name">>,
+    Now = erlang:system_time(seconds),
+    NowRFC = binary:list_to_bin(calendar:system_time_to_rfc3339(Now)),
+    {YMD, _Time} = calendar:system_time_to_universal_time(Now, seconds),
+    UserID = <<"user_id">>,
+    Doc = #{
+        datetime => NowRFC,
+        event_name => EventName,
+        user_id => UserID
+    },
+    io:format("NowRFC ~p~n", [{NowRFC, YMD}]),
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ?CTH:http_post(?MUT, #{analytics_event_mod => features_count_router}, PostReq, 204, no_body),
+
+    Expected = [
+        Namespace,
+        EventName,
+        UserID,
+        #{
+            ensure_goal => false,
+            date => YMD,
+            value => undefined
+        }
+    ],
+
+    test_utils:assertNCalls(1, features_count_router, add, Expected).
+
+save_analytic_event_with_invalid_datetime() ->
+    EventName = <<"event_name">>,
+    Namespace = <<"test namespace">>,
+    UserID = <<"user_id">>,
+    InvalidDateTime = <<"invalid datetime">>,
+    Doc = #{
+        datetime => InvalidDateTime,
+        event_name => EventName,
+        namespace => Namespace,
+        user_id => UserID
+    },
+
+    PostReq = ?CTH:req(post, json, Doc),
+
+    ExpectedErrObj = ?CTH:json_roundtrip(Doc),
+
+    ErrorMessage = <<"Object does not match any of the oneOf specifications">>,
+    State = #{analytics_event_mod => features_count_router},
+    #{
+        <<"error">> := #{
+            <<"what">> := ErrWhat,
+            <<"object">> := ErrObj,
+            <<"why">> := Whys
+        }
+    } = ?CTH:http_post(?MUT, State, PostReq, 400),
+
+    ExpectedError = [<<"invalid_date">>,<<"invalid datetime">>],
+    ?assertEqual(ErrorMessage, ErrWhat),
+    ?assertEqual(ExpectedErrObj, ErrObj),
+
+    io:format("Whys ~p~n", [Whys]),
+    ?assert(lists:member(ExpectedError, Whys)).
 
 save_analytic_event_dont_ensure_goal() ->
     EventName = <<"event_name">>,

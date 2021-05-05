@@ -103,7 +103,8 @@ add(Namespace, CounterName, Key, Opts = #{ensure_goal := true}) ->
 add(Namespace, CounterName, Key, Opts) ->
     Start = erlang:monotonic_time(microsecond),
     Value = maps:get(value, Opts, undefined),
-    YearWeekNum = calendar:iso_week_number(),
+
+    YearWeekNum = yearweeknum_from_opts(Opts),
 
     CounterConfig = counter_config_for_name(CounterName),
     Counters = counters_for_event(Namespace, CounterName, CounterConfig, YearWeekNum),
@@ -607,3 +608,8 @@ enqueue_counter_start_request() ->
     Delay = application:get_env(features, counter_startup_delay, 1),
     {ok, _} = timer:apply_after(Delay, features_count_router, start_enqueued_counters, []),
     ok.
+
+yearweeknum_from_opts(#{date:= {Y, M, D}}) ->
+    calendar:iso_week_number({Y, M, D});
+yearweeknum_from_opts(_) ->
+    calendar:iso_week_number().
