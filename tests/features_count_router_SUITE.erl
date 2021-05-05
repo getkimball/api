@@ -32,6 +32,7 @@ groups() ->
             cb_test_counter_registration_persists,
             cc_test_weekly_cohort_counter_created,
             cd_test_weekly_cohort_counter_created_and_added_again,
+            ce_test_weekly_cohort_counter_with_injected_ymd,
             da_test_new_goal,
             db_test_existing_goal,
             dc_test_goals_are_namespaced,
@@ -83,6 +84,8 @@ init_per_testcase(ca_test_start_with_existing_counters, Config) ->
 init_per_testcase(cc_test_weekly_cohort_counter_created, Config) ->
     init_meck(Config);
 init_per_testcase(cd_test_weekly_cohort_counter_created_and_added_again, Config) ->
+    init_meck(Config);
+init_per_testcase(ce_test_weekly_cohort_counter_with_injected_ymd, Config) ->
     init_meck(Config);
 init_per_testcase(db_test_existing_goal, Config) ->
     init_meck(Config);
@@ -518,6 +521,37 @@ cd_test_weekly_cohort_counter_created_and_added_again(Config) ->
 
     ?assertEqual(2, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec])),
     ?assertEqual(2, meck:num_calls(supervisor, start_child, [features_counter_sup, WeeklySpec])),
+
+    Config1.
+
+ce_test_weekly_cohort_counter_with_injected_ymd(Config) ->
+    CounterConfig = #{date_cohort => weekly},
+    meck:expect(features_counter_config, config_for_counter, ['_', init], CounterConfig),
+    StoreLibState = ?config(store_lib_state, Config),
+
+    InjectedDate = {2000, 1, 3},
+    {Year, Week} = calendar:iso_week_number(InjectedDate),
+    Name = <<"cc_feature">>,
+    WeeklyCounterID = features_counter_id:create(<<"default">>, Name, weekly, {Year, Week}),
+    Num = 1,
+    Count = #{count => Num},
+
+    Spec = spec_for_feature(Name),
+    WeeklySpec = spec_for_feature(WeeklyCounterID),
+    StoredData = #{},
+
+    meck:expect(features_store_lib, get, [StoreLibState], {StoredData, StoreLibState}),
+    meck:expect(features_counter, count, ['_'], Count),
+
+    {ok, Pid} = ?MUT:start_link(?STORE_LIB),
+    Config1 = [{pid, Pid} | Config],
+
+    ?MUT:add(<<"default">>, Name, <<"user_id">>, #{date => InjectedDate}),
+
+    meck:wait(supervisor, start_child, [features_counter_sup, WeeklySpec], 1000),
+
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, Spec])),
+    ?assertEqual(1, meck:num_calls(supervisor, start_child, [features_counter_sup, WeeklySpec])),
 
     Config1.
 
