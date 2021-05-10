@@ -77,6 +77,33 @@ Example
 ]}].
 ```
 
+
+#### API Authentication
+
+The API will default to requiring authentication. Options to configure
+
+`api_auth` - either `enable` or `disable` (default `enable`)
+`api_auth_tokens` - A list of binaries that are acceptable for authorization. These should be provided in an authorization header of the form:
+
+`Authorization: Bearer $TOKEN`
+
+Example
+
+```
+[{features, [
+    {api_auth, disable}
+]}].
+```
+
+or
+
+```
+[{features, [
+    {api_auth, enable},
+    {api_auth_tokens, [<<"SECRET_TOKEN">>]}
+]}].
+```
+
 #### *Experimental* Event forwarding via GRPC Streams
 
 The application can forward event streams via GRPC to external services. This is currently experimental, not well tested, and may incur significant performance concerns.

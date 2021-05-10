@@ -21,4 +21,3 @@ token_for_authheader(undefined) ->
 token_for_authheader(<< _Bearer:7/binary, Token/binary >>) ->
     % 7 bytes for "bearer "
     Token.
-
