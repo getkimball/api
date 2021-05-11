@@ -48,9 +48,21 @@ start(_Type, _Args) ->
 
     Dispatch = trails:single_host_compile(AllRoutes),
 
+    Middlewares = case application:get_env(features, api_auth, enable) of
+       enable ->  [cowboy_router, cb_auth_simple_header, cowboy_handler];
+       disable ->  [cowboy_router, cowboy_handler]
+    end,
+
+    CBAuthOpts = #{
+        auth_tokens => application:get_env(features, api_auth_tokens, []),
+        unauth_handler => features_handler_unauthorized
+    },
+
     HTTPOpts = #{
-        env => #{dispatch => Dispatch},
+        env => #{dispatch => Dispatch,
+                 cb_auth => CBAuthOpts},
         metrics_callback => fun prometheus_cowboy2_instrumenter:observe/1,
+        middlewares => Middlewares,
         stream_handlers => [cowboy_metrics_h, cowboy_stream_h]
     },
 
